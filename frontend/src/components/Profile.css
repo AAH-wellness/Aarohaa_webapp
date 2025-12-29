@@ -1,0 +1,481 @@
+.profile {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.profile-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: #0e4826;
+  margin-bottom: 32px;
+  letter-spacing: -0.5px;
+}
+
+.profile-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0e4826;
+  margin: 0 0 28px 0;
+  letter-spacing: -0.3px;
+}
+
+.profile-card {
+  background-color: #ffffff;
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 8px 30px rgba(14, 72, 38, 0.1), 0 0 0 1px rgba(255, 215, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.1);
+  border: 1px solid #FFD700;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 215, 0, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+  pointer-events: none;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+.profile-card:hover {
+  box-shadow: 0 8px 30px rgba(14, 72, 38, 0.1), 0 0 0 1px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.3);
+  border-color: #FFC107;
+}
+
+.kyc-status {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+.status-badge {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.verified {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.not-verified {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.profile-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field-value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+
+.address-field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.edit-address-btn {
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(14, 72, 38, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.edit-address-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(14, 72, 38, 0.3);
+  background: linear-gradient(135deg, #0a3620 0%, #0e4826 100%);
+}
+
+.address-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.address-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background-color: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.address-input:focus {
+  outline: none;
+  border-color: #0e4826;
+  box-shadow: 0 0 0 3px rgba(14, 72, 38, 0.1);
+}
+
+.address-edit-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancel-address-btn,
+.save-address-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.cancel-address-btn {
+  background-color: #ede9d0;
+  color: #666;
+}
+
+.cancel-address-btn:hover {
+  background-color: #d0b6a8;
+  color: #333;
+}
+
+.save-address-btn {
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.3);
+}
+
+.save-address-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.4);
+  background: linear-gradient(135deg, #0a3620 0%, #0e4826 100%);
+}
+
+.wallet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.wallet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wallet-address {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.copy-btn:hover {
+  transform: scale(1.2);
+}
+
+.balance-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0e4826;
+}
+
+.wallet-not-connected {
+  text-align: center;
+  padding: 32px;
+  background-color: #ede9d0;
+  border-radius: 8px;
+  border: 1px solid #d0b6a8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.wallet-not-connected p {
+  color: #92400e;
+  font-size: 14px;
+  margin: 0;
+}
+
+.toggle-password-btn {
+  background: linear-gradient(135deg, #0e4826 0%, #0e4826 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.3);
+}
+
+.toggle-password-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.4);
+}
+
+.password-reset-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background-color: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #0e4826;
+  box-shadow: 0 0 0 3px rgba(14, 72, 38, 0.1);
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancel-btn,
+.submit-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.cancel-btn {
+  background-color: #ede9d0;
+  color: #666;
+}
+
+.cancel-btn:hover {
+  background-color: #d0b6a8;
+  color: #333;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(14, 72, 38, 0.3);
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(14, 72, 38, 0.4);
+  background: linear-gradient(135deg, #0a3620 0%, #0e4826 100%);
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .profile {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .profile-title {
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+
+  .profile-card {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .section-title {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  .form-input {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .cancel-btn,
+  .submit-btn {
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+
+  .address-field-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .edit-address-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .address-edit-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .cancel-address-btn,
+  .save-address-btn {
+    width: 100%;
+  }
+}

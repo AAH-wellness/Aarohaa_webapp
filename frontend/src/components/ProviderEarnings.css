@@ -1,0 +1,330 @@
+.provider-earnings {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease-in;
+}
+
+.provider-earnings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.provider-earnings-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0e4826;
+  margin-bottom: 8px;
+}
+
+.provider-earnings-subtitle {
+  font-size: 16px;
+  color: rgba(14, 72, 38, 0.7);
+}
+
+.provider-earnings-summary {
+  display: flex;
+  gap: 24px;
+  background: #ffffff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(14, 72, 38, 0.1);
+}
+
+.provider-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.provider-summary-label {
+  font-size: 12px;
+  color: rgba(14, 72, 38, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.provider-summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0e4826;
+}
+
+.provider-earnings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.provider-earnings-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(14, 72, 38, 0.1);
+  transition: all 0.3s ease;
+  border-left: 4px solid;
+}
+
+.provider-earnings-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.provider-earnings-card-purple {
+  border-left-color: #8b5cf6;
+}
+
+.provider-earnings-card-blue {
+  border-left-color: #3b82f6;
+}
+
+.provider-earnings-card-green {
+  border-left-color: #10b981;
+}
+
+.provider-earnings-card-orange {
+  border-left-color: #f59e0b;
+}
+
+.provider-earnings-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.provider-earnings-icon {
+  font-size: 32px;
+  opacity: 0.9;
+}
+
+.provider-earnings-trend {
+  background: rgba(14, 72, 38, 0.1);
+  color: rgba(14, 72, 38, 0.8);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.provider-earnings-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.provider-earnings-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(14, 72, 38, 0.7);
+  margin: 0;
+}
+
+.provider-earnings-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0e4826;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.provider-transactions-section {
+  margin-top: 32px;
+}
+
+.provider-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0e4826;
+  margin-bottom: 16px;
+}
+
+.provider-transactions-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(14, 72, 38, 0.1);
+}
+
+.provider-no-transactions {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.provider-no-transactions-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.provider-no-transactions-message {
+  font-size: 16px;
+  color: rgba(14, 72, 38, 0.7);
+  margin: 0;
+}
+
+.provider-transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.provider-transaction-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(14, 72, 38, 0.02);
+  border-radius: 12px;
+  border-left: 3px solid rgba(14, 72, 38, 0.2);
+  transition: all 0.2s ease;
+}
+
+.provider-transaction-item:hover {
+  background: rgba(14, 72, 38, 0.05);
+  border-left-color: #10b981;
+}
+
+.provider-transaction-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.provider-transaction-info {
+  flex: 1;
+}
+
+.provider-transaction-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0e4826;
+  margin: 0 0 4px 0;
+}
+
+.provider-transaction-date {
+  font-size: 13px;
+  color: rgba(14, 72, 38, 0.6);
+  margin: 0;
+}
+
+.provider-transaction-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.provider-amount-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.provider-status-badge {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.provider-status-completed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.provider-status-pending {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+@media (max-width: 768px) {
+  .provider-earnings {
+    padding: 16px 12px;
+  }
+
+  .provider-earnings-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .provider-earnings-title {
+    font-size: 24px;
+  }
+
+  .provider-earnings-subtitle {
+    font-size: 14px;
+  }
+
+  .provider-earnings-summary {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    width: 100%;
+  }
+
+  .provider-summary-value {
+    font-size: 20px;
+  }
+
+  .provider-earnings-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .provider-earnings-card {
+    padding: 16px;
+  }
+
+  .provider-earnings-card-value {
+    font-size: 24px;
+  }
+
+  .provider-transactions-section {
+    margin-top: 24px;
+  }
+
+  .provider-section-title {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .provider-transactions-card {
+    padding: 16px;
+  }
+
+  .provider-transaction-item {
+    flex-wrap: wrap;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .provider-transaction-icon {
+    font-size: 20px;
+  }
+
+  .provider-transaction-title {
+    font-size: 14px;
+  }
+
+  .provider-transaction-date {
+    font-size: 12px;
+  }
+
+  .provider-amount-value {
+    font-size: 16px;
+  }
+}
+

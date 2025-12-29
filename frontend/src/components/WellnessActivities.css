@@ -1,0 +1,181 @@
+.wellness-activities {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.activities-header {
+  margin-bottom: 32px;
+}
+
+.activities-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: #0e4826;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.activities-subtitle {
+  font-size: 16px;
+  color: #666;
+}
+
+.activities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.activity-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 32px 28px;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.08), 0 0 0 1px rgba(255, 215, 0, 0.3), 0 0 15px rgba(255, 215, 0, 0.1);
+  transition: all 0.4s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid #FFD700;
+  position: relative;
+  overflow: hidden;
+}
+
+.activity-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 215, 0, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+  pointer-events: none;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+.activity-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 40px rgba(14, 72, 38, 0.15), 0 0 0 1px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.3);
+  border-color: #FFC107;
+}
+
+.activity-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.activity-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.activity-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.activity-reward {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0e4826;
+  margin-bottom: 20px;
+}
+
+.activity-button {
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  box-shadow: 0 4px 15px rgba(14, 72, 38, 0.3);
+  letter-spacing: 0.3px;
+}
+
+.activity-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(14, 72, 38, 0.4);
+  background: linear-gradient(135deg, #0a3620 0%, #0e4826 100%);
+}
+
+.activity-button:active {
+  transform: translateY(0);
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .wellness-activities {
+    padding: 0;
+  }
+
+  .activities-header {
+    margin-bottom: 24px;
+  }
+
+  .activities-title {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .activities-subtitle {
+    font-size: 14px;
+  }
+
+  .activities-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .activity-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .activity-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  .activity-title {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .activity-description {
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .activity-reward {
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .activity-button {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+}

@@ -1,0 +1,48 @@
+import React, { useEffect, useState } from 'react'
+import './BookingRequiredModal.css'
+
+const BookingRequiredModal = ({ onClose, onNavigateToBooking }) => {
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    // Trigger animation on mount
+    setTimeout(() => setIsVisible(true), 10)
+  }, [])
+
+  const handleClose = () => {
+    setIsVisible(false)
+    setTimeout(() => onClose(), 300)
+  }
+
+  const handleBookNow = () => {
+    setIsVisible(false)
+    setTimeout(() => {
+      onClose()
+      onNavigateToBooking()
+    }, 300)
+  }
+
+  return (
+    <div className={`modal-overlay ${isVisible ? 'visible' : ''}`} onClick={handleClose}>
+      <div className={`modal-content ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-icon">
+          <div className="icon-bounce">📅</div>
+        </div>
+        <h2 className="modal-title">Session Not Booked</h2>
+        <p className="modal-message">
+          Please book a session with our providers to access the session!
+        </p>
+        <div className="modal-buttons">
+          <button className="modal-btn secondary" onClick={handleClose}>
+            Close
+          </button>
+          <button className="modal-btn primary" onClick={handleBookNow}>
+            Book Session Now
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default BookingRequiredModal

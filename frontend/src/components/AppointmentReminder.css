@@ -1,0 +1,129 @@
+.appointment-reminder {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: linear-gradient(135deg, #0e4826 0%, #0e4826 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(14, 72, 38, 0.4), 0 0 0 1px rgba(255, 215, 0, 0.5), 0 0 20px rgba(255, 215, 0, 0.2);
+  border: 1px solid #FFD700;
+  z-index: 999;
+  max-width: 350px;
+  opacity: 0;
+  transform: translateX(400px);
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+.appointment-reminder.visible {
+  opacity: 1;
+  transform: translateX(0);
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(400px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.reminder-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.reminder-icon {
+  font-size: 24px;
+  animation: ring 2s ease-in-out infinite;
+}
+
+@keyframes ring {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  10%, 30% {
+    transform: rotate(-10deg);
+  }
+  20% {
+    transform: rotate(10deg);
+  }
+}
+
+.reminder-text {
+  flex: 1;
+}
+
+.reminder-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.reminder-text p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.95;
+  line-height: 1.4;
+}
+
+.reminder-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.reminder-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+  .appointment-reminder {
+    top: 60px;
+    right: 8px;
+    left: 8px;
+    max-width: none;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .reminder-title {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .reminder-message {
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .reminder-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .reminder-btn {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}

@@ -1,0 +1,476 @@
+/* Provider Login Styles - Similar to Login but with provider-specific theming */
+.provider-login-container {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #ffffff;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.provider-login-wrapper {
+  background-color: transparent;
+  display: grid;
+  grid-template-columns: 50% 50%;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.provider-login-form-section {
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(14, 72, 38, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 90% 80%, rgba(14, 72, 38, 0.03) 0%, transparent 50%),
+    #f5f5f0;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+  min-height: 100vh;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.provider-login-form-wrapper {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.provider-login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.provider-login-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0e4826;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.provider-login-subtitle {
+  font-size: 14px;
+  color: rgba(14, 72, 38, 0.7);
+  margin: 0;
+}
+
+.provider-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 100%;
+  margin: 0;
+}
+
+.provider-login-button {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.2);
+  margin-top: 8px;
+}
+
+.provider-login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(14, 72, 38, 0.3);
+}
+
+.provider-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+  color: rgba(14, 72, 38, 0.5);
+  font-size: 14px;
+}
+
+.provider-divider::before,
+.provider-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(14, 72, 38, 0.2);
+}
+
+.provider-switch-text {
+  text-align: center;
+  font-size: 14px;
+  color: rgba(14, 72, 38, 0.7);
+  margin: 0;
+}
+
+.provider-switch-link {
+  background: none;
+  border: none;
+  color: #0e4826;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.provider-switch-link:hover {
+  color: #0a3620;
+}
+
+.provider-login-illustration-section {
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.provider-plant-decoration {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: pulse 4s ease-in-out infinite;
+}
+
+/* Reuse form styles from Login.css */
+.provider-login-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.provider-login-form .input-container {
+  position: relative;
+  width: 100%;
+}
+
+.provider-login-form .input-icon-wrapper {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.provider-login-form .form-input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  border: 2px solid rgba(14, 72, 38, 0.2);
+  border-radius: 12px;
+  font-size: 15px;
+  background: #ffffff;
+  color: #0e4826;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.provider-login-form .form-input:focus {
+  outline: none;
+  border-color: #0e4826;
+  box-shadow: 0 0 0 3px rgba(14, 72, 38, 0.1);
+}
+
+.provider-login-form .floating-label {
+  position: absolute;
+  left: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  color: rgba(14, 72, 38, 0.6);
+  pointer-events: none;
+  transition: all 0.3s ease;
+  background: transparent;
+  padding: 0 4px;
+}
+
+.provider-login-form .input-icon-wrapper.focused .floating-label,
+.provider-login-form .form-input:focus + .input-icon-wrapper .floating-label,
+.provider-login-form .form-input:not(:placeholder-shown) + .input-icon-wrapper .floating-label {
+  top: 0;
+  font-size: 12px;
+  color: #0e4826;
+  background: #ffffff;
+}
+
+.provider-login-form .error-message {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.provider-login-form .remember-forgot-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.provider-login-form .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(14, 72, 38, 0.7);
+  cursor: pointer;
+}
+
+.provider-login-form .password-toggle {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  z-index: 3;
+}
+
+/* Provider Social Login Styles */
+.provider-social-login {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.provider-social-button {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(14, 72, 38, 0.2);
+  border-radius: 12px;
+  background-color: #ffffff;
+  color: rgba(14, 72, 38, 0.8);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.provider-social-button:hover {
+  border-color: #0e4826;
+  background-color: #f0f7f4;
+  color: #0e4826;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(14, 72, 38, 0.1);
+}
+
+.provider-wallet-button:hover {
+  border-color: #0e4826;
+  background-color: #f0f7f4;
+  color: #0e4826;
+}
+
+.provider-social-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Wallet Modal Styles - Reused from Login */
+.wallet-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.wallet-modal-content {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+  position: relative;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.wallet-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.wallet-modal-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #666;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wallet-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  text-align: left;
+  width: 100%;
+}
+
+.wallet-option:hover:not(:disabled) {
+  border-color: #0e4826;
+  background-color: #f0f7f4;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.1);
+}
+
+.wallet-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wallet-icon {
+  font-size: 24px;
+}
+
+.wallet-name {
+  flex: 1;
+}
+
+.connecting-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.no-wallets-message {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+}
+
+.no-wallets-message p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.no-wallets-message ul {
+  text-align: left;
+  display: inline-block;
+  margin: 16px 0;
+  padding-left: 20px;
+}
+
+.no-wallets-message li {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .provider-login-wrapper {
+    grid-template-columns: 1fr;
+  }
+  
+  .provider-login-illustration-section {
+    display: none;
+  }
+  
+  .provider-login-form-section {
+    padding: 24px;
+  }
+
+  .wallet-modal-content {
+    width: 95%;
+    max-width: 95%;
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .wallet-option {
+    padding: 14px;
+    font-size: 14px;
+  }
+}
+

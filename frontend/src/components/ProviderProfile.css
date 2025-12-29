@@ -1,0 +1,239 @@
+.provider-profile {
+  padding: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease-in;
+}
+
+.provider-profile-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0e4826;
+  margin-bottom: 32px;
+}
+
+.provider-profile-section {
+  margin-bottom: 32px;
+}
+
+.provider-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0e4826;
+  margin-bottom: 16px;
+}
+
+.provider-profile-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(14, 72, 38, 0.1);
+}
+
+.provider-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.provider-profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.provider-profile-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.provider-profile-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(14, 72, 38, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.provider-field-value {
+  font-size: 15px;
+  color: #0e4826;
+  font-weight: 500;
+  padding: 12px;
+  background: rgba(14, 72, 38, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(14, 72, 38, 0.1);
+}
+
+.provider-wallet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.provider-wallet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.provider-wallet-address {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.provider-copy-btn {
+  background: rgba(14, 72, 38, 0.1);
+  border: 1px solid rgba(14, 72, 38, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.provider-copy-btn:hover {
+  background: rgba(14, 72, 38, 0.15);
+  border-color: rgba(14, 72, 38, 0.3);
+}
+
+.provider-balance-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.provider-wallet-not-connected {
+  text-align: center;
+  padding: 32px;
+  background: rgba(14, 72, 38, 0.02);
+  border-radius: 12px;
+  border: 2px dashed rgba(14, 72, 38, 0.2);
+}
+
+.provider-wallet-not-connected p {
+  margin: 0 0 20px 0;
+  color: rgba(14, 72, 38, 0.7);
+  font-size: 14px;
+}
+
+.provider-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.provider-setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: rgba(14, 72, 38, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(14, 72, 38, 0.1);
+  transition: all 0.2s ease;
+}
+
+.provider-setting-item:hover {
+  background: rgba(14, 72, 38, 0.05);
+  border-color: rgba(14, 72, 38, 0.2);
+}
+
+.provider-setting-info {
+  flex: 1;
+}
+
+.provider-setting-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0e4826;
+  margin: 0 0 4px 0;
+}
+
+.provider-setting-description {
+  font-size: 13px;
+  color: rgba(14, 72, 38, 0.7);
+  margin: 0;
+}
+
+.provider-setting-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.2);
+}
+
+.provider-setting-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.3);
+}
+
+@media (max-width: 768px) {
+  .provider-profile {
+    padding: 16px 12px;
+  }
+
+  .provider-profile-title {
+    font-size: 24px;
+    margin-bottom: 24px;
+  }
+
+  .provider-profile-section {
+    margin-bottom: 24px;
+  }
+
+  .provider-section-title {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .provider-profile-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .provider-profile-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .provider-profile-field {
+    gap: 6px;
+  }
+
+  .provider-profile-field label {
+    font-size: 13px;
+  }
+
+  .provider-profile-field input,
+  .provider-profile-field select,
+  .provider-profile-field textarea {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .provider-setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .provider-setting-btn {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+
