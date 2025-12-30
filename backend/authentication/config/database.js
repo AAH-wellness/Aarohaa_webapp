@@ -1,127 +1,62 @@
-// PostgreSQL Database Connection Pool
-import pkg from 'pg'
-const { Pool } = pkg
+const { Pool } = require('pg');
 
-// Load environment variables in this module too (in case server.js hasn't loaded them yet)
-import dotenv from 'dotenv'
-dotenv.config()
+// Database configuration
+const pool = new Pool({
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'aarohaa_db',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || '',
+  max: 20, // Maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
+  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection cannot be established
+});
 
-// Function to check if database is configured (lazy evaluation)
-const checkDatabaseConfig = () => {
-  // Remove quotes from password if present and trim whitespace
-  const dbPassword = process.env.DB_PASSWORD ? process.env.DB_PASSWORD.replace(/^["']|["']$/g, '').trim() : null
-  const isConfigured = process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && dbPassword
-  
-  return {
-    isConfigured,
-    dbPassword,
-    config: {
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: dbPassword,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-      max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
-      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
-      connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000')
-    }
-  }
-}
+// Test database connection
+pool.on('connect', () => {
+  console.log('✅ Database connection established');
+});
 
-// Database configuration from environment variables
-let pool = null
-let configChecked = false
-
-// Function to initialize pool (lazy initialization)
-const initializePool = () => {
-  if (pool) return pool // Already initialized
-  
-  const dbConfig = checkDatabaseConfig()
-  
-  // Debug logging
-  console.log('🔍 Database configuration check:', {
-    hasHost: !!process.env.DB_HOST,
-    hasName: !!process.env.DB_NAME,
-    hasUser: !!process.env.DB_USER,
-    hasPassword: !!dbConfig.dbPassword,
-    passwordLength: dbConfig.dbPassword ? dbConfig.dbPassword.length : 0,
-    isConfigured: dbConfig.isConfigured
-  })
-  
-  if (dbConfig.isConfigured) {
-    pool = new Pool(dbConfig.config)
-    configChecked = true
-    
-    // Set up event handlers
-    pool.on('connect', () => {
-      console.log('✅ Connected to PostgreSQL database')
-    })
-
-    pool.on('error', (err) => {
-      console.error('❌ Unexpected error on idle client', err)
-      // Don't exit process, just log error
-    })
-  } else {
-    configChecked = true
-  }
-  
-  return pool
-}
-
-// Initialize pool on first access
-initializePool()
+pool.on('error', (err) => {
+  console.error('❌ Unexpected error on idle database client', err);
+  process.exit(-1);
+});
 
 // Test connection function
-export const testConnection = async () => {
-  const currentPool = initializePool()
-  
-  if (!currentPool) {
-    console.log('⚠️  Database not configured - skipping connection test')
-    return false
-  }
-  
+async function testConnection() {
   try {
-    const result = await currentPool.query('SELECT NOW()')
-    console.log('✅ Database connection test successful:', result.rows[0].now)
-    return true
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    console.log('✅ Database connection test successful:', result.rows[0].now);
+    client.release();
+    return { connected: true, timestamp: result.rows[0].now };
   } catch (error) {
-    console.error('❌ Database connection test failed:', error.message)
-    console.error('   Please check your database configuration in .env file')
-    return false
+    console.error('❌ Database connection test failed:', error.message);
+    return { connected: false, error: error.message };
   }
 }
 
-// Get pool (lazy initialization)
-const getPool = () => {
-  return initializePool()
-}
-
-// Export pool getter for use in models
-// Returns null if database is not configured
-export default getPool
-
-// Check if database is available
-export const isDatabaseAvailable = () => {
-  return initializePool() !== null
-}
-
-// Helper function to execute queries
-export const query = async (text, params) => {
-  const currentPool = getPool()
-  if (!currentPool) {
-    throw new Error('Database not configured')
-  }
-  
-  const start = Date.now()
+// Get database status
+async function getDatabaseStatus() {
   try {
-    const res = await currentPool.query(text, params)
-    const duration = Date.now() - start
-    console.log('Executed query', { text, duration, rows: res.rowCount })
-    return res
+    const result = await pool.query('SELECT version()');
+    return {
+      connected: true,
+      version: result.rows[0].version,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
-    console.error('Query error', { text, error: error.message })
-    throw error
+    return {
+      connected: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
   }
 }
+
+module.exports = {
+  pool,
+  testConnection,
+  getDatabaseStatus
+};
 

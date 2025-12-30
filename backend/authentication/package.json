@@ -1,17 +1,22 @@
 {
   "name": "authentication-service",
   "version": "1.0.0",
-  "description": "Authentication service for Aarohaa Wellness Platform",
+  "description": "Authentication microservice for Aarohaa Wellness",
   "main": "server.js",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:db": "node scripts/test-db.js",
+    "check:users": "node scripts/check-users.js",
+    "test:login": "node scripts/test-login.js",
+    "delete:user": "node scripts/delete-user.js"
   },
   "keywords": [
     "authentication",
-    "login",
-    "jwt"
+    "microservice",
+    "aarohaa"
   ],
   "author": "",
   "license": "ISC",
@@ -28,3 +33,4 @@
     "pg": "^8.16.3"
   }
 }
+

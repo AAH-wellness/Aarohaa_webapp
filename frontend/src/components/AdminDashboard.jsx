@@ -17,6 +17,7 @@ const AdminDashboard = () => {
 
   const [walletActivity, setWalletActivity] = useState([])
   const [alerts, setAlerts] = useState([])
+  const [recentActivities, setRecentActivities] = useState([])
 
   useEffect(() => {
     const loadStats = () => {
@@ -35,34 +36,30 @@ const AdminDashboard = () => {
         return aptDate >= today && aptDate < new Date(today.getTime() + 24 * 60 * 60 * 1000)
       }).length
 
-      // Mock wallet activity
-      const mockWalletActivity = [
-        { id: 1, type: 'Payment', amount: 50, wallet: 'Phantom', time: '5 min ago', status: 'completed' },
-        { id: 2, type: 'Payment', amount: 75, wallet: 'Solflare', time: '12 min ago', status: 'completed' },
-        { id: 3, type: 'Payment', amount: 100, wallet: 'Phantom', time: '1 hour ago', status: 'completed' },
-        { id: 4, type: 'Connection', amount: 0, wallet: 'Backpack', time: '2 hours ago', status: 'connected' },
-      ]
+      // Load wallet activity from localStorage (real data only)
+      const walletActivityData = JSON.parse(localStorage.getItem('walletActivity') || '[]')
+      setWalletActivity(walletActivityData)
 
-      // Mock alerts
-      const mockAlerts = [
-        { id: 1, type: 'warning', message: 'High session load detected', time: '10 min ago', severity: 'medium' },
-        { id: 2, type: 'info', message: 'New provider verification pending', time: '1 hour ago', severity: 'low' },
-      ]
+      // Load alerts from localStorage (real data only)
+      const alertsData = JSON.parse(localStorage.getItem('platformAlerts') || '[]')
+      setAlerts(alertsData)
 
-      setWalletActivity(mockWalletActivity)
-      setAlerts(mockAlerts)
-
+      // Calculate real stats from actual data
+      const providers = JSON.parse(localStorage.getItem('providers') || '[]')
+      const activeSessions = JSON.parse(localStorage.getItem('activeSessions') || '[]')
+      const users = JSON.parse(localStorage.getItem('adminUsers') || '[]')
+      
       setStats({
-        totalUsers: 1250, // Mock data
-        totalProviders: 3, // From FindProviders
-        activeSessions: 2, // Mock active sessions
+        totalUsers: users.length,
+        totalProviders: providers.length,
+        activeSessions: activeSessions.filter(s => s.status === 'active').length,
         todayAppointments,
-        totalEarnings: appointments.length * 50, // Mock calculation
+        totalEarnings: 0, // Will be calculated from real payment data
         platformHealth: 'healthy',
-        walletTransactions: mockWalletActivity.length,
-        walletVolume: mockWalletActivity.reduce((sum, t) => sum + t.amount, 0),
-        systemUptime: 99.9,
-        alerts: mockAlerts,
+        walletTransactions: walletActivityData.length,
+        walletVolume: walletActivityData.reduce((sum, t) => sum + (t.amount || 0), 0),
+        systemUptime: 100,
+        alerts: alertsData,
       })
     }
 
@@ -77,16 +74,16 @@ const AdminDashboard = () => {
       value: stats.totalUsers.toLocaleString(),
       icon: '👥',
       color: 'blue',
-      trend: '+12%',
-      trendLabel: 'vs last month',
+      trend: '',
+      trendLabel: '',
     },
     {
       title: 'Total Providers',
       value: stats.totalProviders,
       icon: '🏥',
       color: 'green',
-      trend: '+2',
-      trendLabel: 'new this month',
+      trend: '',
+      trendLabel: '',
     },
     {
       title: 'Active Sessions',
@@ -118,8 +115,8 @@ const AdminDashboard = () => {
       value: `$${stats.totalEarnings.toLocaleString()}`,
       icon: '💰',
       color: 'gold',
-      trend: '+15%',
-      trendLabel: 'vs last month',
+      trend: '',
+      trendLabel: '',
     },
     {
       title: 'Wallet Transactions',
@@ -139,12 +136,11 @@ const AdminDashboard = () => {
     },
   ]
 
-  const recentActivities = [
-    { type: 'user_registered', message: 'New user registered: john.doe@example.com', time: '2 min ago', icon: '👤' },
-    { type: 'appointment_booked', message: 'Appointment booked: Dr. Maya Patel with Patient', time: '5 min ago', icon: '📅' },
-    { type: 'session_started', message: 'Video session started', time: '10 min ago', icon: '💻' },
-    { type: 'provider_verified', message: 'Provider verified: Sarah Rodriguez', time: '1 hour ago', icon: '✅' },
-  ]
+  useEffect(() => {
+    // Load real activities from localStorage
+    const activities = JSON.parse(localStorage.getItem('recentActivities') || '[]')
+    setRecentActivities(activities)
+  }, [])
 
   return (
     <div className="admin-dashboard">
@@ -185,15 +181,19 @@ const AdminDashboard = () => {
             <button className="view-all-btn">View All</button>
           </div>
           <div className="activity-table">
-            {recentActivities.map((activity, index) => (
-              <div key={index} className="activity-row">
-                <div className="activity-icon">{activity.icon}</div>
-                <div className="activity-content">
-                  <p className="activity-message">{activity.message}</p>
-                  <p className="activity-time">{activity.time}</p>
+            {recentActivities.length === 0 ? (
+              <div className="empty-state">No recent activity</div>
+            ) : (
+              recentActivities.map((activity, index) => (
+                <div key={index} className="activity-row">
+                  <div className="activity-icon">{activity.icon || '📝'}</div>
+                  <div className="activity-content">
+                    <p className="activity-message">{activity.message}</p>
+                    <p className="activity-time">{activity.time}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

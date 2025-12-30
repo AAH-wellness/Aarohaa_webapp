@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import WalletConnect from './WalletConnect'
+import userService from '../services/userService'
 import './Profile.css'
 
 const Profile = () => {
   const [kycData, setKycData] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 234 567 8900',
-    dateOfBirth: '1990-01-15',
-    address: '123 Wellness Street, Health City, HC 12345',
+    fullName: '',
+    email: '',
+    phone: '',
+    address: '',
   })
+  const [isLoading, setIsLoading] = useState(true)
+  const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const [editedAddress, setEditedAddress] = useState('')
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
 
   const [walletData, setWalletData] = useState({
     address: '',
@@ -18,45 +22,48 @@ const Profile = () => {
     isConnected: false,
   })
 
-  // Load user data from localStorage on mount
+  // Fetch user profile data from API
   useEffect(() => {
-    // Load saved user profile data from localStorage if available
-    const savedUserData = localStorage.getItem('userProfileData')
-    const savedUserDataAlt = localStorage.getItem('userData')
-    
-    if (savedUserData) {
+    const fetchProfile = async () => {
+      setIsLoading(true)
       try {
-        const userData = JSON.parse(savedUserData)
-        setKycData(prev => ({
-          ...prev,
-          fullName: userData.fullName || prev.fullName,
-          email: userData.email || prev.email,
-          phone: userData.phone || prev.phone,
-          dateOfBirth: userData.dateOfBirth || prev.dateOfBirth,
-          address: userData.address || prev.address,
-        }))
-        if (userData.address) {
-          setEditedAddress(userData.address)
+        // Fetch from backend API only
+        const response = await userService.getProfile()
+        if (response && response.user) {
+          setKycData({
+            fullName: response.user.name || '',
+            email: response.user.email || '',
+            phone: response.user.phone || '',
+            address: response.user.address || '',
+          })
+        } else {
+          // No user data available
+          setKycData({
+            fullName: '',
+            email: '',
+            phone: '',
+            address: '',
+          })
         }
       } catch (error) {
-        console.error('Error loading user profile data:', error)
-      }
-    } else if (savedUserDataAlt) {
-      // Fallback to userData if userProfileData doesn't exist
-      try {
-        const userData = JSON.parse(savedUserDataAlt)
-        setKycData(prev => ({
-          ...prev,
-          fullName: userData.fullName || prev.fullName,
-          email: userData.email || prev.email,
-          phone: userData.phone || prev.phone,
-          dateOfBirth: userData.dateOfBirth || prev.dateOfBirth,
-        }))
-      } catch (error) {
-        console.error('Error loading user data:', error)
+        console.error('Error fetching profile:', error)
+        // Show empty state on error
+        setKycData({
+          fullName: '',
+          email: '',
+          phone: '',
+          address: '',
+        })
+      } finally {
+        setIsLoading(false)
       }
     }
-    
+
+    fetchProfile()
+  }, [])
+
+  // Check if wallet is connected on component mount
+  useEffect(() => {
     // Check localStorage for wallet connection status
     const savedWallet = localStorage.getItem('walletData')
     if (savedWallet) {
@@ -143,8 +150,6 @@ const Profile = () => {
 
   const [showPasswordReset, setShowPasswordReset] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isEditingAddress, setIsEditingAddress] = useState(false)
-  const [editedAddress, setEditedAddress] = useState(kycData.address)
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target
@@ -197,35 +202,61 @@ const Profile = () => {
     alert('Copied to clipboard!')
   }
 
+  // Handle address editing
   const handleEditAddress = () => {
-    setIsEditingAddress(true)
     setEditedAddress(kycData.address)
+    setIsEditingAddress(true)
   }
 
-  const handleSaveAddress = () => {
+  const handleCancelEditAddress = () => {
+    setIsEditingAddress(false)
+    setEditedAddress('')
+  }
+
+  const handleSaveAddress = async () => {
     if (!editedAddress.trim()) {
       alert('Address cannot be empty')
       return
     }
-    
-    // Update the address in state
-    setKycData(prev => ({ ...prev, address: editedAddress.trim() }))
-    
-    // Save to localStorage
-    const userProfileData = {
-      address: editedAddress.trim(),
-      ...kycData,
-      address: editedAddress.trim()
+
+    setIsSavingAddress(true)
+    try {
+      // Update address via backend
+      const response = await userService.updateProfile({ address: editedAddress.trim() })
+      
+      if (response && response.user) {
+        setKycData(prev => ({
+          ...prev,
+          address: response.user.address || editedAddress.trim()
+        }))
+        setIsEditingAddress(false)
+        alert('Address updated successfully!')
+      } else {
+        // Update local state even if response format is unexpected
+        setKycData(prev => ({
+          ...prev,
+          address: editedAddress.trim()
+        }))
+        setIsEditingAddress(false)
+        alert('Address updated!')
+      }
+    } catch (error) {
+      console.error('Error updating address:', error)
+      alert('Failed to update address. Please try again.')
+    } finally {
+      setIsSavingAddress(false)
     }
-    localStorage.setItem('userProfileData', JSON.stringify(userProfileData))
-    
-    setIsEditingAddress(false)
-    alert('Address updated successfully!')
   }
 
-  const handleCancelEditAddress = () => {
-    setEditedAddress(kycData.address)
-    setIsEditingAddress(false)
+  if (isLoading) {
+    return (
+      <div className="profile">
+        <h1 className="profile-title">Profile</h1>
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -252,51 +283,82 @@ const Profile = () => {
             </div>
             <div className="profile-field">
               <label>Phone Number</label>
-              <div className="field-value">{kycData.phone}</div>
-            </div>
-            <div className="profile-field">
-              <label>Date of Birth</label>
-              <div className="field-value">{kycData.dateOfBirth}</div>
+              <div className="field-value">{kycData.phone || 'Not provided'}</div>
             </div>
             <div className="profile-field full-width">
-              <div className="address-field-header">
-                <label>Address</label>
+              <label>
+                Address
                 {!isEditingAddress && (
                   <button
-                    className="edit-address-btn"
                     onClick={handleEditAddress}
-                    title="Edit address"
+                    style={{
+                      marginLeft: '10px',
+                      padding: '4px 12px',
+                      fontSize: '12px',
+                      backgroundColor: '#0e4826',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
                   >
                     ✏️ Edit
                   </button>
                 )}
-              </div>
+              </label>
               {isEditingAddress ? (
-                <div className="address-edit-container">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <textarea
-                    className="address-input"
                     value={editedAddress}
                     onChange={(e) => setEditedAddress(e.target.value)}
                     placeholder="Enter your address"
                     rows={3}
+                    style={{
+                      padding: '10px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      minHeight: '80px'
+                    }}
                   />
-                  <div className="address-edit-actions">
+                  <div style={{ display: 'flex', gap: '10px' }}>
                     <button
-                      className="cancel-address-btn"
-                      onClick={handleCancelEditAddress}
+                      onClick={handleSaveAddress}
+                      disabled={isSavingAddress}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#0e4826',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: isSavingAddress ? 'wait' : 'pointer',
+                        fontSize: '14px',
+                        opacity: isSavingAddress ? 0.7 : 1
+                      }}
                     >
-                      Cancel
+                      {isSavingAddress ? 'Saving...' : '💾 Save'}
                     </button>
                     <button
-                      className="save-address-btn"
-                      onClick={handleSaveAddress}
+                      onClick={handleCancelEditAddress}
+                      disabled={isSavingAddress}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ccc',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: isSavingAddress ? 'wait' : 'pointer',
+                        fontSize: '14px'
+                      }}
                     >
-                      Save
+                      Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="field-value">{kycData.address}</div>
+                <div className="field-value">{kycData.address || 'Not provided'}</div>
               )}
             </div>
           </div>

@@ -35,12 +35,9 @@ class UserService {
 
     try {
       const response = await apiClient.post(`${this.baseUrl}/register`, userData)
-      // Backend returns: { data: { user, token }, message, status }
-      // Store token if provided
-      if (response.data && response.data.token) {
-        localStorage.setItem('authToken', response.data.token)
-        localStorage.setItem('isLoggedIn', 'true')
-        localStorage.setItem('userRole', response.data.user?.role || 'user')
+      // Only store auth token (standard practice for JWT)
+      if (response.token) {
+        localStorage.setItem('authToken', response.token)
       }
       return response
     } catch (error) {
@@ -61,13 +58,9 @@ class UserService {
 
     try {
       const response = await apiClient.post(`${this.baseUrl}/login`, credentials)
-      // Backend returns: { data: { user, token }, message, status }
-      // Store token if provided
-      if (response.data && response.data.token) {
-        localStorage.setItem('authToken', response.data.token)
-        localStorage.setItem('isLoggedIn', 'true')
-        localStorage.setItem('userRole', response.data.user?.role || 'user')
-        localStorage.setItem('loginMethod', credentials.loginMethod || 'email')
+      // Only store auth token (standard practice for JWT)
+      if (response.token) {
+        localStorage.setItem('authToken', response.token)
       }
       return response
     } catch (error) {
@@ -88,11 +81,29 @@ class UserService {
     try {
       await apiClient.post(`${this.baseUrl}/logout`)
     } finally {
-      // Clear local storage
+      // Only clear auth token
       localStorage.removeItem('authToken')
-      localStorage.removeItem('isLoggedIn')
-      localStorage.removeItem('userRole')
-      localStorage.removeItem('loginMethod')
+    }
+  }
+
+  /**
+   * Check if user is logged in by verifying token with backend
+   * @returns {Promise<Object|null>} User object if logged in, null otherwise
+   */
+  async checkAuthStatus() {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      return null
+    }
+
+    try {
+      // Verify token with backend
+      const response = await apiClient.get(`${this.baseUrl}/profile`)
+      return response.user || null
+    } catch (error) {
+      // Token invalid or expired
+      localStorage.removeItem('authToken')
+      return null
     }
   }
 
@@ -221,33 +232,29 @@ class UserService {
 
   async mockLogout() {
     await new Promise(resolve => setTimeout(resolve, 200))
-    localStorage.removeItem('isLoggedIn')
-    localStorage.removeItem('userRole')
-    localStorage.removeItem('loginMethod')
-    localStorage.removeItem('currentUser')
     localStorage.removeItem('authToken')
     return { message: 'Logout successful' }
   }
 
   async mockGetProfile() {
     await new Promise(resolve => setTimeout(resolve, 300))
-    const stored = localStorage.getItem('currentUser')
-    if (stored) {
-      return JSON.parse(stored)
-    }
+    // Mock: Return empty profile (should fetch from API)
     return {
-      id: 1,
-      email: 'user@example.com',
-      name: 'User',
-      role: 'user',
+      user: {
+        id: 1,
+        email: 'user@example.com',
+        name: 'User',
+        role: 'user',
+      }
     }
   }
 
   async mockUpdateProfile(profileData) {
     await new Promise(resolve => setTimeout(resolve, 500))
     const current = await this.mockGetProfile()
-    const updated = { ...current, ...profileData, updatedAt: new Date().toISOString() }
-    localStorage.setItem('currentUser', JSON.stringify(updated))
+    const updated = { 
+      user: { ...current.user, ...profileData, updatedAt: new Date().toISOString() }
+    }
     return updated
   }
 

@@ -11,50 +11,20 @@ const AdminAnalytics = () => {
   })
 
   useEffect(() => {
-    // Generate mock analytics data
-    const generateData = () => {
-      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90
-      const usageTrends = []
-      const sessionVolumes = []
-      const walletActivity = []
-      const revenueData = []
-
-      for (let i = days - 1; i >= 0; i--) {
-        const date = new Date()
-        date.setDate(date.getDate() - i)
-        
-        usageTrends.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          users: Math.floor(Math.random() * 50) + 100,
-          providers: Math.floor(Math.random() * 5) + 10,
-        })
-
-        sessionVolumes.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          sessions: Math.floor(Math.random() * 20) + 30,
-        })
-
-        walletActivity.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          transactions: Math.floor(Math.random() * 15) + 20,
-          volume: Math.floor(Math.random() * 5000) + 10000,
-        })
-
-        revenueData.push({
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          revenue: Math.floor(Math.random() * 2000) + 3000,
-        })
-      }
-
+    // Load real analytics data from localStorage or API
+    const loadAnalytics = () => {
+      const storedData = JSON.parse(localStorage.getItem('analyticsData') || '{}')
+      
+      // If no stored data, initialize with empty arrays
       setAnalyticsData({
-        usageTrends,
-        sessionVolumes,
-        walletActivity,
-        revenueData,
+        usageTrends: storedData.usageTrends || [],
+        sessionVolumes: storedData.sessionVolumes || [],
+        walletActivity: storedData.walletActivity || [],
+        revenueData: storedData.revenueData || [],
       })
     }
 
-    generateData()
+    loadAnalytics()
   }, [timeRange])
 
   const maxUsers = Math.max(...analyticsData.usageTrends.map(d => d.users), 0)
@@ -62,10 +32,12 @@ const AdminAnalytics = () => {
   const maxTransactions = Math.max(...analyticsData.walletActivity.map(d => d.transactions), 0)
   const maxRevenue = Math.max(...analyticsData.revenueData.map(d => d.revenue), 0)
 
-  const totalRevenue = analyticsData.revenueData.reduce((sum, d) => sum + d.revenue, 0)
-  const totalSessions = analyticsData.sessionVolumes.reduce((sum, d) => sum + d.sessions, 0)
-  const totalTransactions = analyticsData.walletActivity.reduce((sum, d) => sum + d.transactions, 0)
-  const avgSessionDuration = 45 // Mock data
+  const totalRevenue = analyticsData.revenueData.reduce((sum, d) => sum + (d.revenue || 0), 0)
+  const totalSessions = analyticsData.sessionVolumes.reduce((sum, d) => sum + (d.sessions || 0), 0)
+  const totalTransactions = analyticsData.walletActivity.reduce((sum, d) => sum + (d.transactions || 0), 0)
+  const avgSessionDuration = analyticsData.sessionVolumes.length > 0 
+    ? Math.round(analyticsData.sessionVolumes.reduce((sum, d) => sum + (d.avgDuration || 0), 0) / analyticsData.sessionVolumes.length)
+    : 0
 
   return (
     <div className="admin-analytics">
@@ -102,7 +74,7 @@ const AdminAnalytics = () => {
           <div className="kpi-content">
             <span className="kpi-label">Total Revenue</span>
             <span className="kpi-value">${totalRevenue.toLocaleString()}</span>
-            <span className="kpi-trend positive">+15.2% vs previous period</span>
+            <span className="kpi-trend"></span>
           </div>
         </div>
         <div className="kpi-card">
@@ -110,7 +82,7 @@ const AdminAnalytics = () => {
           <div className="kpi-content">
             <span className="kpi-label">Total Sessions</span>
             <span className="kpi-value">{totalSessions.toLocaleString()}</span>
-            <span className="kpi-trend positive">+8.7% vs previous period</span>
+            <span className="kpi-trend"></span>
           </div>
         </div>
         <div className="kpi-card">
@@ -118,7 +90,7 @@ const AdminAnalytics = () => {
           <div className="kpi-content">
             <span className="kpi-label">Wallet Transactions</span>
             <span className="kpi-value">{totalTransactions.toLocaleString()}</span>
-            <span className="kpi-trend positive">+22.1% vs previous period</span>
+            <span className="kpi-trend"></span>
           </div>
         </div>
         <div className="kpi-card">
@@ -126,7 +98,7 @@ const AdminAnalytics = () => {
           <div className="kpi-content">
             <span className="kpi-label">Avg. Session Duration</span>
             <span className="kpi-value">{avgSessionDuration} min</span>
-            <span className="kpi-trend neutral">Stable</span>
+            <span className="kpi-trend"></span>
           </div>
         </div>
       </div>
@@ -265,22 +237,22 @@ const AdminAnalytics = () => {
         <div className="insights-card">
           <h3 className="insights-title">Key Insights</h3>
           <ul className="insights-list">
-            <li>
-              <span className="insight-icon">📈</span>
-              <span>User growth has increased by 15% compared to the previous period</span>
-            </li>
-            <li>
-              <span className="insight-icon">💼</span>
-              <span>Provider engagement is at an all-time high with 95% active rate</span>
-            </li>
-            <li>
-              <span className="insight-icon">🔗</span>
-              <span>Blockchain transactions show strong adoption with 22% increase</span>
-            </li>
-            <li>
-              <span className="insight-icon">💰</span>
-              <span>Revenue is trending upward, indicating healthy platform growth</span>
-            </li>
+            {(() => {
+              const insights = JSON.parse(localStorage.getItem('analyticsInsights') || '[]')
+              return insights.length === 0 ? (
+                <li>
+                  <span className="insight-icon">ℹ️</span>
+                  <span>No insights available. Analytics will populate as data is collected.</span>
+                </li>
+              ) : (
+                insights.map((insight, index) => (
+                  <li key={index}>
+                    <span className="insight-icon">{insight.icon || '📊'}</span>
+                    <span>{insight.text}</span>
+                  </li>
+                ))
+              )
+            })()}
           </ul>
         </div>
       </div>

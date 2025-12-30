@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import LoginSuccess from './LoginSuccess'
+import userService from '../services/userService'
 import './Login.css'
-import userService from '../services/userService.js'
 
-const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onToggleMode }) => {
+const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onToggleMode, onNavigateToProviderLogin }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,9 +25,9 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
   const [showWalletModal, setShowWalletModal] = useState(false)
   const [availableWallets, setAvailableWallets] = useState([])
   const [isConnecting, setIsConnecting] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [loginError, setLoginError] = useState('')
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
 
   // Derive mode flags from loginMode prop
   const isProviderMode = loginMode === 'provider'
@@ -116,6 +116,9 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
   const handleSubmit = async (e) => {
     e.preventDefault()
     
+    // Clear previous errors
+    setLoginError('')
+    
     // Mark all fields as touched
     setTouched({
       email: true,
@@ -136,182 +139,110 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
       return
     }
 
-    setIsSubmitting(true)
-    setLoginError('')
+    // Save remember password preference
+    if (formData.rememberPassword) {
+      localStorage.setItem('rememberEmail', formData.email)
+    } else {
+      localStorage.removeItem('rememberEmail')
+    }
+
+    // Set loading state
+    setIsLoading(true)
 
     try {
-      // Send login credentials to backend API
-      const credentials = {
+      // Call the backend API to login
+      const response = await userService.login({
         email: formData.email,
         password: formData.password,
         loginMethod: 'email'
-      }
+      })
 
-      const response = await userService.login(credentials)
-
-      // Login successful - backend validates user exists and password matches
-      if (response.data && response.data.user) {
-        const user = response.data.user
-
-        // Save remember password preference
-        if (formData.rememberPassword) {
-          localStorage.setItem('rememberEmail', formData.email)
-        } else {
-          localStorage.removeItem('rememberEmail')
-        }
-
+      // Login successful - userService already handles storing token and session
+      if (response.user) {
         // Save current user for Header component
-        const currentUser = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role || loginMode || 'user',
-        }
-        localStorage.setItem('currentUser', JSON.stringify(currentUser))
-
-        // Save login status and role
-        localStorage.setItem('isLoggedIn', 'true')
-        localStorage.setItem('userRole', user.role || loginMode || 'user')
-        localStorage.setItem('loginMethod', 'email')
-        
-        // Save last login time
+        localStorage.setItem('currentUser', JSON.stringify(response.user))
         localStorage.setItem('lastLoginTime', new Date().toLocaleString())
-
-        // Show success animation first
+        
+        // Show success animation - onLogin will be called after animation completes
         setShowSuccessAnimation(true)
+        setIsLoading(false)
       }
     } catch (error) {
-      console.error('Login error:', error)
+      // Handle login errors
+      setIsLoading(false)
+      console.error('Login failed:', error)
       
-      // Handle specific error messages from backend
-      let errorMessage = 'Login failed. Please check your credentials and try again.'
+      // Extract error message from backend response
+      let errorMessage = 'Login failed. Please try again.'
       
-      if (error.response?.data?.error) {
-        const backendError = error.response.data.error
-        errorMessage = backendError.message || errorMessage
-        
-        // Show specific messages based on error code
-        if (backendError.code === 'USER_NOT_FOUND') {
-          errorMessage = 'User not found. Please check your email or sign up for a new account.'
-        } else if (backendError.code === 'INVALID_PASSWORD') {
-          errorMessage = 'Invalid password. Please check your password and try again.'
-        } else if (backendError.code === 'INVALID_CREDENTIALS') {
-          errorMessage = 'Invalid email or password. Please check your credentials and try again.'
-        }
+      if (error.data?.error?.message) {
+        // Backend error format: { error: { message: "...", code: "...", status: 401 } }
+        errorMessage = error.data.error.message
       } else if (error.message) {
         errorMessage = error.message
+      } else if (error.status === 401) {
+        errorMessage = 'User not found or invalid email/password. Please check your credentials and try again.'
+      } else if (error.status === 404) {
+        errorMessage = 'User not found. Please check your email and try again.'
+      } else if (error.status === 400) {
+        errorMessage = 'Invalid email or password format. Please check your input.'
       }
       
       setLoginError(errorMessage)
-      setIsSubmitting(false)
       
-      // Clear password field on error
-      setFormData({
-        ...formData,
-        password: ''
-      })
+      // Show error popup
+      alert(errorMessage)
     }
   }
 
-  const handleGoogleLogin = async () => {
-    try {
-      setIsConnecting(true)
-      
-      // Get OAuth URL from backend
-      const API_URL = (import.meta.env.VITE_USER_SERVICE_URL || 'http://localhost:3001').replace('/api', '')
-      const response = await fetch(`${API_URL}/api/auth/google?role=${loginMode || 'user'}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.authUrl) {
-        // Redirect to Google OAuth
-        window.location.href = data.authUrl
-      } else {
-        // Check if it's a configuration error
-        if (data.error?.code === 'GOOGLE_OAUTH_NOT_CONFIGURED' || data.error?.setupRequired) {
-          alert(`Google Sign-In is not configured.\n\nPlease:\n1. Set up Google OAuth in Google Cloud Console\n2. Add credentials to backend/authentication/.env file\n3. See GOOGLE_OAUTH_SETUP.md for detailed instructions\n\nError: ${data.error?.message}`)
-        } else {
-          throw new Error(data.error?.message || 'Failed to initiate Google login')
-        }
-      }
-    } catch (error) {
-      console.error('Google login error:', error)
-      
-      // Check if it's a network error
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        alert(`Cannot connect to backend server.\n\nPlease ensure:\n1. Backend server is running on port 3001\n2. Backend URL is correct\n3. No firewall blocking the connection\n\nError: ${error.message}`)
-      } else {
-        alert(`Google login failed: ${error.message}`)
-      }
-      setIsConnecting(false)
+  const handleGoogleLogin = () => {
+    // Simulate Google login
+    alert('Google login will be integrated with Google OAuth')
+    
+    // Create user from Google (demo)
+    const currentUser = {
+      id: Date.now().toString(),
+      name: 'Google User',
+      email: 'user@gmail.com',
+      role: loginMode || 'user',
     }
+    
+    // Google login - will be handled by backend API
+    // For now, just show success (backend integration needed)
+    alert('Google login will be integrated with backend OAuth')
+    // Show success animation first
+    setShowSuccessAnimation(true)
   }
 
   const handleWalletLogin = () => {
-    console.log('Wallet login button clicked')
-    console.log('Checking for available wallets...')
-    console.log('window.solana:', window.solana)
-    console.log('window.solflare:', window.solflare)
-    console.log('window.backpack:', window.backpack)
-    
     // Always show wallet selection modal
     const wallets = []
     
     // Check for Phantom wallet
     if (window.solana && window.solana.isPhantom) {
-      console.log('Phantom wallet detected')
       wallets.push({
         name: 'Phantom',
         icon: '👻',
         provider: window.solana,
       })
-    } else {
-      console.log('Phantom wallet not detected')
-      if (window.solana) {
-        console.log('window.solana exists but isPhantom is false:', window.solana)
-      }
     }
     
     // Check for Solflare
     if (window.solflare) {
-      console.log('Solflare wallet detected')
       wallets.push({
         name: 'Solflare',
         icon: '🔥',
         provider: window.solflare,
       })
-    } else {
-      console.log('Solflare wallet not detected')
     }
     
     // Check for Backpack
     if (window.backpack) {
-      console.log('Backpack wallet detected')
       wallets.push({
         name: 'Backpack',
         icon: '🎒',
         provider: window.backpack,
       })
-    } else {
-      console.log('Backpack wallet not detected')
-    }
-    
-    console.log('Available wallets:', wallets.length, wallets.map(w => w.name))
-    
-    if (wallets.length === 0) {
-      const installMessage = 'No Solana wallets detected.\n\n' +
-        'Please install one of the following wallet extensions:\n' +
-        '• Phantom: https://phantom.app/\n' +
-        '• Solflare: https://solflare.com/\n' +
-        '• Backpack: https://www.backpack.app/\n\n' +
-        'After installing, refresh this page and try again.'
-      alert(installMessage)
-      return
     }
     
     setAvailableWallets(wallets)
@@ -362,141 +293,40 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
     }
     
     setAvailableWallets(wallets)
-    console.log('Wallets checked on mount:', wallets.length)
   }
 
   const connectWallet = async (wallet) => {
     setIsConnecting(true)
-    console.log('Attempting to connect wallet:', wallet.name)
-    
     try {
       const provider = wallet.provider
       
       if (!provider) {
-        throw new Error('Wallet provider not found. Please make sure your wallet extension is installed and enabled.')
+        throw new Error('Wallet provider not found')
       }
       
-      console.log('Wallet provider found:', provider)
-      console.log('Provider methods:', Object.keys(provider))
+      // Always require a fresh connection - disconnect first if already connected
+      // This ensures user must enter wallet passcode every time
+      try {
+        if (provider.isConnected && typeof provider.disconnect === 'function') {
+          await provider.disconnect()
+        }
+      } catch (disconnectError) {
+        // Ignore disconnect errors, proceed with connection
+        console.log('Disconnect not needed or failed:', disconnectError)
+      }
       
-      // Check if wallet is available
-      if (!provider.isPhantom && !provider.connect && wallet.name === 'Phantom') {
-        throw new Error('Phantom wallet not properly initialized. Please refresh the page.')
+      // Always call connect() which will prompt for wallet passcode
+      if (typeof provider.connect !== 'function') {
+        throw new Error('Wallet does not support connection. Please try a different wallet.')
       }
       
-      let publicKey = null
-      
-      // Handle Phantom wallet specifically
-      if (wallet.name === 'Phantom' && window.solana && window.solana.isPhantom) {
-        console.log('Connecting to Phantom wallet...')
-        console.log('Phantom wallet state:', {
-          isPhantom: window.solana.isPhantom,
-          isConnected: window.solana.isConnected,
-          publicKey: window.solana.publicKey ? window.solana.publicKey.toString() : null
-        })
-        
-        try {
-          // Check if already connected
-          if (window.solana.isConnected && window.solana.publicKey) {
-            console.log('Phantom already connected, using existing connection...')
-            publicKey = window.solana.publicKey.toString()
-          } else {
-            // Disconnect first if needed (some wallets require this)
-            if (window.solana.isConnected) {
-              try {
-                await window.solana.disconnect()
-                console.log('Disconnected existing Phantom connection')
-              } catch (disconnectErr) {
-                console.log('Disconnect not needed or failed:', disconnectErr)
-              }
-            }
-            
-            // Connect to Phantom wallet
-            console.log('Calling window.solana.connect()...')
-            const response = await window.solana.connect({ onlyIfTrusted: false })
-            console.log('Phantom connection response:', response)
-            
-            // Get public key from response or provider
-            if (response && response.publicKey) {
-              publicKey = response.publicKey.toString()
-            } else if (window.solana.publicKey) {
-              publicKey = window.solana.publicKey.toString()
-            } else {
-              throw new Error('Could not retrieve public key from Phantom wallet')
-            }
-          }
-        } catch (phantomError) {
-          console.error('Phantom connection error:', phantomError)
-          const errorMsg = phantomError.message || phantomError.toString() || 'Unknown error'
-          throw new Error(`Phantom wallet connection failed: ${errorMsg}. Please make sure your wallet is unlocked and approve the connection request.`)
-        }
-      }
-      // Handle Solflare wallet
-      else if (wallet.name === 'Solflare' && window.solflare) {
-        console.log('Connecting to Solflare wallet...')
-        try {
-          if (typeof window.solflare.connect === 'function') {
-            const response = await window.solflare.connect()
-            console.log('Solflare connection response:', response)
-            
-            if (response && response.publicKey) {
-              publicKey = response.publicKey.toString()
-            } else if (window.solflare.publicKey) {
-              publicKey = window.solflare.publicKey.toString()
-            }
-          } else {
-            // Try alternative method
-            publicKey = window.solflare.publicKey ? window.solflare.publicKey.toString() : null
-          }
-        } catch (solflareError) {
-          console.error('Solflare connection error:', solflareError)
-          throw new Error(`Solflare wallet connection failed: ${solflareError.message || 'Please approve the connection in your wallet'}`)
-        }
-      }
-      // Handle Backpack wallet
-      else if (wallet.name === 'Backpack' && window.backpack) {
-        console.log('Connecting to Backpack wallet...')
-        try {
-          if (typeof window.backpack.connect === 'function') {
-            const response = await window.backpack.connect()
-            console.log('Backpack connection response:', response)
-            
-            if (response && response.publicKey) {
-              publicKey = response.publicKey.toString()
-            } else if (window.backpack.publicKey) {
-              publicKey = window.backpack.publicKey.toString()
-            }
-          } else {
-            // Try alternative method
-            publicKey = window.backpack.publicKey ? window.backpack.publicKey.toString() : null
-          }
-        } catch (backpackError) {
-          console.error('Backpack connection error:', backpackError)
-          throw new Error(`Backpack wallet connection failed: ${backpackError.message || 'Please approve the connection in your wallet'}`)
-        }
-      }
-      // Generic fallback
-      else {
-        console.log('Using generic connection method...')
-        if (provider.isConnected && provider.publicKey) {
-          publicKey = provider.publicKey.toString()
-        } else if (typeof provider.connect === 'function') {
-          const response = await provider.connect()
-          if (response && response.publicKey) {
-            publicKey = response.publicKey.toString()
-          } else if (provider.publicKey) {
-            publicKey = provider.publicKey.toString()
-          }
-        } else {
-          throw new Error('Wallet connection method not supported for this wallet type.')
-        }
-      }
+      // Connect to wallet - this will prompt for passcode
+      const response = await provider.connect()
+      const publicKey = response.publicKey ? response.publicKey.toString() : response.toString()
       
       if (!publicKey) {
-        throw new Error('Failed to get wallet address. Please make sure your wallet is unlocked and try again.')
+        throw new Error('Failed to get wallet address')
       }
-      
-      console.log('Wallet connected successfully. Public key:', publicKey)
       
       // Save wallet connection
       const walletData = {
@@ -539,67 +369,30 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         }
       }
       
-      console.log('Saving user data:', currentUser)
-      
-      // Save all login data
+      // Wallet login - store wallet connection info only (not user data)
+      // User data should come from backend API after wallet authentication
       localStorage.setItem('walletData', JSON.stringify(walletData))
-      localStorage.setItem('currentUser', JSON.stringify(currentUser))
-      localStorage.setItem('isLoggedIn', 'true')
-      localStorage.setItem('loginMethod', 'wallet')
-      localStorage.setItem('userRole', loginMode || 'user')
-      localStorage.setItem('lastLoginTime', new Date().toLocaleString())
       
-      console.log('Login data saved to localStorage')
-      console.log('isLoggedIn:', localStorage.getItem('isLoggedIn'))
-      console.log('userRole:', localStorage.getItem('userRole'))
+      // TODO: Call backend API to authenticate with wallet and get user data
+      // For now, this is a placeholder - backend wallet auth needed
       
       setShowWalletModal(false)
       setIsConnecting(false)
       
-      // Show success animation first, which will trigger login
-      console.log('Showing success animation...')
+      // Show success animation first
       setShowSuccessAnimation(true)
-      
-      // Fallback: Ensure login happens even if animation fails
-      // This is a safety mechanism in case the animation callback doesn't fire
-      setTimeout(() => {
-        const shouldBeLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
-        if (shouldBeLoggedIn && onLogin) {
-          console.log('Fallback: Triggering login directly after timeout')
-          onLogin()
-        }
-      }, 3000) // Wait 3 seconds (after animation completes) before fallback
     } catch (error) {
       console.error('Error connecting wallet:', error)
-      console.error('Error details:', {
-        code: error.code,
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      })
-      
       setIsConnecting(false)
       setShowWalletModal(false)
       
-      let errorMessage = 'Failed to connect wallet.'
-      
       if (error.code === 4001) {
-        errorMessage = 'Connection rejected. Please approve the connection request in your wallet popup.'
-      } else if (error.code === -32002) {
-        errorMessage = 'Connection request already pending. Please check your wallet extension and approve the pending request.'
+        alert('Connection rejected. Please approve the connection request in your wallet.')
       } else if (error.message) {
-        errorMessage = `Failed to connect wallet: ${error.message}`
-      } else if (error.toString && error.toString().includes('User rejected')) {
-        errorMessage = 'Connection was rejected. Please try again and approve the connection in your wallet.'
+        alert(`Failed to connect wallet: ${error.message}`)
       } else {
-        errorMessage = 'Failed to connect wallet. Please ensure:\n' +
-          '1. Your wallet extension is installed and enabled\n' +
-          '2. Your wallet is unlocked\n' +
-          '3. You approve the connection request in the wallet popup\n' +
-          '4. Try refreshing the page if the issue persists'
+        alert('Failed to connect wallet. Please make sure your wallet extension is installed and unlocked.')
       }
-      
-      alert(errorMessage)
     }
   }
 
@@ -631,7 +424,13 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                 <button
                   type="button"
                   className={`mode-toggle-btn ${isProviderMode ? 'active' : ''}`}
-                  onClick={() => onToggleMode && onToggleMode('provider')}
+                  onClick={() => {
+                    if (onNavigateToProviderLogin) {
+                      onNavigateToProviderLogin()
+                    } else if (onToggleMode) {
+                      onToggleMode('provider')
+                    }
+                  }}
                 >
                   🏥 Provider
                 </button>
@@ -755,26 +554,26 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
               </div>
             </div>
 
+            {/* Error Message Display */}
             {loginError && (
-              <div className="error-message" style={{ 
-                marginBottom: '12px', 
-                textAlign: 'center',
-                padding: '10px',
-                backgroundColor: '#fff5f5',
-                border: '1px solid #e74c3c',
+              <div className="error-message-container" style={{
+                marginBottom: '15px',
+                padding: '12px',
+                backgroundColor: '#fee',
+                border: '1px solid #fcc',
                 borderRadius: '8px',
-                color: '#e74c3c'
+                color: '#c33'
               }}>
-                {loginError}
+                <strong>⚠️ Login Failed:</strong> {loginError}
               </div>
             )}
 
             <button 
               type="submit" 
               className="login-button"
-              disabled={isSubmitting}
+              disabled={isLoading}
             >
-              {isSubmitting ? 'Logging in...' : 'Login'}
+              {isLoading ? 'Logging in...' : 'Login'}
             </button>
             </form>
 
@@ -883,6 +682,7 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         <LoginSuccess 
           onAnimationComplete={() => {
             setShowSuccessAnimation(false)
+            // Call onLogin after animation completes to navigate to dashboard
             if (onLogin) {
               onLogin()
             }

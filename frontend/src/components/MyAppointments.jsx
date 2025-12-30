@@ -19,13 +19,36 @@ const MyAppointments = () => {
         // Use service to get upcoming appointments
         const allAppointments = await appointmentService.getUpcomingAppointments()
         
+        console.log('MyAppointments - Fetched appointments:', allAppointments)
+        
+        // Transform backend data format to component format
+        // Backend returns appointmentDate, but component expects dateTime
+        const transformedAppointments = allAppointments.map(apt => ({
+          id: apt.id,
+          providerId: apt.providerId,
+          providerName: apt.providerName || 'Provider',
+          providerTitle: apt.providerTitle || apt.providerSpecialty || 'Wellness Professional',
+          dateTime: apt.appointmentDate || apt.dateTime, // Map appointmentDate to dateTime
+          appointmentDate: apt.appointmentDate, // Keep original for compatibility
+          sessionType: apt.sessionType || 'Video Consultation',
+          notes: apt.notes,
+          status: apt.status || 'scheduled',
+          createdAt: apt.createdAt || apt.created_at
+        }))
+        
         // Filter by user if needed (service should handle this, but keeping for compatibility)
-        const userAppointments = allAppointments.filter(apt => 
+        const userAppointments = transformedAppointments.filter(apt => 
           !apt.userId || apt.userId === userId
         )
         
         // Sort by date
-        userAppointments.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+        userAppointments.sort((a, b) => {
+          const dateA = new Date(a.dateTime || a.appointmentDate)
+          const dateB = new Date(b.dateTime || b.appointmentDate)
+          return dateA - dateB
+        })
+        
+        console.log('MyAppointments - Transformed appointments:', userAppointments)
         setAppointments(userAppointments)
       } catch (error) {
         console.error('Error loading appointments:', error)
@@ -110,12 +133,31 @@ const MyAppointments = () => {
       
       // Reload appointments to reflect the change
       const allAppointments = await appointmentService.getUpcomingAppointments()
+      
+      // Transform backend data format
+      const transformedAppointments = allAppointments.map(apt => ({
+        id: apt.id,
+        providerId: apt.providerId,
+        providerName: apt.providerName || 'Provider',
+        providerTitle: apt.providerTitle || apt.providerSpecialty || 'Wellness Professional',
+        dateTime: apt.appointmentDate || apt.dateTime,
+        appointmentDate: apt.appointmentDate,
+        sessionType: apt.sessionType || 'Video Consultation',
+        notes: apt.notes,
+        status: apt.status || 'scheduled',
+        createdAt: apt.createdAt || apt.created_at
+      }))
+      
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
       const userId = currentUser.id || 'current-user'
-      const userAppointments = allAppointments.filter(apt => 
+      const userAppointments = transformedAppointments.filter(apt => 
         !apt.userId || apt.userId === userId
       )
-      userAppointments.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+      userAppointments.sort((a, b) => {
+        const dateA = new Date(a.dateTime || a.appointmentDate)
+        const dateB = new Date(b.dateTime || b.appointmentDate)
+        return dateA - dateB
+      })
       setAppointments(userAppointments)
     } catch (error) {
       console.error('Error cancelling appointment:', error)

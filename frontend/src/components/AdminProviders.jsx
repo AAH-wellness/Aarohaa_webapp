@@ -8,15 +8,9 @@ const AdminProviders = () => {
   const [verificationFilter, setVerificationFilter] = useState('all')
 
   useEffect(() => {
-    // Load providers from localStorage or mock data
-    const mockProviders = [
-      { id: 1, name: 'Dr. Maya Patel', email: 'maya.patel@example.com', specialty: 'Yoga Therapy', status: 'verified', appointments: 45, earnings: 2250, joinDate: '2024-01-10' },
-      { id: 2, name: 'Sarah Rodriguez', email: 'sarah.rodriguez@example.com', specialty: 'Meditation', status: 'verified', appointments: 38, earnings: 1900, joinDate: '2024-01-15' },
-      { id: 3, name: 'James Chen', email: 'james.chen@example.com', specialty: 'Mindfulness', status: 'pending', appointments: 0, earnings: 0, joinDate: '2024-02-20' },
-    ]
-
+    // Load providers from localStorage (real data only)
     const storedProviders = JSON.parse(localStorage.getItem('adminProviders') || '[]')
-    setProviders(storedProviders.length > 0 ? storedProviders : mockProviders)
+    setProviders(storedProviders)
   }, [])
 
   useEffect(() => {

@@ -1,0 +1,22 @@
+{
+  "name": "aarohaa-backend",
+  "version": "1.0.0",
+  "description": "Backend microservices for Aarohaa Wellness Platform",
+  "private": true,
+  "scripts": {
+    "dev": "cd authentication && npm run dev",
+    "dev:auth": "cd authentication && npm run dev",
+    "start": "cd authentication && npm start",
+    "start:auth": "cd authentication && npm start",
+    "install:all": "cd authentication && npm install"
+  },
+  "keywords": [
+    "microservices",
+    "backend",
+    "aarohaa",
+    "wellness"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+

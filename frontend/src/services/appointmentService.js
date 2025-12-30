@@ -17,7 +17,8 @@ import API_CONFIG from './config.js'
 
 class AppointmentService {
   constructor() {
-    this.baseUrl = `${API_CONFIG.APPOINTMENT_SERVICE}/appointments`
+    // Use authentication service for bookings (since it's in the same backend for now)
+    this.baseUrl = `${API_CONFIG.USER_SERVICE}/users/bookings`
     this.useMock = API_CONFIG.USE_MOCK_SERVICES
   }
 
@@ -70,7 +71,19 @@ class AppointmentService {
     }
 
     try {
-      return await apiClient.post(this.baseUrl, appointmentData)
+      // Map appointmentData to booking format
+      const bookingData = {
+        providerId: appointmentData.providerId,
+        appointmentDate: appointmentData.dateTime || appointmentData.appointmentDate, // Support both field names
+        sessionType: appointmentData.sessionType,
+        notes: appointmentData.notes
+      }
+      const response = await apiClient.post(this.baseUrl, bookingData)
+      console.log('appointmentService.createAppointment - Full response:', response)
+      
+      // Backend returns { booking: {...}, message: '...' }
+      // Return the full response so frontend can access both booking and message
+      return response
     } catch (error) {
       console.error('Create appointment error:', error)
       throw error
@@ -107,7 +120,7 @@ class AppointmentService {
     }
 
     try {
-      return await apiClient.delete(`${this.baseUrl}/${appointmentId}`)
+      return await apiClient.post(`${this.baseUrl}/cancel`, { bookingId: appointmentId })
     } catch (error) {
       console.error('Cancel appointment error:', error)
       throw error
@@ -133,17 +146,17 @@ class AppointmentService {
   }
 
   /**
-   * Get provider's appointments
-   * @param {string} providerId - Provider ID
+   * Get provider's appointments (for logged-in provider)
    * @returns {Promise<Array>} Provider's appointments
    */
-  async getProviderAppointments(providerId) {
+  async getProviderAppointments() {
     if (this.useMock) {
-      return this.mockGetProviderAppointments(providerId)
+      return this.mockGetProviderAppointments()
     }
 
     try {
-      return await apiClient.get(`${this.baseUrl}/provider/${providerId}`)
+      const response = await apiClient.get(`${API_CONFIG.USER_SERVICE}/users/provider/bookings`)
+      return response.bookings || response || []
     } catch (error) {
       console.error('Get provider appointments error:', error)
       throw error
@@ -160,7 +173,8 @@ class AppointmentService {
     }
 
     try {
-      return await apiClient.get(`${this.baseUrl}/upcoming`)
+      const response = await apiClient.get(`${this.baseUrl}/upcoming`)
+      return response.bookings || response || []
     } catch (error) {
       console.error('Get upcoming appointments error:', error)
       throw error

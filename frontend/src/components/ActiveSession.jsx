@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import BookingRequiredModal from './BookingRequiredModal'
+import appointmentService from '../services/appointmentService'
 import './ActiveSession.css'
 
 const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
@@ -10,17 +11,53 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [notes, setNotes] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [checkingAppointments, setCheckingAppointments] = useState(true)
+  const [hasAppointment, setHasAppointment] = useState(false)
+  const [currentAppointment, setCurrentAppointment] = useState(null)
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
   useEffect(() => {
-    // Check if session is booked when component mounts or when hasBookedSession changes
-    if (!hasBookedSession) {
+    // Check appointments from API when component mounts
+    const checkAppointments = async () => {
+      setCheckingAppointments(true)
+      try {
+        const appointments = await appointmentService.getUpcomingAppointments()
+        if (appointments && appointments.length > 0) {
+          setHasAppointment(true)
+          // Get the next upcoming appointment
+          const now = new Date()
+          const upcoming = appointments
+            .filter(apt => new Date(apt.dateTime) > now)
+            .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+          
+          if (upcoming.length > 0) {
+            setCurrentAppointment(upcoming[0])
+          }
+        } else {
+          setHasAppointment(false)
+          setShowModal(true)
+        }
+      } catch (error) {
+        console.error('Error checking appointments:', error)
+        setHasAppointment(false)
+        setShowModal(true)
+      } finally {
+        setCheckingAppointments(false)
+      }
+    }
+
+    checkAppointments()
+  }, [])
+
+  useEffect(() => {
+    // Also respect the prop if provided
+    if (hasBookedSession === false && !hasAppointment) {
       setShowModal(true)
     } else {
       setShowModal(false)
     }
-  }, [hasBookedSession])
+  }, [hasBookedSession, hasAppointment])
 
   useEffect(() => {
     if (isCallStarted) {
@@ -81,9 +118,10 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
   }
 
   const calculateCost = (seconds) => {
-    // Assuming $3 per minute for Dr. Maya Patel
+    // Calculate cost based on provider's rate from appointment
+    const providerRate = currentAppointment?.pricePerMin || (currentAppointment?.hourlyRate ? (currentAppointment.hourlyRate / 60) : 3)
     const minutes = seconds / 60
-    return (minutes * 3).toFixed(2)
+    return (minutes * providerRate).toFixed(2)
   }
 
   const handleStartCall = async () => {
@@ -181,27 +219,46 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
     }
   }
 
-  // Show modal if session is not booked
-  if (!hasBookedSession && showModal) {
+  // Show loading state while checking appointments
+  if (checkingAppointments) {
+    return (
+      <div className="active-session">
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>Checking appointments...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show modal if no appointment is booked
+  if ((!hasBookedSession && !hasAppointment) || showModal) {
     return (
       <div className="active-session">
         <BookingRequiredModal
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            setShowModal(false)
+            if (onNavigateToBooking) {
+              onNavigateToBooking()
+            }
+          }}
           onNavigateToBooking={onNavigateToBooking}
         />
       </div>
     )
   }
 
-  // Don't show session content if not booked
-  if (!hasBookedSession) {
+  // Don't show session content if no appointment
+  if (!hasBookedSession && !hasAppointment) {
     return null
   }
+
+  // Get provider name from current appointment
+  const providerName = currentAppointment?.providerName || 'Provider'
 
   return (
     <div className="active-session">
       <div className="session-container">
-        <h1 className="session-title">Video Session with Dr. Maya Patel</h1>
+        <h1 className="session-title">Video Session with {providerName}</h1>
 
         {isCallStarted ? (
           <>
@@ -258,7 +315,7 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
                 <div className="video-icon">📹</div>
                 <p className="video-status">
                   Ready to start your session with<br />
-                  Dr. Maya Patel
+                  {providerName}
                 </p>
               </div>
             </div>

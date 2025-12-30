@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import providerService from '../services/providerService'
+import AvailabilitySuccessModal from './AvailabilitySuccessModal'
 import './ProviderAvailability.css'
 
 const ProviderAvailability = ({ onBack }) => {
@@ -14,6 +16,9 @@ const ProviderAvailability = ({ onBack }) => {
 
   const [timezone, setTimezone] = useState('America/New_York')
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   const days = [
     { key: 'monday', label: 'Monday' },
@@ -45,17 +50,64 @@ const ProviderAvailability = ({ onBack }) => {
     })
   }
 
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      setIsLoading(true)
+      setError('')
+      try {
+        const savedAvailability = await providerService.getProviderAvailability()
+        if (savedAvailability && Object.keys(savedAvailability).length > 0) {
+          // Merge saved availability with default structure
+          const merged = { ...availability }
+          Object.keys(savedAvailability).forEach(day => {
+            if (merged[day]) {
+              merged[day] = { ...merged[day], ...savedAvailability[day] }
+            } else {
+              merged[day] = savedAvailability[day]
+            }
+          })
+          setAvailability(merged)
+        }
+      } catch (error) {
+        console.error('Error fetching availability:', error)
+        // Continue with default availability if fetch fails
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAvailability()
+  }, [])
+
   const handleSave = async () => {
     setIsSaving(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    
-    // Save to localStorage
-    localStorage.setItem('providerAvailability', JSON.stringify(availability))
-    localStorage.setItem('providerTimezone', timezone)
-    
-    setIsSaving(false)
-    alert('Availability settings saved successfully!')
+    setError('')
+    try {
+      // Include timezone in availability data
+      const availabilityData = {
+        ...availability,
+        timezone: timezone
+      }
+      
+      await providerService.updateProviderAvailability(availabilityData)
+      // Show success modal instead of alert
+      setShowSuccessModal(true)
+    } catch (error) {
+      console.error('Error saving availability:', error)
+      setError('Failed to save availability. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="provider-availability">
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>Loading availability settings...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -66,9 +118,15 @@ const ProviderAvailability = ({ onBack }) => {
         </button>
         <div>
           <h1 className="availability-title">Manage Availability</h1>
-          <p className="availability-subtitle">Set your working hours for each day of the week</p>
+          <p className="availability-subtitle">Set your working hours for each day of the week. Changes are saved immediately.</p>
         </div>
       </div>
+
+      {error && (
+        <div className="error-message" style={{ color: '#c33', padding: '10px', marginBottom: '20px' }}>
+          {error}
+        </div>
+      )}
 
       <div className="availability-container">
         <div className="availability-section">
@@ -156,9 +214,22 @@ const ProviderAvailability = ({ onBack }) => {
           </button>
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <AvailabilitySuccessModal
+          onClose={() => {
+            setShowSuccessModal(false)
+            if (onBack) {
+              onBack()
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
 
 export default ProviderAvailability
+
 

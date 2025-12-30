@@ -1,47 +1,47 @@
 import React, { useState, useEffect, useRef } from 'react'
+import userService from '../services/userService'
 import './Register.css'
-import { countryCodes, getDefaultCountry } from '../utils/countryCodes.js'
-import userService from '../services/userService.js'
 
-const Register = ({ onRegister, onNavigateToLogin }) => {
+const Register = ({ onRegister, onNavigateToLogin, role = 'user' }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    phone: '',
+    countryCode: '+1', // Default to US
     password: '',
     confirmPassword: '',
     rememberPassword: false,
-    phone: '',
-    countryCode: getDefaultCountry().dialCode,
-    dateOfBirth: '',
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [captchaCode, setCaptchaCode] = useState('')
   const [userInput, setUserInput] = useState('')
   const [captchaError, setCaptchaError] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState('')
   const [errors, setErrors] = useState({
     fullName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
-    phone: '',
-    dateOfBirth: '',
   })
   const [touched, setTouched] = useState({
     fullName: false,
     email: false,
+    phone: false,
     password: false,
     confirmPassword: false,
-    phone: false,
-    dateOfBirth: false,
   })
+  const [isLoading, setIsLoading] = useState(false)
+  const [registerError, setRegisterError] = useState('')
   const canvasRef = useRef(null)
 
   // Generate captcha code
   useEffect(() => {
-    generateCaptcha()
+    // Add a small delay to ensure canvas is mounted
+    const timer = setTimeout(() => {
+      generateCaptcha()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [])
 
   const generateCaptcha = () => {
@@ -97,10 +97,7 @@ const Register = ({ onRegister, onNavigateToLogin }) => {
       return 'Full name is required'
     }
     if (name.trim().length < 2) {
-      return 'Full name must be at least 2 characters long'
-    }
-    if (name.trim().length > 100) {
-      return 'Full name must be less than 100 characters'
+      return 'Full name must be at least 2 characters'
     }
     return ''
   }
@@ -123,13 +120,6 @@ const Register = ({ onRegister, onNavigateToLogin }) => {
     if (password.length < 6) {
       return 'Password must be at least 6 characters long'
     }
-    // Check for uppercase, lowercase, and number
-    const hasUpperCase = /[A-Z]/.test(password)
-    const hasLowerCase = /[a-z]/.test(password)
-    const hasNumber = /\d/.test(password)
-    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-      return 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-    }
     return ''
   }
 
@@ -147,43 +137,38 @@ const Register = ({ onRegister, onNavigateToLogin }) => {
     if (!phone) {
       return 'Phone number is required'
     }
-    // Basic phone validation - allows digits, spaces, hyphens
-    const phoneRegex = /^[\d\s\-]+$/
-    if (!phoneRegex.test(phone)) {
-      return 'Please enter a valid phone number (digits only)'
+    // Remove spaces, dashes, and parentheses for validation
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '')
+    // Check if it's all digits
+    if (!/^\d+$/.test(cleanPhone)) {
+      return 'Phone number must contain only digits'
     }
-    // Remove spaces and hyphens for digit count
-    const digitsOnly = phone.replace(/\D/g, '')
-    if (digitsOnly.length < 7) {
-      return 'Phone number must be at least 7 digits'
-    }
-    if (digitsOnly.length > 15) {
-      return 'Phone number must be less than 15 digits'
+    // Check length (minimum 7, maximum 15 digits)
+    if (cleanPhone.length < 7 || cleanPhone.length > 15) {
+      return 'Phone number must be between 7 and 15 digits'
     }
     return ''
   }
 
-  const validateDateOfBirth = (dateOfBirth) => {
-    if (!dateOfBirth) {
-      return 'Date of birth is required'
-    }
-    const birthDate = new Date(dateOfBirth)
-    const today = new Date()
-    const age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
-    
-    if (age < 13) {
-      return 'You must be at least 13 years old'
-    }
-    if (age > 120) {
-      return 'Please enter a valid date of birth'
-    }
-    return ''
-  }
+  // Common country codes
+  const countryCodes = [
+    { code: '+1', country: 'US/CA', flag: '🇺🇸' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+91', country: 'India', flag: '🇮🇳' },
+    { code: '+86', country: 'China', flag: '🇨🇳' },
+    { code: '+81', country: 'Japan', flag: '🇯🇵' },
+    { code: '+49', country: 'Germany', flag: '🇩🇪' },
+    { code: '+33', country: 'France', flag: '🇫🇷' },
+    { code: '+39', country: 'Italy', flag: '🇮🇹' },
+    { code: '+34', country: 'Spain', flag: '🇪🇸' },
+    { code: '+61', country: 'Australia', flag: '🇦🇺' },
+    { code: '+7', country: 'Russia', flag: '🇷🇺' },
+    { code: '+82', country: 'South Korea', flag: '🇰🇷' },
+    { code: '+55', country: 'Brazil', flag: '🇧🇷' },
+    { code: '+52', country: 'Mexico', flag: '🇲🇽' },
+    { code: '+971', country: 'UAE', flag: '🇦🇪' },
+    { code: '+65', country: 'Singapore', flag: '🇸🇬' },
+  ]
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -210,20 +195,15 @@ const Register = ({ onRegister, onNavigateToLogin }) => {
           password: validatePassword(value),
           confirmPassword: formData.confirmPassword ? validateConfirmPassword(formData.confirmPassword) : '',
         })
-      } else if (name === 'confirmPassword') {
-        setErrors({
-          ...errors,
-          confirmPassword: validateConfirmPassword(value),
-        })
       } else if (name === 'phone') {
         setErrors({
           ...errors,
           phone: validatePhone(value),
         })
-      } else if (name === 'dateOfBirth') {
+      } else if (name === 'confirmPassword') {
         setErrors({
           ...errors,
-          dateOfBirth: validateDateOfBirth(value),
+          confirmPassword: validateConfirmPassword(value),
         })
       }
     }
@@ -252,20 +232,15 @@ const Register = ({ onRegister, onNavigateToLogin }) => {
         ...errors,
         password: validatePassword(value),
       })
-    } else if (name === 'confirmPassword') {
-      setErrors({
-        ...errors,
-        confirmPassword: validateConfirmPassword(value),
-      })
     } else if (name === 'phone') {
       setErrors({
         ...errors,
         phone: validatePhone(value),
       })
-    } else if (name === 'dateOfBirth') {
+    } else if (name === 'confirmPassword') {
       setErrors({
         ...errors,
-        dateOfBirth: validateDateOfBirth(value),
+        confirmPassword: validateConfirmPassword(value),
       })
     }
   }
@@ -278,128 +253,150 @@ const Register = ({ onRegister, onNavigateToLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
+    // Clear previous errors
+    setRegisterError('')
+    
     // Mark all fields as touched
     setTouched({
       fullName: true,
       email: true,
+      phone: true,
       password: true,
       confirmPassword: true,
-      phone: true,
-      dateOfBirth: true,
     })
 
     // Validate all fields
     const fullNameError = validateFullName(formData.fullName)
     const emailError = validateEmail(formData.email)
+    const phoneError = validatePhone(formData.phone)
     const passwordError = validatePassword(formData.password)
     const confirmPasswordError = validateConfirmPassword(formData.confirmPassword)
-    const phoneError = validatePhone(formData.phone)
-    const dateOfBirthError = validateDateOfBirth(formData.dateOfBirth)
 
     setErrors({
       fullName: fullNameError,
       email: emailError,
+      phone: phoneError,
       password: passwordError,
       confirmPassword: confirmPasswordError,
-      phone: phoneError,
-      dateOfBirth: dateOfBirthError,
     })
 
     // Check if there are any validation errors
-    if (fullNameError || emailError || passwordError || confirmPasswordError || phoneError || dateOfBirthError) {
+    if (fullNameError || emailError || phoneError || passwordError || confirmPasswordError) {
+      console.log('Validation errors:', {
+        fullNameError,
+        emailError,
+        phoneError,
+        passwordError,
+        confirmPasswordError
+      })
+      // Scroll to first error
+      const firstErrorField = document.querySelector('.form-input.error')
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        firstErrorField.focus()
+      }
       return
     }
     
     // Validate captcha
-    if (userInput !== captchaCode) {
+    if (userInput.toUpperCase() !== captchaCode) {
       setCaptchaError(true)
       generateCaptcha()
       setUserInput('')
+      alert('Invalid CAPTCHA. Please enter the correct code.')
       return
     }
 
-    // Combine country code with phone number
-    const fullPhoneNumber = `${formData.countryCode}${formData.phone.replace(/\D/g, '')}`
-    
-    setIsSubmitting(true)
-    setSubmitError('')
-    
+    // Set loading state
+    setIsLoading(true)
+    console.log('Starting registration...', { email: formData.email, name: formData.fullName })
+
     try {
-      // Send registration data to backend API
-      const registrationData = {
+      // Prepare phone number with country code
+      const fullPhoneNumber = `${formData.countryCode}${formData.phone}`
+
+      console.log('Calling userService.register with:', {
+        email: formData.email,
+        name: formData.fullName,
+        phone: fullPhoneNumber,
+        role: role
+      })
+
+      // Call the backend API to register
+      const response = await userService.register({
         email: formData.email,
         password: formData.password,
         name: formData.fullName,
-        role: 'user',
         phone: fullPhoneNumber,
-        dateOfBirth: formData.dateOfBirth
-      }
-      
-      const response = await userService.register(registrationData)
-      
-      // Registration successful - backend returns user data and token
-      if (response.data && response.data.user) {
-        const user = response.data.user
+        role: role // Use the role prop (either 'user' or 'provider')
+      })
+
+      console.log('Registration response:', response)
+
+      // Registration successful - userService already handles storing token
+      if (response && response.user) {
+        console.log('Registration successful!', response.user)
         
-        // Save user data to localStorage for frontend use
-        const userData = {
-          fullName: user.name,
-          email: user.email,
-          phone: fullPhoneNumber,
-          countryCode: formData.countryCode,
-          dateOfBirth: formData.dateOfBirth,
-        }
-        localStorage.setItem('userData', JSON.stringify(userData))
-        
-        // Also save to userProfileData for Profile component
-        const userProfileData = {
-          fullName: user.name,
-          email: user.email,
-          phone: fullPhoneNumber,
-          countryCode: formData.countryCode,
-          dateOfBirth: formData.dateOfBirth,
-          address: '', // Will be set later in profile
-        }
-        localStorage.setItem('userProfileData', JSON.stringify(userProfileData))
-        
-        // Save current user
-        const currentUser = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role || 'user',
-        }
-        localStorage.setItem('currentUser', JSON.stringify(currentUser))
-        
-        // Save token if provided
-        if (response.data.token) {
-          localStorage.setItem('authToken', response.data.token)
-        }
-        
-        // Save remember password preference
+        // Save remember email preference only (not user data - that's in database)
         if (formData.rememberPassword) {
           localStorage.setItem('rememberEmail', formData.email)
+        } else {
+          localStorage.removeItem('rememberEmail')
         }
         
-        // Save login status
-        localStorage.setItem('isLoggedIn', 'true')
-        localStorage.setItem('userRole', user.role || 'user')
+        // Reset loading state
+        setIsLoading(false)
         
-        // Call onRegister callback
+        // Call onRegister callback with user role
         if (onRegister) {
-          onRegister()
+          // Pass the role to the callback so it can navigate correctly
+          onRegister(response.user.role || role)
         }
+      } else {
+        console.error('Registration response missing user data:', response)
+        setIsLoading(false)
+        setRegisterError('Registration succeeded but received invalid response. Please try logging in.')
+        alert('Registration succeeded but received invalid response. Please try logging in.')
       }
     } catch (error) {
-      console.error('Registration error:', error)
-      setSubmitError(
-        error.response?.data?.error?.message || 
-        error.message || 
-        'Registration failed. Please try again.'
-      )
-      setIsSubmitting(false)
+      // Handle registration errors
+      setIsLoading(false)
+      console.error('Registration failed:', error)
+      
+      // Extract error message
+      let errorMessage = 'Registration failed. Please try again.'
+      
+      // Check for network errors (backend not running)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Cannot connect to server. Please make sure the backend is running on port 3001.'
+      } else if (error.data?.error?.message) {
+        // Backend error format: { error: { message: "...", code: "...", status: 400 } }
+        errorMessage = error.data.error.message
+      } else if (error.message) {
+        errorMessage = error.message
+      } else if (error.status === 409) {
+        errorMessage = 'Email already registered. Please use a different email or login.'
+      } else if (error.status === 400) {
+        errorMessage = 'Invalid registration data. Please check all fields and try again.'
+      } else if (error.status === 0 || !error.status) {
+        errorMessage = 'Network error: Cannot connect to backend server. Please ensure the backend is running on http://localhost:3001'
+      }
+      
+      setRegisterError(errorMessage)
+      alert(`Registration Error: ${errorMessage}`)
     }
   }
+
+  // Debug: Log component render
+  useEffect(() => {
+    console.log('Register component rendered', { 
+      showRegister: true,
+      formData,
+      errors,
+      isLoading,
+      registerError
+    })
+  }, [formData, errors, isLoading, registerError])
 
   return (
     <div className="register-modal-form">
@@ -461,62 +458,47 @@ const Register = ({ onRegister, onNavigateToLogin }) => {
             </div>
 
             <div className="form-group">
-              <div className="phone-input-wrapper">
-                <select
-                  name="countryCode"
-                  value={formData.countryCode}
-                  onChange={handleInputChange}
-                  className="country-code-select"
-                  title="Select country code"
-                >
-                  {countryCodes.map((country) => (
-                    <option key={country.code} value={country.dialCode}>
-                      {country.flag} {country.dialCode}
-                    </option>
-                  ))}
-                </select>
-                <div className="input-wrapper phone-input-container">
-                  <label className="floating-label">
-                    <span className="floating-label-icon">📱</span>
-                    <span className="floating-label-text">Enter your phone number</span>
-                  </label>
+              <div className="input-wrapper">
+                <label className="floating-label">
+                  <span className="floating-label-icon">📱</span>
+                  <span className="floating-label-text">Enter your phone number</span>
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select
+                    name="countryCode"
+                    value={formData.countryCode}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '120px',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {countryCodes.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.flag} {item.code}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="tel"
                     name="phone"
-                    placeholder="Enter phone number"
+                    placeholder="📱 Enter your phone number"
                     value={formData.phone}
                     onChange={handleInputChange}
                     onBlur={handleBlur}
-                    className={`form-input phone-input ${touched.phone && errors.phone ? 'error' : ''} ${formData.phone ? 'has-value' : ''}`}
+                    className={`form-input ${touched.phone && errors.phone ? 'error' : ''} ${formData.phone ? 'has-value' : ''}`}
+                    style={{ flex: 1 }}
                     required
                   />
                 </div>
               </div>
               {touched.phone && errors.phone && (
                 <p className="error-message">{errors.phone}</p>
-              )}
-            </div>
-
-            <div className="form-group">
-              <div className="input-wrapper">
-                <label className="floating-label">
-                  <span className="floating-label-icon">🎂</span>
-                  <span className="floating-label-text">Select your date of birth</span>
-                </label>
-                <input
-                  type="date"
-                  name="dateOfBirth"
-                  placeholder="🎂 Select your date of birth"
-                  value={formData.dateOfBirth}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  className={`form-input ${touched.dateOfBirth && errors.dateOfBirth ? 'error' : ''} ${formData.dateOfBirth ? 'has-value' : ''}`}
-                  max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split('T')[0]}
-                  required
-                />
-              </div>
-              {touched.dateOfBirth && errors.dateOfBirth && (
-                <p className="error-message">{errors.dateOfBirth}</p>
               )}
             </div>
 
@@ -616,18 +598,42 @@ const Register = ({ onRegister, onNavigateToLogin }) => {
               <p className="captcha-hint">Click on CAPTCHA to refresh</p>
             </div>
 
-            {submitError && (
-              <p className="error-message" style={{ marginTop: '8px', textAlign: 'center' }}>
-                {submitError}
-              </p>
+            {/* Error Message Display */}
+            {registerError && (
+              <div className="error-message-container" style={{
+                marginBottom: '15px',
+                padding: '12px',
+                backgroundColor: '#fee',
+                border: '1px solid #fcc',
+                borderRadius: '8px',
+                color: '#c33'
+              }}>
+                <strong>⚠️ Registration Failed:</strong> {registerError}
+              </div>
             )}
+
             <button 
               type="submit" 
               className="register-button"
-              disabled={isSubmitting}
+              disabled={isLoading}
+              style={{
+                opacity: isLoading ? 0.7 : 1,
+                cursor: isLoading ? 'wait' : 'pointer'
+              }}
             >
-              {isSubmitting ? 'Signing Up...' : 'Sign Up'}
+              {isLoading ? '⏳ Registering...' : 'Sign Up'}
             </button>
+            
+            {isLoading && (
+              <p style={{ 
+                textAlign: 'center', 
+                marginTop: '10px', 
+                color: '#666',
+                fontSize: '14px'
+              }}>
+                Please wait, creating your account...
+              </p>
+            )}
           </form>
 
       <p className="login-link-text">
