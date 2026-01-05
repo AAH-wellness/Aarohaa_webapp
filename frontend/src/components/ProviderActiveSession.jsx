@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react'
-import appointmentService from '../services/appointmentService'
 import './ProviderActiveSession.css'
 
 const ProviderActiveSession = () => {
@@ -9,67 +8,12 @@ const ProviderActiveSession = () => {
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [notes, setNotes] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingBookings, setIsLoadingBookings] = useState(true)
   const [patientInfo, setPatientInfo] = useState({
-    name: 'Loading...',
+    name: 'John Doe',
     sessionType: 'Video Consultation',
   })
-  const [currentBooking, setCurrentBooking] = useState(null)
   const videoRef = useRef(null)
   const streamRef = useRef(null)
-
-  useEffect(() => {
-    // Fetch provider's upcoming bookings on mount
-    const fetchProviderBookings = async () => {
-      setIsLoadingBookings(true)
-      try {
-        const bookings = await appointmentService.getProviderAppointments()
-        if (bookings && bookings.length > 0) {
-          // Get the next upcoming booking
-          const now = new Date()
-          const upcoming = bookings
-            .filter(booking => {
-              const appointmentDate = new Date(booking.appointmentDate || booking.appointment_date)
-              return appointmentDate > now && booking.status === 'scheduled'
-            })
-            .sort((a, b) => {
-              const dateA = new Date(a.appointmentDate || a.appointment_date)
-              const dateB = new Date(b.appointmentDate || b.appointment_date)
-              return dateA - dateB
-            })
-          
-          if (upcoming.length > 0) {
-            const booking = upcoming[0]
-            setCurrentBooking(booking)
-            setPatientInfo({
-              name: booking.userName || booking.user_name || 'Patient',
-              sessionType: booking.sessionType || booking.session_type || 'Video Consultation',
-            })
-          } else {
-            setPatientInfo({
-              name: 'No upcoming sessions',
-              sessionType: 'N/A',
-            })
-          }
-        } else {
-          setPatientInfo({
-            name: 'No upcoming sessions',
-            sessionType: 'N/A',
-          })
-        }
-      } catch (error) {
-        console.error('Error fetching provider bookings:', error)
-        setPatientInfo({
-          name: 'Error loading patient info',
-          sessionType: 'N/A',
-        })
-      } finally {
-        setIsLoadingBookings(false)
-      }
-    }
-
-    fetchProviderBookings()
-  }, [])
 
   useEffect(() => {
     if (isCallStarted) {
@@ -220,17 +164,10 @@ const ProviderActiveSession = () => {
       <div className="provider-session-container">
         <div className="provider-session-header">
           <h1 className="provider-session-title">Active Session</h1>
-          {!isLoadingBookings && (
-            <div className="provider-patient-info">
-              <span className="provider-patient-name">Patient: {patientInfo.name}</span>
-              <span className="provider-session-type">{patientInfo.sessionType}</span>
-            </div>
-          )}
-          {isLoadingBookings && (
-            <div className="provider-patient-info">
-              <span className="provider-patient-name">Loading patient info...</span>
-            </div>
-          )}
+          <div className="provider-patient-info">
+            <span className="provider-patient-name">Patient: {patientInfo.name}</span>
+            <span className="provider-session-type">{patientInfo.sessionType}</span>
+          </div>
         </div>
 
         {isCallStarted ? (
@@ -287,14 +224,8 @@ const ProviderActiveSession = () => {
               <div className="provider-video-placeholder">
                 <div className="provider-video-icon">💻</div>
                 <p className="provider-video-status">
-                  {patientInfo.name !== 'No upcoming sessions' && patientInfo.name !== 'Error loading patient info' ? (
-                    <>
-                      Ready to start session with<br />
-                      {patientInfo.name}
-                    </>
-                  ) : (
-                    patientInfo.name
-                  )}
+                  Ready to start session with<br />
+                  {patientInfo.name}
                 </p>
               </div>
             </div>

@@ -1,26 +1,15 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import './Sidebar.css'
 
-// Define all menu items outside component (constant)
-const ALL_MENU_ITEMS = [
-  { icon: '👥', label: 'Find Providers' },
-  { icon: '📅', label: 'My Appointments' },
-  { icon: '💻', label: 'Active Session', requiresAppointment: true },
-  { icon: '🧘', label: 'Wellness Activities' },
-  { icon: '📚', label: 'Courses & Content' },
-  { icon: '💬', label: 'Support' },
-]
-
-const Sidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSidebar, hasBookedSession = false }) => {
-  // Filter menu items based on hasBookedSession
-  const menuItems = useMemo(() => {
-    return ALL_MENU_ITEMS.filter(item => {
-      if (item.requiresAppointment) {
-        return hasBookedSession === true
-      }
-      return true
-    })
-  }, [hasBookedSession])
+const Sidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSidebar }) => {
+  const menuItems = [
+    { icon: '👥', label: 'Find Providers' },
+    { icon: '📅', label: 'My Appointments' },
+    { icon: '💻', label: 'Active Session' },
+    { icon: '🧘', label: 'Wellness Activities' },
+    { icon: '📚', label: 'Courses & Content' },
+    { icon: '💬', label: 'Support' },
+  ]
 
   const handleItemClick = (label) => {
     setActiveView(label)

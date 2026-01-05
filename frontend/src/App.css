@@ -117,15 +117,6 @@
   background-size: 400% 400%;
 }
 
-/* Ensure user and provider register overlays don't conflict */
-.user-register-overlay {
-  z-index: 2001;
-}
-
-.provider-register-overlay {
-  z-index: 2002;
-}
-
 .register-modal-overlay::before {
   content: '';
   position: absolute;

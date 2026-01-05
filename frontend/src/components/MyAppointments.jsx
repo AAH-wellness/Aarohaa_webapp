@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import './MyAppointments.css'
 import AppointmentReminder from './AppointmentReminder'
-import { appointmentService } from '../services'
+import { appointmentService, userService } from '../services'
 
 const MyAppointments = () => {
   const [appointments, setAppointments] = useState([])
@@ -12,44 +12,37 @@ const MyAppointments = () => {
     const loadAppointments = async () => {
       try {
         setLoading(true)
-        // Get current user ID (in real app, this would come from auth context)
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
-        const userId = currentUser.id || 'current-user'
         
-        // Use service to get upcoming appointments
-        const allAppointments = await appointmentService.getUpcomingAppointments()
+        // Get current user ID from backend profile
+        let userId = null
+        try {
+          const profile = await userService.getProfile()
+          if (profile.user && profile.user.id) {
+            userId = profile.user.id
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error)
+        }
         
-        console.log('MyAppointments - Fetched appointments:', allAppointments)
+        if (!userId) {
+          // If we can't get user ID, show empty appointments
+          setAppointments([])
+          return
+        }
         
-        // Transform backend data format to component format
-        // Backend returns appointmentDate, but component expects dateTime
-        const transformedAppointments = allAppointments.map(apt => ({
-          id: apt.id,
-          providerId: apt.providerId,
-          providerName: apt.providerName || 'Provider',
-          providerTitle: apt.providerTitle || apt.providerSpecialty || 'Wellness Professional',
-          dateTime: apt.appointmentDate || apt.dateTime, // Map appointmentDate to dateTime
-          appointmentDate: apt.appointmentDate, // Keep original for compatibility
-          sessionType: apt.sessionType || 'Video Consultation',
-          notes: apt.notes,
-          status: apt.status || 'scheduled',
-          createdAt: apt.createdAt || apt.created_at
-        }))
+        // Use service to get user's appointments from backend
+        const userAppointments = await appointmentService.getUserAppointments(userId)
         
-        // Filter by user if needed (service should handle this, but keeping for compatibility)
-        const userAppointments = transformedAppointments.filter(apt => 
-          !apt.userId || apt.userId === userId
-        )
-        
-        // Sort by date
-        userAppointments.sort((a, b) => {
-          const dateA = new Date(a.dateTime || a.appointmentDate)
-          const dateB = new Date(b.dateTime || b.appointmentDate)
-          return dateA - dateB
+        // Filter to only show upcoming appointments
+        const now = new Date()
+        const upcoming = userAppointments.filter(apt => {
+          const aptDate = new Date(apt.dateTime)
+          return aptDate > now && apt.status !== 'cancelled'
         })
         
-        console.log('MyAppointments - Transformed appointments:', userAppointments)
-        setAppointments(userAppointments)
+        // Sort by date
+        upcoming.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+        setAppointments(upcoming)
       } catch (error) {
         console.error('Error loading appointments:', error)
         // Fallback to empty array on error
@@ -133,31 +126,12 @@ const MyAppointments = () => {
       
       // Reload appointments to reflect the change
       const allAppointments = await appointmentService.getUpcomingAppointments()
-      
-      // Transform backend data format
-      const transformedAppointments = allAppointments.map(apt => ({
-        id: apt.id,
-        providerId: apt.providerId,
-        providerName: apt.providerName || 'Provider',
-        providerTitle: apt.providerTitle || apt.providerSpecialty || 'Wellness Professional',
-        dateTime: apt.appointmentDate || apt.dateTime,
-        appointmentDate: apt.appointmentDate,
-        sessionType: apt.sessionType || 'Video Consultation',
-        notes: apt.notes,
-        status: apt.status || 'scheduled',
-        createdAt: apt.createdAt || apt.created_at
-      }))
-      
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
       const userId = currentUser.id || 'current-user'
-      const userAppointments = transformedAppointments.filter(apt => 
+      const userAppointments = allAppointments.filter(apt => 
         !apt.userId || apt.userId === userId
       )
-      userAppointments.sort((a, b) => {
-        const dateA = new Date(a.dateTime || a.appointmentDate)
-        const dateB = new Date(b.dateTime || b.appointmentDate)
-        return dateA - dateB
-      })
+      userAppointments.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
       setAppointments(userAppointments)
     } catch (error) {
       console.error('Error cancelling appointment:', error)

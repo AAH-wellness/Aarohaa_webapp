@@ -9,9 +9,53 @@ const AdminAuditLog = () => {
   const [dateFilter, setDateFilter] = useState('all')
 
   useEffect(() => {
-    // Load audit logs from localStorage (real data only)
+    // Load audit logs from localStorage or generate mock data
+    const generateMockLogs = () => {
+      const logTypes = ['user_action', 'provider_action', 'system_event', 'security_event', 'admin_action']
+      const actions = [
+        'User registered',
+        'Provider verified',
+        'Appointment booked',
+        'Session started',
+        'Session ended',
+        'Payment processed',
+        'Settings updated',
+        'User deleted',
+        'Provider suspended',
+        'Login attempt',
+        'Failed login',
+        'Password reset',
+        'Profile updated',
+        'Wallet connected',
+        'Policy changed',
+      ]
+
+      const mockLogs = []
+      for (let i = 0; i < 50; i++) {
+        const date = new Date()
+        date.setHours(date.getHours() - Math.floor(Math.random() * 168)) // Last 7 days
+        const logType = logTypes[Math.floor(Math.random() * logTypes.length)]
+        const action = actions[Math.floor(Math.random() * actions.length)]
+        
+        mockLogs.push({
+          id: i + 1,
+          timestamp: date.toISOString(),
+          type: logType,
+          action,
+          user: `user${Math.floor(Math.random() * 100)}@example.com`,
+          ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+          details: `Action performed: ${action}`,
+          severity: Math.random() > 0.7 ? 'high' : Math.random() > 0.4 ? 'medium' : 'low',
+        })
+      }
+
+      // Sort by timestamp (newest first)
+      mockLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      return mockLogs
+    }
+
     const storedLogs = JSON.parse(localStorage.getItem('auditLogs') || '[]')
-    setLogs(storedLogs)
+    setLogs(storedLogs.length > 0 ? storedLogs : generateMockLogs())
   }, [])
 
   useEffect(() => {

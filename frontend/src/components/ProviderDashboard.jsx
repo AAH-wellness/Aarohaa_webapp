@@ -21,17 +21,15 @@ const ProviderDashboard = () => {
         return aptDate > now
       }).length
 
-      // Calculate earnings from real payment data
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]')
-      const totalEarnings = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
-      
+      // Calculate earnings (mock data for now)
+      const totalEarnings = appointments.length * 50 // Mock: $50 per appointment
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const todayPayments = payments.filter(p => {
-        const paymentDate = new Date(p.date || p.createdAt)
-        return paymentDate >= today && paymentDate < new Date(today.getTime() + 24 * 60 * 60 * 1000)
-      })
-      const todayEarnings = todayPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+      const todayAppointments = appointments.filter(apt => {
+        const aptDate = new Date(apt.dateTime)
+        return aptDate >= today && aptDate < new Date(today.getTime() + 24 * 60 * 60 * 1000)
+      }).length
+      const todayEarnings = todayAppointments * 50
 
       setStats({
         upcomingAppointments: upcoming,
@@ -53,8 +51,8 @@ const ProviderDashboard = () => {
       value: stats.upcomingAppointments,
       icon: '📅',
       color: 'blue',
-      trend: '',
-      trendLabel: '',
+      trend: '+3',
+      trendLabel: 'This week',
     },
     {
       title: 'Active Sessions',
@@ -70,16 +68,16 @@ const ProviderDashboard = () => {
       value: `$${stats.totalEarnings.toLocaleString()}`,
       icon: '💰',
       color: 'purple',
-      trend: '',
-      trendLabel: '',
+      trend: '+12%',
+      trendLabel: 'This month',
     },
     {
       title: 'Today\'s Earnings',
       value: `$${stats.todayEarnings.toLocaleString()}`,
       icon: '💵',
       color: 'orange',
-      trend: '',
-      trendLabel: '',
+      trend: '+$120',
+      trendLabel: 'vs yesterday',
     },
   ]
 
@@ -135,22 +133,27 @@ const ProviderDashboard = () => {
         <div className="dashboard-section">
           <h2 className="section-title">Recent Activity</h2>
           <div className="recent-activity">
-            {(() => {
-              const activities = JSON.parse(localStorage.getItem('providerActivities') || '[]')
-              return activities.length === 0 ? (
-                <div className="empty-state">No recent activity</div>
-              ) : (
-                activities.map((activity, index) => (
-                  <div key={index} className="activity-item">
-                    <div className="activity-icon">{activity.icon || '📝'}</div>
-                    <div className="activity-content">
-                      <p className="activity-text">{activity.text}</p>
-                      <p className="activity-time">{activity.time}</p>
-                    </div>
-                  </div>
-                ))
-              )
-            })()}
+            <div className="activity-item">
+              <div className="activity-icon">✅</div>
+              <div className="activity-content">
+                <p className="activity-text">Session completed with John Doe</p>
+                <p className="activity-time">2 hours ago</p>
+              </div>
+            </div>
+            <div className="activity-item">
+              <div className="activity-icon">📅</div>
+              <div className="activity-content">
+                <p className="activity-text">New appointment booked for tomorrow</p>
+                <p className="activity-time">5 hours ago</p>
+              </div>
+            </div>
+            <div className="activity-item">
+              <div className="activity-icon">💰</div>
+              <div className="activity-content">
+                <p className="activity-text">Payment received: $150</p>
+                <p className="activity-time">1 day ago</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

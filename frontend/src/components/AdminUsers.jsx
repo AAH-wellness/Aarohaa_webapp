@@ -9,9 +9,18 @@ const AdminUsers = () => {
   const [sortBy, setSortBy] = useState('recent')
 
   useEffect(() => {
-    // Load users from localStorage (real data only)
+    // Load users from localStorage or mock data
+    const mockUsers = [
+      { id: 1, name: 'John Doe', email: 'john.doe@example.com', joinDate: '2024-01-15', status: 'active', appointments: 5, wallet: 'Solana123...' },
+      { id: 2, name: 'Jane Smith', email: 'jane.smith@example.com', joinDate: '2024-01-20', status: 'active', appointments: 3, wallet: 'Solana456...' },
+      { id: 3, name: 'Bob Johnson', email: 'bob.johnson@example.com', joinDate: '2024-02-01', status: 'inactive', appointments: 1, wallet: 'Solana789...' },
+      { id: 4, name: 'Alice Williams', email: 'alice.williams@example.com', joinDate: '2024-02-10', status: 'active', appointments: 8, wallet: 'Solana012...' },
+      { id: 5, name: 'Charlie Brown', email: 'charlie.brown@example.com', joinDate: '2024-02-15', status: 'active', appointments: 2, wallet: 'Solana345...' },
+    ]
+
+    // Load from localStorage if available, otherwise use mock
     const storedUsers = JSON.parse(localStorage.getItem('adminUsers') || '[]')
-    setUsers(storedUsers)
+    setUsers(storedUsers.length > 0 ? storedUsers : mockUsers)
   }, [])
 
   useEffect(() => {

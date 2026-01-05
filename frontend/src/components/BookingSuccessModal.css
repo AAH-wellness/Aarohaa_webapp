@@ -19,17 +19,17 @@
 }
 
 .success-modal-content {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-radius: 24px;
-  padding: 48px 40px;
-  max-width: 520px;
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 450px;
   width: 90%;
-  box-shadow: 0 20px 60px rgba(14, 72, 38, 0.3), 0 0 0 1px rgba(16, 185, 129, 0.2), 0 0 30px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 215, 0, 0.4), 0 0 25px rgba(255, 215, 0, 0.2);
   text-align: center;
   transform: scale(0.7) translateY(-50px);
   opacity: 0;
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border: 2px solid rgba(16, 185, 129, 0.3);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 1px solid #FFD700;
   position: relative;
   overflow: hidden;
 }
@@ -74,83 +74,25 @@
 }
 
 .checkmark-circle {
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #0e4826 0%, #0e4826 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   animation: scaleIn 0.5s ease-out;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
-  position: relative;
-  overflow: hidden;
-}
-
-.checkmark-circle::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.checkmark-svg {
-  width: 60px;
-  height: 60px;
-  position: relative;
-  z-index: 1;
-}
-
-.checkmark-circle-bg {
-  stroke: #ffffff;
-  stroke-width: 3;
-  stroke-dasharray: 166;
-  stroke-dashoffset: 166;
-  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
-}
-
-.checkmark-check {
-  stroke: #ffffff;
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 48;
-  stroke-dashoffset: 48;
-  animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
 }
 
 @keyframes scaleIn {
   0% {
     transform: scale(0);
-    opacity: 0;
   }
   50% {
     transform: scale(1.1);
   }
   100% {
     transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes stroke {
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.1);
   }
 }
 
@@ -159,8 +101,6 @@
   font-size: 48px;
   font-weight: bold;
   animation: checkmarkAnimation 0.5s ease-out 0.2s both;
-  position: relative;
-  z-index: 1;
 }
 
 @keyframes checkmarkAnimation {
@@ -175,44 +115,26 @@
 }
 
 .success-modal-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
-  color: #0e4826;
-  margin-bottom: 20px;
-  text-align: center;
+  color: #333;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #0e4826 0%, #0e4826 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .success-modal-message {
   font-size: 16px;
-  color: #6b7280;
+  color: #666;
   line-height: 1.6;
-  margin-bottom: 12px;
-  text-align: center;
-}
-
-.success-provider-name {
-  font-size: 22px;
-  font-weight: 700;
-  color: #10b981;
-  margin: 16px 0;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
-  border-radius: 12px;
-  border: 2px solid rgba(16, 185, 129, 0.2);
-  text-align: center;
-}
-
-.success-provider-name strong {
-  color: #059669;
-  font-weight: 700;
-}
-
-.success-modal-submessage {
-  font-size: 14px;
-  color: #9ca3af;
-  line-height: 1.5;
   margin-bottom: 32px;
-  text-align: center;
+}
+
+.success-modal-message strong {
+  color: #333;
+  font-weight: 600;
 }
 
 .success-modal-buttons {
@@ -233,15 +155,14 @@
 }
 
 .success-modal-btn.primary {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #0e4826 0%, #0e4826 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.3);
 }
 
 .success-modal-btn.primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-  background: linear-gradient(135deg, #12d48a 0%, #06a875 100%);
+  box-shadow: 0 6px 16px rgba(14, 72, 38, 0.4);
 }
 
 .success-modal-btn.secondary {

@@ -8,9 +8,33 @@ const AdminSessions = () => {
   const [statusFilter, setStatusFilter] = useState('all')
 
   useEffect(() => {
-    // Load active sessions from localStorage (real data only)
+    // Load active sessions from localStorage or mock data
+    const mockSessions = [
+      {
+        id: 1,
+        providerName: 'Dr. Maya Patel',
+        userName: 'John Doe',
+        startTime: new Date().toISOString(),
+        duration: 45,
+        status: 'active',
+        connectionQuality: 'excellent',
+        participants: 2,
+      },
+      {
+        id: 2,
+        providerName: 'Sarah Rodriguez',
+        userName: 'Jane Smith',
+        startTime: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        duration: 60,
+        status: 'active',
+        connectionQuality: 'good',
+        participants: 2,
+      },
+    ]
+
+    // In a real app, this would fetch from an API
     const storedSessions = JSON.parse(localStorage.getItem('activeSessions') || '[]')
-    setSessions(storedSessions)
+    setSessions(storedSessions.length > 0 ? storedSessions : mockSessions)
     
     // Simulate real-time updates
     const interval = setInterval(() => {

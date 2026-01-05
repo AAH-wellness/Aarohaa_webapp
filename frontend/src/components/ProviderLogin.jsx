@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import LoginSuccess from './LoginSuccess'
-import userService from '../services/userService'
 import './ProviderLogin.css'
 
-const ProviderLogin = ({ onLogin, onNavigateToUserLogin, onNavigateToRegister }) => {
+const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -23,8 +22,6 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin, onNavigateToRegister })
     password: false,
   })
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [loginError, setLoginError] = useState('')
 
   const validateEmail = (email) => {
     if (!email) {
@@ -89,7 +86,7 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin, onNavigateToRegister })
     }
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
     
     setTouched({
@@ -116,56 +113,11 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin, onNavigateToRegister })
       localStorage.removeItem('providerRememberEmail')
     }
 
-    setLoginError('')
-    setIsLoading(true)
-
-    try {
-      const response = await userService.login({
-        email: formData.email,
-        password: formData.password,
-        loginMethod: 'email'
-      })
-
-      console.log('Provider login response:', response) // Debug log
-
-      if (!response) {
-        setLoginError('Login failed: No response from server. Please try again.')
-        setIsLoading(false)
-        return
-      }
-
-      if (!response.user) {
-        console.error('Provider login error: response.user is undefined', response)
-        setLoginError('Login failed: Invalid response format. Please try again.')
-        setIsLoading(false)
-        return
-      }
-
-      // Check if user is actually a provider
-      if (response.user.role !== 'provider') {
-        setLoginError('This account is not registered as a provider. Please use User Login.')
-        setIsLoading(false)
-        return
-      }
-      
-      // Show success animation - onLogin will be called after animation completes
-      setShowSuccessAnimation(true)
-      setIsLoading(false)
-    } catch (error) {
-      console.error('Provider login failed:', error)
-      let errorMessage = 'Login failed. Please try again.'
-      if (error.data?.error?.message) {
-        errorMessage = error.data.error.message
-      } else if (error.message) {
-        errorMessage = error.message
-      } else if (error.status === 401) {
-        errorMessage = 'Invalid email or password. Please check your credentials.'
-      } else if (error.status === 404) {
-        errorMessage = 'User not found. Please check your email and try again.'
-      }
-      setLoginError(errorMessage)
-      setIsLoading(false)
-    }
+    // Save login status and role
+    localStorage.setItem('isLoggedIn', 'true')
+    localStorage.setItem('userRole', 'provider')
+    
+    setShowSuccessAnimation(true)
   }
 
   // Load remembered email on mount
@@ -284,14 +236,8 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin, onNavigateToRegister })
                 </div>
               </div>
 
-              {loginError && (
-                <div className="error-message" style={{ color: '#c33', padding: '10px', marginBottom: '10px', textAlign: 'center' }}>
-                  {loginError}
-                </div>
-              )}
-
-              <button type="submit" className="provider-login-button" disabled={isLoading}>
-                {isLoading ? 'Signing In...' : 'Sign In'}
+              <button type="submit" className="provider-login-button">
+                Sign In
               </button>
             </form>
 
@@ -299,15 +245,6 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin, onNavigateToRegister })
               <span>or</span>
             </div>
 
-            <p className="provider-switch-text">
-              Don't have an account? <button
-                type="button"
-                className="provider-switch-link"
-                onClick={onNavigateToRegister}
-              >
-                Sign Up as Provider
-              </button>
-            </p>
             <p className="provider-switch-text">
               Are you a patient? <button
                 type="button"
@@ -329,7 +266,6 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin, onNavigateToRegister })
         <LoginSuccess 
           onAnimationComplete={() => {
             setShowSuccessAnimation(false)
-            // Call onLogin after animation completes to navigate to dashboard
             if (onLogin) {
               onLogin()
             }

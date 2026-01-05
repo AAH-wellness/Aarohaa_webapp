@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { userService } from '../services'
 import './Header.css'
 
 const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, isSidebarOpen }) => {
@@ -10,80 +11,48 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
   const profileRef = useRef(null)
 
   useEffect(() => {
-    // Get user name from localStorage
-    const loadUserInfo = () => {
+    // Fetch user profile from backend
+    const loadUserInfo = async () => {
       try {
-        // First try to get from currentUser
-        let currentUser = null
-        try {
-          const currentUserStr = localStorage.getItem('currentUser')
-          if (currentUserStr) {
-            currentUser = JSON.parse(currentUserStr)
-          }
-        } catch (e) {
-          console.error('Error parsing currentUser:', e)
+        const token = localStorage.getItem('authToken')
+        if (!token) {
+          // No token, user not logged in
+          setUserName('User')
+          setUserInitials('U')
+          return
         }
 
-        // Then try userData
-        let userData = null
-        try {
-          const userDataStr = localStorage.getItem('userData')
-          if (userDataStr) {
-            userData = JSON.parse(userDataStr)
-          }
-        } catch (e) {
-          console.error('Error parsing userData:', e)
-        }
-
-        // Prioritize name from currentUser, fallback to userData, then email
-        let name = null
+        // Fetch user profile from backend
+        const profile = await userService.getProfile()
         
-        if (currentUser && currentUser.name) {
-          name = currentUser.name
-        } else if (userData && userData.fullName) {
-          name = userData.fullName
-        } else if (userData && userData.name) {
-          name = userData.name
-        } else if (currentUser && currentUser.email) {
-          // Format name from email
-          const emailName = currentUser.email.split('@')[0]
-          name = emailName.split('.').map(word => 
+        if (profile.user && profile.user.name) {
+          const name = profile.user.name.trim()
+          setUserName(name)
+          
+          // Generate initials
+          const nameParts = name.split(' ').filter(part => part.length > 0)
+          if (nameParts.length >= 2) {
+            setUserInitials((nameParts[0][0] + nameParts[1][0]).toUpperCase())
+          } else if (nameParts.length === 1 && nameParts[0].length >= 2) {
+            setUserInitials(nameParts[0].substring(0, 2).toUpperCase())
+          } else {
+            setUserInitials(name.substring(0, 2).toUpperCase())
+          }
+        } else if (profile.user && profile.user.email) {
+          // Fallback to email if name not available
+          const emailName = profile.user.email.split('@')[0]
+          const name = emailName.split('.').map(word => 
             word.charAt(0).toUpperCase() + word.slice(1)
           ).join(' ')
-        } else if (userData && userData.email) {
-          // Format name from email
-          const emailName = userData.email.split('@')[0]
-          name = emailName.split('.').map(word => 
-            word.charAt(0).toUpperCase() + word.slice(1)
-          ).join(' ')
-        } else {
-          name = 'User'
-        }
-
-        // Ensure name is not empty
-        if (!name || name.trim() === '') {
-          name = 'User'
-        }
-
-        const finalName = name.trim()
-        setUserName(finalName)
-        
-        // Debug log (can be removed in production)
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Header: Loaded user name:', finalName, { currentUser, userData })
-        }
-        
-        // Generate initials
-        const nameParts = name.trim().split(' ').filter(part => part.length > 0)
-        if (nameParts.length >= 2) {
-          setUserInitials((nameParts[0][0] + nameParts[1][0]).toUpperCase())
-        } else if (nameParts.length === 1 && nameParts[0].length >= 2) {
-          setUserInitials(nameParts[0].substring(0, 2).toUpperCase())
-        } else {
+          setUserName(name)
           setUserInitials(name.substring(0, 2).toUpperCase())
+        } else {
+          setUserName('User')
+          setUserInitials('U')
         }
       } catch (error) {
         console.error('Error loading user info:', error)
+        // Fallback to 'User' if API call fails
         setUserName('User')
         setUserInitials('U')
       }
@@ -92,22 +61,12 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
     // Load immediately
     loadUserInfo()
     
-    // Listen for storage changes to update name when user logs in/registers
-    const handleStorageChange = (e) => {
-      if (e.key === 'currentUser' || e.key === 'userData') {
-        loadUserInfo()
-      }
+    // Refresh user info when navigating to profile (user might have updated their profile)
+    if (activeView === 'Profile') {
+      const interval = setInterval(loadUserInfo, 2000) // Refresh every 2 seconds when on profile page
+      return () => clearInterval(interval)
     }
-    window.addEventListener('storage', handleStorageChange)
-    
-    // Also check periodically (for same-tab updates)
-    const interval = setInterval(loadUserInfo, 500)
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      clearInterval(interval)
-    }
-  }, [])
+  }, [activeView])
 
   useEffect(() => {
     const handleClickOutside = (event) => {

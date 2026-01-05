@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import providerService from '../services/providerService'
-import AvailabilitySuccessModal from './AvailabilitySuccessModal'
+import { userService } from '../services'
 import './ProviderAvailability.css'
 
 const ProviderAvailability = ({ onBack }) => {
@@ -17,8 +16,7 @@ const ProviderAvailability = ({ onBack }) => {
   const [timezone, setTimezone] = useState('America/New_York')
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [error, setError] = useState(null)
 
   const days = [
     { key: 'monday', label: 'Monday' },
@@ -51,50 +49,49 @@ const ProviderAvailability = ({ onBack }) => {
   }
 
   useEffect(() => {
-    const fetchAvailability = async () => {
-      setIsLoading(true)
-      setError('')
+    // Load existing availability from backend
+    const loadAvailability = async () => {
       try {
-        const savedAvailability = await providerService.getProviderAvailability()
-        if (savedAvailability && Object.keys(savedAvailability).length > 0) {
-          // Merge saved availability with default structure
-          const merged = { ...availability }
-          Object.keys(savedAvailability).forEach(day => {
-            if (merged[day]) {
-              merged[day] = { ...merged[day], ...savedAvailability[day] }
-            } else {
-              merged[day] = savedAvailability[day]
-            }
-          })
-          setAvailability(merged)
+        setIsLoading(true)
+        const response = await userService.getProviderAvailability()
+        if (response.availability) {
+          setAvailability(response.availability)
+        }
+        // Load timezone from localStorage if available
+        const savedTimezone = localStorage.getItem('providerTimezone')
+        if (savedTimezone) {
+          setTimezone(savedTimezone)
         }
       } catch (error) {
-        console.error('Error fetching availability:', error)
-        // Continue with default availability if fetch fails
+        console.error('Error loading availability:', error)
+        setError('Failed to load availability settings')
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchAvailability()
+    loadAvailability()
   }, [])
 
   const handleSave = async () => {
-    setIsSaving(true)
-    setError('')
     try {
-      // Include timezone in availability data
-      const availabilityData = {
-        ...availability,
-        timezone: timezone
-      }
+      setIsSaving(true)
+      setError(null)
       
-      await providerService.updateProviderAvailability(availabilityData)
-      // Show success modal instead of alert
-      setShowSuccessModal(true)
+      // Save availability to backend
+      await userService.updateProviderAvailability(availability)
+      
+      // Save timezone to localStorage (not part of backend yet)
+      localStorage.setItem('providerTimezone', timezone)
+      
+      alert('Availability settings saved successfully! Your profile is now visible to users.')
+      if (onBack) {
+        onBack()
+      }
     } catch (error) {
       console.error('Error saving availability:', error)
       setError('Failed to save availability. Please try again.')
+      alert('Failed to save availability. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -103,8 +100,14 @@ const ProviderAvailability = ({ onBack }) => {
   if (isLoading) {
     return (
       <div className="provider-availability">
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <p>Loading availability settings...</p>
+        <div className="availability-header">
+          <button className="back-button" onClick={onBack}>
+            ← Back
+          </button>
+          <div>
+            <h1 className="availability-title">Manage Availability</h1>
+            <p className="availability-subtitle">Loading availability settings...</p>
+          </div>
         </div>
       </div>
     )
@@ -118,15 +121,13 @@ const ProviderAvailability = ({ onBack }) => {
         </button>
         <div>
           <h1 className="availability-title">Manage Availability</h1>
-          <p className="availability-subtitle">Set your working hours for each day of the week. Changes are saved immediately.</p>
+          <p className="availability-subtitle">Set your working hours for each day of the week</p>
+          {error && (
+            <p style={{ color: 'red', marginTop: '8px' }}>{error}</p>
+          )}
         </div>
-      </div>
 
-      {error && (
-        <div className="error-message" style={{ color: '#c33', padding: '10px', marginBottom: '20px' }}>
-          {error}
-        </div>
-      )}
+      </div>
 
       <div className="availability-container">
         <div className="availability-section">
@@ -214,18 +215,6 @@ const ProviderAvailability = ({ onBack }) => {
           </button>
         </div>
       </div>
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <AvailabilitySuccessModal
-          onClose={() => {
-            setShowSuccessModal(false)
-            if (onBack) {
-              onBack()
-            }
-          }}
-        />
-      )}
     </div>
   )
 }

@@ -1,7 +1,26 @@
 import React from 'react'
 import './WellnessActivities.css'
 
+/**
+ * WellnessActivities Component
+ * 
+ * TODO: Fetch activities from backend database when endpoint is available
+ * Currently using static data. Should be replaced with:
+ * - GET /api/users/wellness-activities (or similar endpoint)
+ * - Store activities in database table
+ * - Fetch activities based on user's profile/preferences
+ */
 const WellnessActivities = () => {
+  // TODO: Replace with backend API call when endpoint is available
+  // const [activities, setActivities] = useState([])
+  // useEffect(() => {
+  //   const fetchActivities = async () => {
+  //     const data = await userService.getWellnessActivities()
+  //     setActivities(data)
+  //   }
+  //   fetchActivities()
+  // }, [])
+  
   const activities = [
     {
       icon: '🧘',

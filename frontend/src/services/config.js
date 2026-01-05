@@ -15,9 +15,9 @@ const API_CONFIG = {
   NOTIFICATION_SERVICE: import.meta.env.VITE_NOTIFICATION_SERVICE_URL || 'http://localhost:3006/api',
   ANALYTICS_SERVICE: import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3007/api',
   
-  // Use mock services in development (set VITE_USE_MOCK_SERVICES=false in .env to use real backend)
-  // Environment variables are strings, so we check for the string 'false'
-  USE_MOCK_SERVICES: import.meta.env.VITE_USE_MOCK_SERVICES !== 'false',
+  // Use mock services in development (set to false when backend is ready)
+  // Default to false to use real backend API
+  USE_MOCK_SERVICES: import.meta.env.VITE_USE_MOCK_SERVICES === 'true',
   
   // API timeout
   TIMEOUT: 30000, // 30 seconds

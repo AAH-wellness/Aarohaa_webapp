@@ -137,6 +137,111 @@
   font-weight: 500;
 }
 
+.address-field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.edit-address-btn {
+  background: none;
+  border: none;
+  color: #0e4826;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.edit-address-btn:hover {
+  background-color: rgba(14, 72, 38, 0.1);
+  transform: translateY(-1px);
+}
+
+.address-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.address-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: all 0.3s ease;
+}
+
+.address-input:focus {
+  outline: none;
+  border-color: #0e4826;
+  box-shadow: 0 0 0 3px rgba(14, 72, 38, 0.1);
+}
+
+.address-edit-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancel-address-btn,
+.save-address-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-address-btn {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.cancel-address-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.cancel-address-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-address-btn {
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.2);
+}
+
+.save-address-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.3);
+}
+
+.save-address-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-message {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  color: #666;
+}
+
 .wallet-info {
   display: flex;
   flex-direction: column;

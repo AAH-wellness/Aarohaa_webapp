@@ -6,6 +6,27 @@
   background: transparent;
 }
 
+.loading-message,
+.error-message,
+.no-providers-message {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 16px;
+  color: #666;
+  background-color: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.08);
+}
+
+.error-message {
+  color: #d32f2f;
+  background-color: #ffebee;
+}
+
+.no-providers-message {
+  color: #666;
+}
+
 .providers-title {
   font-size: 36px;
   font-weight: 800;

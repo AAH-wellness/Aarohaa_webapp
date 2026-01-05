@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { userService } from './services'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import WellnessActivities from './components/WellnessActivities'
@@ -37,13 +36,13 @@ import AdminSettings from './components/AdminSettings'
 import AdminAuditLog from './components/AdminAuditLog'
 import AdminProfile from './components/AdminProfile'
 import MaintenanceMode from './components/MaintenanceMode'
+import LoginSuccess from './components/LoginSuccess'
 import './App.css'
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const [showProviderLogin, setShowProviderLogin] = useState(false)
-  const [showProviderRegister, setShowProviderRegister] = useState(false)
   const [loginMode, setLoginMode] = useState('user') // 'user', 'provider', or 'admin'
   const [userRole, setUserRole] = useState('user') // 'user', 'provider', or 'admin'
   const [activeView, setActiveView] = useState('My Appointments')
@@ -55,52 +54,53 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false)
   const [isProviderSidebarOpen, setIsProviderSidebarOpen] = useState(false)
+  const [showLoginSuccessAnimation, setShowLoginSuccessAnimation] = useState(false)
 
   useEffect(() => {
-    // Check authentication status from API
-    const checkAuthStatus = async () => {
-      try {
-        const userService = (await import('./services/userService.js')).default
-        const user = await userService.checkAuthStatus()
-        
-        if (user) {
-          setIsLoggedIn(true)
-          setUserRole(user.role || 'user')
-          
-          // Set default view based on role
-          if (user.role === 'provider') {
-            setProviderActiveView('Dashboard')
-          } else if (user.role === 'admin') {
-            setAdminActiveView('Dashboard')
-          } else {
-            setActiveView('My Appointments')
-          }
-          
-          // Check appointments from API to determine if Active Session should be accessible
-          try {
-            const appointmentService = (await import('./services/appointmentService.js')).default
-            const appointments = await appointmentService.getUpcomingAppointments()
-            if (appointments && appointments.length > 0) {
-              setHasBookedSession(true)
-            } else {
-              setHasBookedSession(false)
-            }
-          } catch (error) {
-            console.error('Error checking appointments:', error)
-            setHasBookedSession(false)
-          }
-        } else {
-          setIsLoggedIn(false)
-          setUserRole('user')
-        }
-      } catch (error) {
-        console.error('Error checking auth status:', error)
-        setIsLoggedIn(false)
-        setUserRole('user')
-      }
+    // Check maintenance mode status
+    const checkMaintenanceMode = () => {
+      const platformSettings = JSON.parse(localStorage.getItem('platformSettings') || '{}')
+      setMaintenanceMode(platformSettings.maintenanceMode === true)
+    }
+    
+    checkMaintenanceMode()
+    
+    // Check if user is logged in
+    const loggedIn = localStorage.getItem('isLoggedIn') === 'true'
+    const role = localStorage.getItem('userRole') || 'user'
+    setIsLoggedIn(loggedIn)
+    setUserRole(role)
+    
+    // Set default view based on role
+    if (role === 'provider') {
+      setProviderActiveView('Dashboard')
+    } else if (role === 'admin') {
+      setAdminActiveView('Dashboard')
+    } else {
+      setActiveView('My Appointments')
+    }
+    
+    // Check if there are any appointments in localStorage
+    const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
+    if (appointments.length > 0) {
+      setHasBookedSession(true)
     }
 
-    checkAuthStatus()
+    // Listen for storage changes to update maintenance mode in real-time
+    const handleStorageChange = (e) => {
+      if (e.key === 'platformSettings') {
+        checkMaintenanceMode()
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Also check periodically for changes (in case settings are changed in same tab)
+    const interval = setInterval(checkMaintenanceMode, 1000)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      clearInterval(interval)
+    }
   }, [])
 
   const handleBookSession = (providerValue) => {
@@ -108,17 +108,8 @@ function App() {
     setActiveView('Book Appointment')
   }
 
-  const handleBookingConfirmed = async () => {
-    // Refresh appointments from API to update hasBookedSession
-    try {
-      const appointmentService = (await import('./services/appointmentService.js')).default
-      const appointments = await appointmentService.getUpcomingAppointments()
-      setHasBookedSession(appointments && appointments.length > 0)
-    } catch (error) {
-      console.error('Error checking appointments after booking:', error)
-      // Still set to true if booking was successful
-      setHasBookedSession(true)
-    }
+  const handleBookingConfirmed = () => {
+    setHasBookedSession(true)
     setSelectedProvider(null)
   }
 
@@ -165,32 +156,40 @@ function App() {
   }
 
   const handleLogin = () => {
+    // Show success animation first, then proceed with login after animation completes
+    setShowLoginSuccessAnimation(true)
+  }
+
+  const handleLoginAnimationComplete = () => {
+    // Animation completed, now proceed with login
+    const role = localStorage.getItem('userRole') || 'user'
+    console.log('Animation complete - Navigating to dashboard for role:', role)
+    setIsLoggedIn(true)
+    setUserRole(role)
+    setShowRegister(false)
+    setShowLoginSuccessAnimation(false)
+    // Set default view based on role
+    if (role === 'provider') {
+      setProviderActiveView('Dashboard')
+      console.log('Provider dashboard view set to Dashboard')
+    } else if (role === 'admin') {
+      setAdminActiveView('Dashboard')
+      console.log('Admin dashboard view set to Dashboard')
+    } else {
+      setActiveView('My Appointments')
+      console.log('User dashboard view set to My Appointments')
+    }
+  }
+
+  const handleRegister = () => {
     const role = localStorage.getItem('userRole') || 'user'
     setIsLoggedIn(true)
     setUserRole(role)
     setShowRegister(false)
-    // Always default to user view on login
-    setActiveView('My Appointments')
-  }
-
-  const handleRegister = async (registeredRole) => {
-    // After registration, token is already stored by userService
-    // Set logged in state immediately and navigate based on role
-    const finalRole = registeredRole || 'user'
-    
-    // Set login state immediately since token is stored during registration
-    setIsLoggedIn(true)
-    setUserRole(finalRole)
-    setShowRegister(false)
-    setShowProviderRegister(false)
-    
-    // Also store role in localStorage for handleLogin to pick up
-    localStorage.setItem('userRole', finalRole)
-    
-    // Navigate based on role
-    if (finalRole === 'provider') {
+    // Set default view based on role
+    if (role === 'provider') {
       setProviderActiveView('Dashboard')
-    } else if (finalRole === 'admin') {
+    } else if (role === 'admin') {
       setAdminActiveView('Dashboard')
     } else {
       setActiveView('My Appointments')
@@ -198,45 +197,21 @@ function App() {
   }
 
   const handleNavigateToRegister = () => {
-    // Clear provider states when showing user register
-    setShowProviderLogin(false)
-    setShowProviderRegister(false)
     setShowRegister(true)
   }
 
   const handleNavigateToLogin = () => {
-    // Clear all register states
     setShowRegister(false)
-    setShowProviderRegister(false)
-    // Clear provider login if showing
     setShowProviderLogin(false)
   }
 
   const handleNavigateToProviderLogin = () => {
-    // Clear all user-related states first
-    setShowRegister(false)
-    setLoginMode('user')
-    // Then set provider states
     setShowProviderLogin(true)
-    setShowProviderRegister(false)
-  }
-
-  const handleNavigateToProviderRegister = () => {
-    // Clear all user-related states first
     setShowRegister(false)
-    setLoginMode('user')
-    // Then set provider states
-    setShowProviderRegister(true)
-    setShowProviderLogin(false)
   }
 
   const handleNavigateToUserLogin = () => {
-    // Clear all provider-related states first
     setShowProviderLogin(false)
-    setShowProviderRegister(false)
-    // Then set user states
-    setShowRegister(false)
-    setLoginMode('user')
   }
 
   const handleForgotPassword = () => {
@@ -374,57 +349,36 @@ function App() {
 
   // Show login/register page if not logged in
   if (!isLoggedIn) {
-    // Show provider login/register (completely separate from user login)
-    if (showProviderLogin || showProviderRegister) {
-      return (
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          {!showProviderRegister && (
-            <ProviderLogin
-              onLogin={handleLogin}
-              onNavigateToUserLogin={handleNavigateToUserLogin}
-              onNavigateToRegister={handleNavigateToProviderRegister}
-            />
-          )}
-          {showProviderRegister && (
-            <div className="register-modal-overlay provider-register-overlay" onClick={handleNavigateToProviderLogin}>
-              <div className="register-modal-content" onClick={(e) => e.stopPropagation()}>
-                <Register
-                  onRegister={handleRegister}
-                  onNavigateToLogin={handleNavigateToProviderLogin}
-                  role="provider"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      )
-    }
-    
-    // Show user login/register (completely separate from provider login)
     return (
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        {!showRegister && (
-          <Login
-            onLogin={handleLogin}
-            onNavigateToRegister={handleNavigateToRegister}
-            onForgotPassword={handleForgotPassword}
-            loginMode={loginMode}
-            onToggleMode={(mode) => setLoginMode(mode)}
-            onNavigateToProviderLogin={handleNavigateToProviderLogin}
-          />
-        )}
+      <>
+        <Login
+          onLogin={handleLogin}
+          onNavigateToRegister={handleNavigateToRegister}
+          onForgotPassword={handleForgotPassword}
+          loginMode={loginMode}
+          onToggleMode={(mode) => setLoginMode(mode)}
+        />
         {showRegister && (
-          <div className="register-modal-overlay user-register-overlay" onClick={handleNavigateToLogin}>
+          <div className="register-modal-overlay" onClick={handleNavigateToLogin}>
             <div className="register-modal-content" onClick={(e) => e.stopPropagation()}>
               <Register
                 onRegister={handleRegister}
                 onNavigateToLogin={handleNavigateToLogin}
-                role="user"
+                registrationMode={loginMode}
               />
             </div>
           </div>
         )}
-      </div>
+        {/* Show login success animation overlay on top of login page
+            Works for both user and provider login - the overlay appears with
+            blurred transparent background, shows Lottie animation in center,
+            then navigates to appropriate dashboard (user/provider/admin) */}
+        {showLoginSuccessAnimation && (
+          <LoginSuccess 
+            onAnimationComplete={handleLoginAnimationComplete}
+          />
+        )}
+      </>
     )
   }
 
@@ -596,7 +550,6 @@ function App() {
           setActiveView={setActiveView}
           isMobileOpen={isSidebarOpen}
           onCloseSidebar={() => setIsSidebarOpen(false)}
-          hasBookedSession={hasBookedSession}
         />
         <main className="main-content">
           <div className="network-nodes">

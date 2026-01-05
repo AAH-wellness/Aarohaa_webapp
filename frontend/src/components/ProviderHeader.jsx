@@ -1,47 +1,41 @@
 import React, { useState, useRef, useEffect } from 'react'
-import providerService from '../services/providerService'
+import { userService } from '../services'
 import './ProviderHeader.css'
 
 const ProviderHeader = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, isSidebarOpen }) => {
   const [showDropdown, setShowDropdown] = useState(false)
-  const [providerName, setProviderName] = useState('Provider')
-  const [providerTitle, setProviderTitle] = useState('')
-  const [providerInitials, setProviderInitials] = useState('P')
+  const [providerData, setProviderData] = useState({
+    name: '',
+    title: '',
+  })
   const dropdownRef = useRef(null)
 
   useEffect(() => {
     // Fetch provider profile data
     const fetchProviderData = async () => {
       try {
-        const response = await providerService.getProviderProfile()
-        if (response && response.provider) {
-          const provider = response.provider
-          const name = provider.name || 'Provider'
-          const title = provider.title || provider.specialty || ''
-          
-          setProviderName(name)
-          setProviderTitle(title)
-          
-          // Generate initials from name
-          const nameParts = name.trim().split(' ').filter(part => part.length > 0)
-          if (nameParts.length >= 2) {
-            setProviderInitials((nameParts[0][0] + nameParts[1][0]).toUpperCase())
-          } else if (nameParts.length === 1 && nameParts[0].length >= 2) {
-            setProviderInitials(nameParts[0].substring(0, 2).toUpperCase())
-          } else {
-            setProviderInitials(name.substring(0, 2).toUpperCase())
-          }
+        const response = await userService.getProviderProfile()
+        if (response.provider) {
+          setProviderData({
+            name: response.provider.name || '',
+            title: response.provider.title || '',
+          })
         }
       } catch (error) {
         console.error('Error fetching provider data for header:', error)
-        // Keep default values if fetch fails
+        // Fallback to currentUser from localStorage if available
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
+        if (currentUser.name) {
+          setProviderData({
+            name: currentUser.name,
+            title: '',
+          })
+        }
       }
     }
 
     fetchProviderData()
-  }, [])
 
-  useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false)
@@ -105,10 +99,12 @@ const ProviderHeader = ({ onNavigateToProfile, onSignOut, activeView, onToggleSi
             className="provider-user-profile"
             onClick={() => setShowDropdown(!showDropdown)}
           >
-            <div className="provider-user-avatar">{providerInitials}</div>
+            <div className="provider-user-avatar">
+              {providerData.name ? providerData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'P'}
+            </div>
             <div className="provider-user-info">
-              <span className="provider-user-name">{providerName}</span>
-              <span className="provider-user-role">{providerTitle || 'Provider'}</span>
+              <span className="provider-user-name">{providerData.name || 'Provider'}</span>
+              <span className="provider-user-role">{providerData.title || 'Wellness Provider'}</span>
             </div>
             <span className="provider-dropdown-arrow">▼</span>
           </div>

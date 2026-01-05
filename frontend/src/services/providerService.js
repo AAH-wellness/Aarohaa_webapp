@@ -17,8 +17,7 @@ import API_CONFIG from './config.js'
 
 class ProviderService {
   constructor() {
-    // Use authentication service for providers (since it's in the same backend for now)
-    this.baseUrl = `${API_CONFIG.USER_SERVICE}/users/providers`
+    this.baseUrl = `${API_CONFIG.PROVIDER_SERVICE}/providers`
     this.useMock = API_CONFIG.USE_MOCK_SERVICES
   }
 
@@ -35,9 +34,7 @@ class ProviderService {
     try {
       const queryParams = new URLSearchParams(filters).toString()
       const url = queryParams ? `${this.baseUrl}?${queryParams}` : this.baseUrl
-      const response = await apiClient.get(url)
-      // Backend returns { providers: [...] }, so return the providers array directly
-      return response.providers || response || []
+      return await apiClient.get(url)
     } catch (error) {
       console.error('Get providers error:', error)
       throw error
@@ -151,77 +148,6 @@ class ProviderService {
       return await apiClient.post(`${this.baseUrl}/${providerId}/verify`, { verified })
     } catch (error) {
       console.error('Verify provider error:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Get provider profile (for logged-in provider)
-   */
-  async getProviderProfile() {
-    if (this.useMock) {
-      return this.mockGetProviderById('current')
-    }
-
-    try {
-      const response = await apiClient.get(`${API_CONFIG.USER_SERVICE}/users/provider/profile`)
-      console.log('getProviderProfile response:', response)
-      return response
-    } catch (error) {
-      console.error('Get provider profile error:', error)
-      // If provider not found, it might be because they just registered
-      if (error.status === 404 || error.data?.error?.code === 'PROVIDER_NOT_FOUND') {
-        throw new Error('Provider profile not found. Please ensure you have registered as a provider.')
-      }
-      throw error
-    }
-  }
-
-  /**
-   * Update provider profile (for logged-in provider)
-   */
-  async updateProviderProfile(updateData) {
-    if (this.useMock) {
-      return this.mockUpdateProvider('current', updateData)
-    }
-
-    try {
-      return await apiClient.put(`${API_CONFIG.USER_SERVICE}/users/provider/profile`, updateData)
-    } catch (error) {
-      console.error('Update provider profile error:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Get provider availability (for logged-in provider)
-   */
-  async getProviderAvailability() {
-    if (this.useMock) {
-      return this.mockGetProviderAvailability('current')
-    }
-
-    try {
-      const response = await apiClient.get(`${API_CONFIG.USER_SERVICE}/users/provider/availability`)
-      return response.availability || {}
-    } catch (error) {
-      console.error('Get provider availability error:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Update provider availability (for logged-in provider)
-   */
-  async updateProviderAvailability(availabilityData) {
-    if (this.useMock) {
-      return this.mockUpdateProviderAvailability('current', availabilityData)
-    }
-
-    try {
-      return await apiClient.put(`${API_CONFIG.USER_SERVICE}/users/provider/availability`, { availability: availabilityData })
-    } catch (error) {
-      console.error('Update provider availability error:', error)
       throw error
     }
   }

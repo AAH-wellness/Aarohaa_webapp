@@ -17,46 +17,42 @@ const ProviderEarnings = () => {
       const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
       const now = new Date()
       
-      // Calculate earnings from real payment data
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]')
-      const providerPayments = payments.filter(p => p.providerId || p.provider) // Filter by provider
-      
-      const totalEarnings = providerPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+      // Calculate earnings (mock: $50 per completed session)
+      const completedSessions = appointments.filter(apt => {
+        const aptDate = new Date(apt.dateTime)
+        return aptDate < now
+      })
+
+      const totalEarnings = completedSessions.length * 50
       
       // This month
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-      const thisMonthPayments = providerPayments.filter(p => {
-        const paymentDate = new Date(p.date || p.createdAt)
-        return paymentDate >= monthStart
+      const thisMonthSessions = completedSessions.filter(apt => {
+        const aptDate = new Date(apt.dateTime)
+        return aptDate >= monthStart
       })
-      const thisMonth = thisMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+      const thisMonth = thisMonthSessions.length * 50
 
       // This week
       const weekStart = new Date(now)
       weekStart.setDate(weekStart.getDate() - weekStart.getDay())
       weekStart.setHours(0, 0, 0, 0)
-      const thisWeekPayments = providerPayments.filter(p => {
-        const paymentDate = new Date(p.date || p.createdAt)
-        return paymentDate >= weekStart
+      const thisWeekSessions = completedSessions.filter(apt => {
+        const aptDate = new Date(apt.dateTime)
+        return aptDate >= weekStart
       })
-      const thisWeek = thisWeekPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+      const thisWeek = thisWeekSessions.length * 50
 
       // Today
       const today = new Date(now)
       today.setHours(0, 0, 0, 0)
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
-      const todayPayments = providerPayments.filter(p => {
-        const paymentDate = new Date(p.date || p.createdAt)
-        return paymentDate >= today && paymentDate < tomorrow
-      })
-      const todayEarnings = todayPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
-
-      // Count completed sessions
-      const completedSessions = appointments.filter(apt => {
+      const todaySessions = completedSessions.filter(apt => {
         const aptDate = new Date(apt.dateTime)
-        return aptDate < now
+        return aptDate >= today && aptDate < tomorrow
       })
+      const todayEarnings = todaySessions.length * 50
 
       setEarningsData({
         totalEarnings,
@@ -66,16 +62,16 @@ const ProviderEarnings = () => {
         sessionsCompleted: completedSessions.length,
       })
 
-      // Load real transactions from payments
-      const transactionsData = providerPayments.slice(0, 10).map(payment => ({
-        id: payment.id || payment.transactionId,
-        date: payment.date || payment.createdAt,
-        patient: payment.patientName || payment.userName || 'Patient',
-        amount: payment.amount || 0,
-        status: payment.status || 'completed',
-        type: payment.type || 'session',
+      // Mock transactions
+      const mockTransactions = completedSessions.slice(0, 10).map((apt, index) => ({
+        id: apt.id,
+        date: apt.dateTime,
+        patient: apt.patientName || 'Patient',
+        amount: 50,
+        status: 'completed',
+        type: 'session',
       }))
-      setTransactions(transactionsData)
+      setTransactions(mockTransactions)
     }
 
     loadEarnings()
@@ -99,14 +95,14 @@ const ProviderEarnings = () => {
       value: `$${earningsData.totalEarnings.toLocaleString()}`,
       icon: '💰',
       color: 'purple',
-      trend: '',
+      trend: '+12%',
     },
     {
       title: 'This Month',
       value: `$${earningsData.thisMonth.toLocaleString()}`,
       icon: '📅',
       color: 'blue',
-      trend: '',
+      trend: '+5 sessions',
     },
     {
       title: 'This Week',

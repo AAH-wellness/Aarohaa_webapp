@@ -15,10 +15,10 @@ async function register(req, res, next) {
     const { email, password, name, role, phone } = req.body;
 
     // Validation
-    if (!email || !password) {
+    if (!email || !password || !name || !phone) {
       return res.status(400).json({
         error: {
-          message: 'Email and password are required',
+          message: 'Email, password, name, and phone number are required',
           code: 'MISSING_FIELDS',
           status: 400
         }
@@ -42,33 +42,18 @@ async function register(req, res, next) {
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Create user
+    // IMPORTANT: User registration endpoint ALWAYS creates 'user' role
+    // Provider registration must use the separate /register/provider endpoint
     const user = await User.create({
       email,
       passwordHash,
       name,
-      role: role || 'user',
-      phone: phone || null
+      role: 'user', // ALWAYS 'user' for this endpoint - never 'provider'
+      phone: phone // Phone is now required
     });
 
-    // If role is provider, create provider record in providers table
-    if (role === 'provider') {
-      try {
-        await Provider.create({
-          userId: user.id,
-          name: user.name,
-          email: user.email,
-          phone: phone || null,
-          specialty: null,
-          title: null,
-          bio: null,
-          hourlyRate: 0
-        });
-        console.log(`✅ Provider record created for user ${user.id}`);
-      } catch (error) {
-        console.error('Error creating provider record:', error);
-        // Continue even if provider creation fails (user is still created)
-      }
-    }
+    // DO NOT create provider record here - this is user registration only
+    // Provider registration uses separate endpoint /register/provider
 
     // Generate JWT token
     const token = jwt.sign(
@@ -89,6 +74,127 @@ async function register(req, res, next) {
       },
       token,
       message: 'Registration successful'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Register a new provider
+ * Separate endpoint for provider registration
+ * Creates user with role='provider' AND creates provider record
+ */
+async function registerProvider(req, res, next) {
+  try {
+    const { email, password, name, phone, specialty, title, bio, hourlyRate } = req.body;
+
+    // Validation
+    if (!email || !password || !name || !phone) {
+      return res.status(400).json({
+        error: {
+          message: 'Email, password, name, and phone number are required',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      // Check if the existing user is already a provider
+      if (existingUser.role === 'provider') {
+        return res.status(409).json({
+          error: {
+            message: 'This email is already registered as a provider. Please use a different email or try logging in.',
+            code: 'EMAIL_EXISTS_PROVIDER',
+            status: 409
+          }
+        });
+      } else {
+        // User exists but is not a provider
+        return res.status(409).json({
+          error: {
+            message: 'This email is already registered as a user. Please use a different email or try logging in.',
+            code: 'EMAIL_EXISTS_USER',
+            status: 409
+          }
+        });
+      }
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Create user with role='provider'
+    const user = await User.create({
+      email,
+      passwordHash,
+      name,
+      role: 'provider', // ALWAYS 'provider' for provider registration
+      phone: phone
+    });
+
+    // Create provider record in providers table
+    try {
+      const provider = await Provider.create({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        phone: phone || null,
+        specialty: specialty || null,
+        title: title || null,
+        bio: bio || null,
+        hourlyRate: hourlyRate || 0
+      });
+      console.log(`✅ Provider record created for user ${user.id}`);
+    } catch (error) {
+      console.error('Error creating provider record:', error);
+      // If provider creation fails, delete the user to maintain data integrity
+      await User.deleteById(user.id);
+      
+      // Check if it's a unique constraint violation (email already exists in providers table)
+      if (error.code === '23505' || error.message?.includes('already exists')) {
+        return res.status(409).json({
+          error: {
+            message: 'Provider with this email already exists',
+            code: 'PROVIDER_EMAIL_EXISTS',
+            status: 409
+          }
+        });
+      }
+      
+      return res.status(500).json({
+        error: {
+          message: 'Failed to create provider profile',
+          code: 'PROVIDER_CREATION_FAILED',
+          status: 500,
+          detail: error.message
+        }
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    // Return user (without password hash) and token
+    res.status(201).json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        phone: user.phone,
+        createdAt: user.created_at
+      },
+      token,
+      message: 'Provider registration successful'
     });
   } catch (error) {
     next(error);
@@ -119,8 +225,8 @@ async function login(req, res, next) {
       console.log(`Login attempt failed: User not found for email: ${email}`);
       return res.status(401).json({
         error: {
-          message: 'Invalid email or password',
-          code: 'INVALID_CREDENTIALS',
+          message: 'User not found. Please check your email or sign up.',
+          code: 'USER_NOT_FOUND',
           status: 401
         }
       });
@@ -1080,6 +1186,7 @@ async function cancelBooking(req, res, next) {
 
 module.exports = {
   register,
+  registerProvider,
   login,
   logout,
   deleteUser,
