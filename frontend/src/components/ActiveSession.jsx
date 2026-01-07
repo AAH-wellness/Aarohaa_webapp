@@ -8,19 +8,44 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
   const [sessionTime, setSessionTime] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
-  const [notes, setNotes] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [activeBooking, setActiveBooking] = useState(null)
+  const [providerNotes, setProviderNotes] = useState([])
   const videoRef = useRef(null)
   const streamRef = useRef(null)
 
   useEffect(() => {
-    // Check if session is booked when component mounts or when hasBookedSession changes
-    if (!hasBookedSession) {
-      setShowModal(true)
-    } else {
-      setShowModal(false)
+    // Check for active booking when component mounts
+    const checkActiveBooking = () => {
+      const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
+      const now = new Date()
+      
+      // Find active booking (scheduled for today/now or in progress)
+      const active = appointments.find(apt => {
+        const aptDate = new Date(apt.dateTime)
+        const diffInHours = (aptDate - now) / (1000 * 60 * 60)
+        // Active if appointment is within 1 hour before or 2 hours after scheduled time
+        return diffInHours >= -1 && diffInHours <= 2 && apt.status !== 'completed' && apt.status !== 'cancelled'
+      })
+      
+      if (active) {
+        setActiveBooking(active)
+        setShowModal(false)
+        loadProviderNotes(active.id)
+      } else {
+        setActiveBooking(null)
+        setShowModal(true)
+      }
     }
+    
+    checkActiveBooking()
   }, [hasBookedSession])
+
+  const loadProviderNotes = (bookingId) => {
+    // Load provider notes from localStorage (in production, this would be from API)
+    const savedNotes = JSON.parse(localStorage.getItem(`session_notes_${bookingId}`) || '[]')
+    setProviderNotes(savedNotes)
+  }
 
   useEffect(() => {
     if (isCallStarted) {
@@ -81,9 +106,11 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
   }
 
   const calculateCost = (seconds) => {
-    // Assuming $3 per minute for Dr. Maya Patel
+    if (!activeBooking) return '0.00'
+    // Calculate based on provider's rate (default $3 per minute)
+    const ratePerMinute = 3 // This should come from provider data
     const minutes = seconds / 60
-    return (minutes * 3).toFixed(2)
+    return (minutes * ratePerMinute).toFixed(2)
   }
 
   const handleStartCall = async () => {
@@ -154,10 +181,30 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
         videoRef.current.srcObject = null
       }
 
+      // Mark session as completed
+      if (activeBooking) {
+        const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
+        const updatedAppointments = appointments.map(apt => {
+          if (apt.id === activeBooking.id) {
+            return {
+              ...apt,
+              status: 'completed',
+              sessionDuration: sessionTime,
+              completedAt: new Date().toISOString()
+            }
+          }
+          return apt
+        })
+        localStorage.setItem('appointments', JSON.stringify(updatedAppointments))
+      }
+
       setIsCallStarted(false)
       setSessionTime(0)
       setIsMuted(false)
       setIsVideoOff(false)
+      
+      // Show completion message
+      alert('Session completed! You can access provider notes in this section.')
     }
   }
 
@@ -181,8 +228,8 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
     }
   }
 
-  // Show modal if session is not booked
-  if (!hasBookedSession && showModal) {
+  // Show modal if no active booking
+  if (!activeBooking && showModal) {
     return (
       <div className="active-session">
         <BookingRequiredModal
@@ -193,15 +240,21 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
     )
   }
 
-  // Don't show session content if not booked
-  if (!hasBookedSession) {
+  // Don't show session content if no active booking
+  if (!activeBooking) {
     return null
   }
+
+  const providerName = activeBooking.providerName || 'Your Provider'
+  const sessionDate = new Date(activeBooking.dateTime).toLocaleString()
 
   return (
     <div className="active-session">
       <div className="session-container">
-        <h1 className="session-title">Video Session with Dr. Maya Patel</h1>
+        <div className="session-header">
+          <h1 className="session-title">Video Session with {providerName}</h1>
+          <p className="session-scheduled-time">Scheduled: {sessionDate}</p>
+        </div>
 
         {isCallStarted ? (
           <>
@@ -258,7 +311,7 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
                 <div className="video-icon">📹</div>
                 <p className="video-status">
                   Ready to start your session with<br />
-                  Dr. Maya Patel
+                  {providerName}
                 </p>
               </div>
             </div>
@@ -273,14 +326,28 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking }) => {
         )}
 
         <div className="session-notes-section">
-          <h2 className="notes-title">Session Notes</h2>
-          <textarea
-            className="notes-textarea"
-            placeholder="Take notes during your session..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows="6"
-          />
+          <h2 className="notes-title">Provider Session Notes</h2>
+          <p className="notes-description">
+            Your provider will share important information here during and after the session.
+          </p>
+          
+          {providerNotes.length > 0 ? (
+            <div className="notes-list">
+              {providerNotes.map((note, index) => (
+                <div key={index} className="note-item">
+                  <div className="note-header">
+                    <span className="note-author">{note.providerName}</span>
+                    <span className="note-time">{new Date(note.timestamp).toLocaleString()}</span>
+                  </div>
+                  <div className="note-content">{note.content}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="no-notes-placeholder">
+              <p>No notes shared yet. Provider notes will appear here during or after your session.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

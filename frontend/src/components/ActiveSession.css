@@ -198,35 +198,88 @@
   margin-top: 8px;
 }
 
+.session-header {
+  margin-bottom: 24px;
+}
+
+.session-scheduled-time {
+  color: #666;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
 .notes-title {
   font-size: 20px;
   font-weight: 700;
-  color: #333;
-  margin-bottom: 12px;
+  color: #0e4826;
+  margin: 0 0 8px 0;
 }
 
-.notes-textarea {
-  width: 100%;
-  padding: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+.notes-description {
+  color: #666;
   font-size: 14px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.note-item {
+  background-color: #f8f9fa;
+  border-left: 4px solid #0e4826;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.note-item:hover {
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.1);
+  transform: translateX(4px);
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.note-author {
+  font-weight: 600;
+  color: #0e4826;
+  font-size: 14px;
+}
+
+.note-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.note-content {
   color: #333;
-  background-color: #ffffff;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 150px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
-.notes-textarea:focus {
-  outline: none;
-  border-color: #0e4826;
-  box-shadow: 0 0 0 3px rgba(14, 72, 38, 0.1);
+.no-notes-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  border: 2px dashed #e0e0e0;
 }
 
-.notes-textarea::placeholder {
-  color: #9ca3af;
+.no-notes-placeholder p {
+  color: #999;
+  font-size: 14px;
+  margin: 0;
 }
 
 .pre-call-section {
