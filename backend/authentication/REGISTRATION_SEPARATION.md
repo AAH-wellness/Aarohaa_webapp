@@ -320,3 +320,8 @@ curl -X POST http://localhost:3001/api/users/register/provider \
 - Clear data integrity rules
 - No mixing of roles or records
 
+
+
+
+
+

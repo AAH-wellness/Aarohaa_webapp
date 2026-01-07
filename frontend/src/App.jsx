@@ -36,7 +36,6 @@ import AdminSettings from './components/AdminSettings'
 import AdminAuditLog from './components/AdminAuditLog'
 import AdminProfile from './components/AdminProfile'
 import MaintenanceMode from './components/MaintenanceMode'
-import LoginSuccess from './components/LoginSuccess'
 import './App.css'
 
 function App() {
@@ -54,7 +53,6 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false)
   const [isProviderSidebarOpen, setIsProviderSidebarOpen] = useState(false)
-  const [showLoginSuccessAnimation, setShowLoginSuccessAnimation] = useState(false)
 
   useEffect(() => {
     // Check maintenance mode status
@@ -156,29 +154,12 @@ function App() {
   }
 
   const handleLogin = () => {
-    // Show success animation first, then proceed with login after animation completes
-    setShowLoginSuccessAnimation(true)
-  }
-
-  const handleLoginAnimationComplete = () => {
-    // Animation completed, now proceed with login
     const role = localStorage.getItem('userRole') || 'user'
-    console.log('Animation complete - Navigating to dashboard for role:', role)
     setIsLoggedIn(true)
     setUserRole(role)
     setShowRegister(false)
-    setShowLoginSuccessAnimation(false)
-    // Set default view based on role
-    if (role === 'provider') {
-      setProviderActiveView('Dashboard')
-      console.log('Provider dashboard view set to Dashboard')
-    } else if (role === 'admin') {
-      setAdminActiveView('Dashboard')
-      console.log('Admin dashboard view set to Dashboard')
-    } else {
-      setActiveView('My Appointments')
-      console.log('User dashboard view set to My Appointments')
-    }
+    // Always default to user view on login
+    setActiveView('My Appointments')
   }
 
   const handleRegister = () => {
@@ -186,14 +167,8 @@ function App() {
     setIsLoggedIn(true)
     setUserRole(role)
     setShowRegister(false)
-    // Set default view based on role
-    if (role === 'provider') {
-      setProviderActiveView('Dashboard')
-    } else if (role === 'admin') {
-      setAdminActiveView('Dashboard')
-    } else {
-      setActiveView('My Appointments')
-    }
+    // Always default to user view on register
+    setActiveView('My Appointments')
   }
 
   const handleNavigateToRegister = () => {
@@ -364,19 +339,9 @@ function App() {
               <Register
                 onRegister={handleRegister}
                 onNavigateToLogin={handleNavigateToLogin}
-                registrationMode={loginMode}
               />
             </div>
           </div>
-        )}
-        {/* Show login success animation overlay on top of login page
-            Works for both user and provider login - the overlay appears with
-            blurred transparent background, shows Lottie animation in center,
-            then navigates to appropriate dashboard (user/provider/admin) */}
-        {showLoginSuccessAnimation && (
-          <LoginSuccess 
-            onAnimationComplete={handleLoginAnimationComplete}
-          />
         )}
       </>
     )

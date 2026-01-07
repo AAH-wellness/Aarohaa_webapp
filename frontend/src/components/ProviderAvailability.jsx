@@ -3,6 +3,8 @@ import { userService } from '../services'
 import './ProviderAvailability.css'
 
 const ProviderAvailability = ({ onBack }) => {
+  console.log('ProviderAvailability component rendered')
+  
   const [availability, setAvailability] = useState({
     monday: { enabled: true, start: '09:00', end: '17:00' },
     tuesday: { enabled: true, start: '09:00', end: '17:00' },
@@ -53,10 +55,51 @@ const ProviderAvailability = ({ onBack }) => {
     const loadAvailability = async () => {
       try {
         setIsLoading(true)
+        setError(null)
         const response = await userService.getProviderAvailability()
-        if (response.availability) {
-          setAvailability(response.availability)
+        console.log('Availability response:', response)
+        
+        if (response && response.availability) {
+          // Check if response.availability is a string (JSON) or object
+          let availabilityData = response.availability
+          if (typeof availabilityData === 'string') {
+            try {
+              availabilityData = JSON.parse(availabilityData)
+            } catch (parseError) {
+              console.error('Error parsing availability JSON:', parseError)
+            }
+          }
+          
+          // Only update if we have valid data
+          if (availabilityData && typeof availabilityData === 'object') {
+            // Ensure all days have the required structure
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+            const normalizedAvailability = {}
+            
+            days.forEach(day => {
+              if (availabilityData[day] && typeof availabilityData[day] === 'object') {
+                normalizedAvailability[day] = {
+                  enabled: availabilityData[day].enabled !== undefined ? availabilityData[day].enabled : false,
+                  start: availabilityData[day].start || '09:00',
+                  end: availabilityData[day].end || '17:00'
+                }
+              } else {
+                // Use default if day data is missing or invalid
+                normalizedAvailability[day] = {
+                  enabled: day !== 'saturday' && day !== 'sunday', // Default: weekdays enabled
+                  start: '09:00',
+                  end: '17:00'
+                }
+              }
+            })
+            
+            setAvailability(normalizedAvailability)
+          }
+        } else {
+          console.log('No availability data found, using defaults')
+          // Keep default availability values
         }
+        
         // Load timezone from localStorage if available
         const savedTimezone = localStorage.getItem('providerTimezone')
         if (savedTimezone) {
@@ -64,7 +107,10 @@ const ProviderAvailability = ({ onBack }) => {
         }
       } catch (error) {
         console.error('Error loading availability:', error)
-        setError('Failed to load availability settings')
+        // Don't set error state - just use default values
+        // This allows the user to still set their availability even if loading fails
+        setError(null)
+        console.log('Using default availability values')
       } finally {
         setIsLoading(false)
       }
@@ -109,12 +155,15 @@ const ProviderAvailability = ({ onBack }) => {
             <p className="availability-subtitle">Loading availability settings...</p>
           </div>
         </div>
+        <div className="availability-container" style={{ padding: '40px', textAlign: 'center' }}>
+          <div style={{ color: 'rgba(14, 72, 38, 0.6)' }}>Loading...</div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="provider-availability">
+    <div className="provider-availability" style={{ minHeight: '100vh', padding: '32px' }}>
       <div className="availability-header">
         <button className="back-button" onClick={onBack}>
           ← Back
@@ -123,10 +172,11 @@ const ProviderAvailability = ({ onBack }) => {
           <h1 className="availability-title">Manage Availability</h1>
           <p className="availability-subtitle">Set your working hours for each day of the week</p>
           {error && (
-            <p style={{ color: 'red', marginTop: '8px' }}>{error}</p>
+            <p style={{ color: '#dc2626', marginTop: '8px', padding: '8px 12px', background: '#fef2f2', borderRadius: '6px', border: '1px solid #fecaca' }}>
+              {error}
+            </p>
           )}
         </div>
-
       </div>
 
       <div className="availability-container">
@@ -158,51 +208,56 @@ const ProviderAvailability = ({ onBack }) => {
           </div>
           
           <div className="availability-days">
-            {days.map((day) => (
-              <div key={day.key} className="availability-day-card">
-                <div className="day-header">
-                  <div className="day-toggle">
-                    <label className="toggle-switch">
-                      <input
-                        type="checkbox"
-                        checked={availability[day.key].enabled}
-                        onChange={() => handleDayToggle(day.key)}
-                      />
-                      <span className="toggle-slider"></span>
-                    </label>
-                    <span className="day-label">{day.label}</span>
+            {days.map((day) => {
+              // Ensure day data exists, use defaults if not
+              const dayData = availability[day.key] || { enabled: false, start: '09:00', end: '17:00' }
+              
+              return (
+                <div key={day.key} className="availability-day-card">
+                  <div className="day-header">
+                    <div className="day-toggle">
+                      <label className="toggle-switch">
+                        <input
+                          type="checkbox"
+                          checked={dayData.enabled}
+                          onChange={() => handleDayToggle(day.key)}
+                        />
+                        <span className="toggle-slider"></span>
+                      </label>
+                      <span className="day-label">{day.label}</span>
+                    </div>
                   </div>
+                  {dayData.enabled && (
+                    <div className="day-times">
+                      <div className="time-input-group">
+                        <label>Start Time</label>
+                        <input
+                          type="time"
+                          value={dayData.start}
+                          onChange={(e) => handleTimeChange(day.key, 'start', e.target.value)}
+                          className="time-input"
+                        />
+                      </div>
+                      <span className="time-separator">to</span>
+                      <div className="time-input-group">
+                        <label>End Time</label>
+                        <input
+                          type="time"
+                          value={dayData.end}
+                          onChange={(e) => handleTimeChange(day.key, 'end', e.target.value)}
+                          className="time-input"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {!dayData.enabled && (
+                    <div className="day-unavailable">
+                      <span>Unavailable</span>
+                    </div>
+                  )}
                 </div>
-                {availability[day.key].enabled && (
-                  <div className="day-times">
-                    <div className="time-input-group">
-                      <label>Start Time</label>
-                      <input
-                        type="time"
-                        value={availability[day.key].start}
-                        onChange={(e) => handleTimeChange(day.key, 'start', e.target.value)}
-                        className="time-input"
-                      />
-                    </div>
-                    <span className="time-separator">to</span>
-                    <div className="time-input-group">
-                      <label>End Time</label>
-                      <input
-                        type="time"
-                        value={availability[day.key].end}
-                        onChange={(e) => handleTimeChange(day.key, 'end', e.target.value)}
-                        className="time-input"
-                      />
-                    </div>
-                  </div>
-                )}
-                {!availability[day.key].enabled && (
-                  <div className="day-unavailable">
-                    <span>Unavailable</span>
-                  </div>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 

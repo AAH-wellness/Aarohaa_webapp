@@ -152,3 +152,8 @@ ORDER BY b.appointment_date ASC;
 4. Migrate existing data (if any)
 5. Remove the `availability` JSONB column from `providers` table (optional)
 
+
+
+
+
+

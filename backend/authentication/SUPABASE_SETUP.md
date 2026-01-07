@@ -252,3 +252,8 @@ You can also view and manage tables in Supabase Dashboard → **Table Editor**.
 4. Check server logs for error messages
 5. Review Supabase documentation
 
+
+
+
+
+

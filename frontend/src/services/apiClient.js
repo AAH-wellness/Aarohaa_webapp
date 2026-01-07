@@ -70,21 +70,10 @@ class ApiClient {
       
       return await response.text()
     } catch (error) {
-      // Handle network errors (TypeError from fetch)
-      if (error instanceof TypeError) {
-        // Network error - server not reachable
-        const networkError = new ApiError(
-          'Cannot connect to backend server. Please ensure the server is running.',
-          0,
-          { originalError: error.message }
-        )
-        throw networkError
-      }
-      
       // Retry on network errors or 5xx errors
       if (
         retryCount < API_CONFIG.MAX_RETRIES &&
-        (error.status >= 500 && error.status < 600)
+        (error instanceof TypeError || (error.status >= 500 && error.status < 600))
       ) {
         await this.delay(API_CONFIG.RETRY_DELAY * (retryCount + 1))
         return this.request(url, options, retryCount + 1)
