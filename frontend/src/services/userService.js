@@ -74,6 +74,59 @@ class UserService {
   }
 
   /**
+   * Login with Google OAuth
+   * @param {Object} googleData - { idToken, role }
+   * @returns {Promise<Object>} User object with token
+   */
+  async loginWithGoogle(googleData) {
+    if (this.useMock) {
+      return this.mockGoogleLogin(googleData)
+    }
+
+    try {
+      const response = await apiClient.post(`${this.baseUrl}/login/google`, googleData)
+      if (response.token) {
+        localStorage.setItem('authToken', response.token)
+        localStorage.setItem('isLoggedIn', 'true')
+        localStorage.setItem('userRole', response.user.role || 'user')
+        localStorage.setItem('loginMethod', 'google')
+        // Store profile incomplete status
+        if (response.user.profileIncomplete) {
+          localStorage.setItem('profileIncomplete', 'true')
+        } else {
+          localStorage.removeItem('profileIncomplete')
+        }
+      }
+      return response
+    } catch (error) {
+      console.error('Google login error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Complete Google profile (for Google OAuth users)
+   * @param {Object} profileData - { name, dateOfBirth, phone }
+   * @returns {Promise<Object>} Updated user profile
+   */
+  async completeGoogleProfile(profileData) {
+    if (this.useMock) {
+      return this.mockCompleteGoogleProfile(profileData)
+    }
+
+    try {
+      const response = await apiClient.post(`${this.baseUrl}/profile/complete-google`, profileData)
+      if (response.user) {
+        localStorage.removeItem('profileIncomplete')
+      }
+      return response
+    } catch (error) {
+      console.error('Complete Google profile error:', error)
+      throw error
+    }
+  }
+
+  /**
    * Logout user
    * @returns {Promise<void>}
    */
@@ -256,6 +309,46 @@ class UserService {
   async mockResetPassword(resetData) {
     await new Promise(resolve => setTimeout(resolve, 500))
     return { message: 'Password reset successful' }
+  }
+
+  async mockGoogleLogin(googleData) {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    const user = {
+      id: Date.now(),
+      email: 'user@gmail.com',
+      name: 'Google User',
+      role: googleData.role || 'user',
+      picture: null,
+      profileIncomplete: true,
+    }
+
+    localStorage.setItem('isLoggedIn', 'true')
+    localStorage.setItem('userRole', user.role)
+    localStorage.setItem('loginMethod', 'google')
+    localStorage.setItem('profileIncomplete', 'true')
+    localStorage.setItem('currentUser', JSON.stringify(user))
+
+    return {
+      user,
+      token: 'mock-google-token-' + Date.now(),
+      message: 'Google login successful',
+    }
+  }
+
+  async mockCompleteGoogleProfile(profileData) {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    const current = await this.mockGetProfile()
+    const updated = { 
+      ...current, 
+      ...profileData, 
+      updatedAt: new Date().toISOString(),
+      profileIncomplete: false
+    }
+    localStorage.setItem('currentUser', JSON.stringify(updated))
+    localStorage.removeItem('profileIncomplete')
+    return { user: updated, message: 'Profile completed successfully' }
   }
 }
 

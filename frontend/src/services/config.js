@@ -19,6 +19,9 @@ const API_CONFIG = {
   // Default to false to use real backend API
   USE_MOCK_SERVICES: import.meta.env.VITE_USE_MOCK_SERVICES === 'true',
   
+  // Google OAuth Configuration
+  GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+  
   // API timeout
   TIMEOUT: 30000, // 30 seconds
   

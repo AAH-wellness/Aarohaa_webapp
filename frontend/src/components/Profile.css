@@ -403,6 +403,40 @@
   cursor: not-allowed;
 }
 
+/* Google Profile Completion Form */
+.google-profile-completion {
+  background: linear-gradient(135deg, #f0f7f4 0%, #ffffff 100%);
+  border: 2px solid #4285F4;
+  box-shadow: 0 8px 30px rgba(66, 133, 244, 0.15), 0 0 0 1px rgba(66, 133, 244, 0.2);
+}
+
+.google-profile-completion::before {
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(66, 133, 244, 0.1),
+    transparent
+  );
+}
+
+.google-profile-completion:hover {
+  box-shadow: 0 8px 30px rgba(66, 133, 244, 0.2), 0 0 0 1px rgba(66, 133, 244, 0.4);
+  border-color: #1a73e8;
+}
+
+.completion-message {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.google-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 @media (max-width: 768px) {
   .profile {
     max-width: 100%;

@@ -3,6 +3,8 @@ const router = express.Router();
 const { 
   register, 
   login, 
+  loginWithGoogle,
+  completeGoogleProfile,
   logout, 
   deleteUser, 
   getProfile, 
@@ -26,6 +28,12 @@ router.post('/register', validateRegister, register);
 
 // Login user
 router.post('/login', validateLogin, login);
+
+// Login with Google OAuth
+router.post('/login/google', loginWithGoogle);
+
+// Complete Google profile (for Google OAuth users)
+router.post('/profile/complete-google', authenticateToken, completeGoogleProfile);
 
 // Logout user
 router.post('/logout', logout);

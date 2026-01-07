@@ -1,11 +1,17 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const Provider = require('../models/Provider');
+const UserLoginEvent = require('../models/UserLoginEvent');
 const { pool } = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
+// Initialize Google OAuth client
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 /**
  * Register a new user
@@ -301,6 +307,9 @@ async function getProfile(req, res, next) {
       });
     }
 
+    // Check if profile is incomplete (for Google users)
+    const profileIncomplete = user.auth_method === 'google' && (!user.name || !user.phone || !user.date_of_birth);
+
     // Return user profile without password
     res.json({
       user: {
@@ -310,6 +319,10 @@ async function getProfile(req, res, next) {
         role: user.role,
         phone: user.phone || null,
         address: user.address || null,
+        dateOfBirth: user.date_of_birth || null,
+        picture: user.google_picture || null,
+        authMethod: user.auth_method || 'email',
+        profileIncomplete: profileIncomplete,
         createdAt: user.created_at,
         updatedAt: user.updated_at
       }
@@ -1035,6 +1048,318 @@ async function getProviderBookings(req, res, next) {
 }
 
 /**
+ * Login with Google OAuth
+ */
+async function loginWithGoogle(req, res, next) {
+  try {
+    const { idToken, role } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({
+        error: {
+          message: 'Google ID token is required',
+          code: 'MISSING_TOKEN',
+          status: 400
+        }
+      });
+    }
+
+    if (!googleClient) {
+      return res.status(500).json({
+        error: {
+          message: 'Google OAuth is not configured',
+          code: 'OAUTH_NOT_CONFIGURED',
+          status: 500
+        }
+      });
+    }
+
+    // Verify the Google ID token
+    let ticket;
+    try {
+      ticket = await googleClient.verifyIdToken({
+        idToken: idToken,
+        audience: GOOGLE_CLIENT_ID
+      });
+    } catch (error) {
+      console.error('Google token verification error:', error);
+      return res.status(401).json({
+        error: {
+          message: 'Invalid Google token',
+          code: 'INVALID_TOKEN',
+          status: 401
+        }
+      });
+    }
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    if (!email) {
+      return res.status(400).json({
+        error: {
+          message: 'Email not provided by Google',
+          code: 'NO_EMAIL',
+          status: 400
+        }
+      });
+    }
+
+    // Get client IP and user agent for logging
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'] || '';
+    
+    // Parse user agent (simple parsing)
+    const deviceInfo = parseUserAgent(userAgent);
+
+    // Check if user already exists
+    let user = await User.findByEmail(email);
+    let isNewUser = false;
+
+    if (user) {
+      // User exists, update last login and Google info
+      await pool.query(
+        `UPDATE users 
+         SET last_login = CURRENT_TIMESTAMP, 
+             google_id = $1, 
+             google_picture = $2,
+             auth_method = 'google',
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [googleId, picture, user.id]
+      );
+      
+      // Refresh user data
+      user = await User.findById(user.id);
+    } else {
+      // Create new user from Google account
+      isNewUser = true;
+      // Generate a random password (won't be used for OAuth users)
+      const randomPassword = Math.random().toString(36).slice(-12);
+      const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+      // Create user with Google info
+      const insertQuery = `
+        INSERT INTO users (email, password, name, role, phone, google_id, google_picture, auth_method, created_at, updated_at, last_login)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'google', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING id, email, name, role, phone, google_id, google_picture, auth_method, date_of_birth, created_at, updated_at
+      `;
+      
+      const result = await pool.query(insertQuery, [
+        email,
+        passwordHash,
+        name || email.split('@')[0],
+        role || 'user',
+        null,
+        googleId,
+        picture
+      ]);
+      
+      user = result.rows[0];
+
+      // If role is provider, create provider record
+      if (user.role === 'provider') {
+        try {
+          await Provider.create({
+            userId: user.id,
+            name: user.name,
+            email: user.email,
+            phone: null,
+            specialty: null,
+            title: null,
+            bio: null,
+            hourlyRate: 0
+          });
+          console.log(`✅ Provider record created for Google OAuth user ${user.id}`);
+        } catch (error) {
+          console.error('Error creating provider record:', error);
+        }
+      }
+    }
+
+    // Log login event
+    try {
+      await UserLoginEvent.create({
+        userId: user.id,
+        loginMethod: 'google',
+        ipAddress: ipAddress,
+        userAgent: userAgent,
+        deviceType: deviceInfo.deviceType,
+        browser: deviceInfo.browser,
+        os: deviceInfo.os,
+        success: true
+      });
+    } catch (error) {
+      console.error('Error logging login event:', error);
+      // Don't fail the login if logging fails
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    // Check if profile is incomplete (for Google users)
+    const profileIncomplete = user.auth_method === 'google' && (!user.name || !user.phone || !user.date_of_birth);
+
+    // Return user and token
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role || 'user',
+        phone: user.phone || null,
+        dateOfBirth: user.date_of_birth || null,
+        picture: user.google_picture || picture || null,
+        authMethod: user.auth_method || 'google',
+        profileIncomplete: profileIncomplete,
+        createdAt: user.created_at
+      },
+      token,
+      message: 'Google login successful',
+      isNewUser: isNewUser
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    next(error);
+  }
+}
+
+/**
+ * Helper function to parse user agent
+ */
+function parseUserAgent(userAgent) {
+  if (!userAgent) return { deviceType: 'Unknown', browser: 'Unknown', os: 'Unknown' };
+  
+  let deviceType = 'Desktop';
+  let browser = 'Unknown';
+  let os = 'Unknown';
+
+  // Detect device type
+  if (/mobile|android|iphone|ipad/i.test(userAgent)) {
+    deviceType = 'Mobile';
+  } else if (/tablet|ipad/i.test(userAgent)) {
+    deviceType = 'Tablet';
+  }
+
+  // Detect browser
+  if (/chrome/i.test(userAgent) && !/edg/i.test(userAgent)) {
+    browser = 'Chrome';
+  } else if (/firefox/i.test(userAgent)) {
+    browser = 'Firefox';
+  } else if (/safari/i.test(userAgent) && !/chrome/i.test(userAgent)) {
+    browser = 'Safari';
+  } else if (/edg/i.test(userAgent)) {
+    browser = 'Edge';
+  }
+
+  // Detect OS
+  if (/windows/i.test(userAgent)) {
+    os = 'Windows';
+  } else if (/mac/i.test(userAgent)) {
+    os = 'macOS';
+  } else if (/linux/i.test(userAgent)) {
+    os = 'Linux';
+  } else if (/android/i.test(userAgent)) {
+    os = 'Android';
+  } else if (/ios|iphone|ipad/i.test(userAgent)) {
+    os = 'iOS';
+  }
+
+  return { deviceType, browser, os };
+}
+
+/**
+ * Update profile for Google OAuth users (complete profile)
+ */
+async function completeGoogleProfile(req, res, next) {
+  try {
+    const userId = req.user?.userId || req.body.userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        error: {
+          message: 'User not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    const { name, dateOfBirth, phone } = req.body;
+
+    // Validate required fields
+    if (!name || !dateOfBirth || !phone) {
+      return res.status(400).json({
+        error: {
+          message: 'Name, date of birth, and phone number are required',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+
+    // Validate date format
+    const dob = new Date(dateOfBirth);
+    if (isNaN(dob.getTime())) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid date of birth format',
+          code: 'INVALID_DATE',
+          status: 400
+        }
+      });
+    }
+
+    // Check if user exists and is a Google user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: {
+          message: 'User not found',
+          code: 'USER_NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+
+    // Update user profile
+    const updateQuery = `
+      UPDATE users 
+      SET name = $1, 
+          date_of_birth = $2, 
+          phone = $3,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+      RETURNING id, email, name, role, phone, date_of_birth, created_at, updated_at
+    `;
+
+    const result = await pool.query(updateQuery, [name, dob.toISOString().split('T')[0], phone, userId]);
+    const updatedUser = result.rows[0];
+
+    res.json({
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        phone: updatedUser.phone,
+        dateOfBirth: updatedUser.date_of_birth,
+        createdAt: updatedUser.created_at,
+        updatedAt: updatedUser.updated_at
+      },
+      message: 'Profile completed successfully'
+    });
+  } catch (error) {
+    console.error('Error completing Google profile:', error);
+    next(error);
+  }
+}
+
+/**
  * Cancel booking
  */
 async function cancelBooking(req, res, next) {
@@ -1081,6 +1406,8 @@ async function cancelBooking(req, res, next) {
 module.exports = {
   register,
   login,
+  loginWithGoogle,
+  completeGoogleProfile,
   logout,
   deleteUser,
   getProfile,

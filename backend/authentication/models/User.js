@@ -71,7 +71,7 @@ class User {
    * Find user by ID
    */
   static async findById(id) {
-    const query = 'SELECT id, email, name, role, phone, address, created_at, updated_at, password FROM users WHERE id = $1';
+    const query = 'SELECT id, email, name, role, phone, address, date_of_birth, google_id, google_picture, auth_method, created_at, updated_at, password FROM users WHERE id = $1';
     try {
       const result = await pool.query(query, [id]);
       return result.rows[0] || null;
@@ -138,6 +138,10 @@ class User {
       fields.push(`address = $${paramCount++}`);
       values.push(updates.address);
     }
+    if (updates.dateOfBirth !== undefined) {
+      fields.push(`date_of_birth = $${paramCount++}`);
+      values.push(updates.dateOfBirth);
+    }
 
     if (fields.length === 0) {
       return await this.findById(id);
@@ -150,7 +154,7 @@ class User {
       UPDATE users 
       SET ${fields.join(', ')}
       WHERE id = $${paramCount}
-      RETURNING id, email, name, role, phone, address, created_at, updated_at
+      RETURNING id, email, name, role, phone, address, date_of_birth, google_id, google_picture, auth_method, created_at, updated_at
     `;
 
     try {

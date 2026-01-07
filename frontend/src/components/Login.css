@@ -696,11 +696,30 @@
   opacity: 1;
 }
 
-.social-button:hover {
+.social-button:hover:not(:disabled) {
   border-color: #d0d0d0;
   background-color: #fafafa;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.social-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .google-button:hover {

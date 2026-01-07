@@ -15,6 +15,15 @@ const Profile = () => {
   const [isEditingAddress, setIsEditingAddress] = useState(false)
   const [editedAddress, setEditedAddress] = useState('')
   const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [profileIncomplete, setProfileIncomplete] = useState(false)
+  const [authMethod, setAuthMethod] = useState('email')
+  const [showGoogleProfileForm, setShowGoogleProfileForm] = useState(false)
+  const [googleProfileForm, setGoogleProfileForm] = useState({
+    name: '',
+    dateOfBirth: '',
+    phone: ''
+  })
+  const [isSubmittingGoogleProfile, setIsSubmittingGoogleProfile] = useState(false)
 
   const [walletData, setWalletData] = useState({
     address: '',
@@ -39,6 +48,18 @@ const Profile = () => {
             address: profile.user.address || '',
           })
           setEditedAddress(profile.user.address || '')
+          setProfileIncomplete(profile.user.profileIncomplete || false)
+          setAuthMethod(profile.user.authMethod || 'email')
+          
+          // If profile is incomplete and user logged in via Google, show form
+          if (profile.user.profileIncomplete && profile.user.authMethod === 'google') {
+            setShowGoogleProfileForm(true)
+            setGoogleProfileForm({
+              name: profile.user.name || '',
+              dateOfBirth: profile.user.dateOfBirth || '',
+              phone: profile.user.phone || ''
+            })
+          }
         }
       } catch (error) {
         console.error('Error fetching user profile:', error)
@@ -235,6 +256,72 @@ const Profile = () => {
     }
   }
 
+  const handleGoogleProfileChange = (e) => {
+    const { name, value } = e.target
+    setGoogleProfileForm(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleCompleteGoogleProfile = async (e) => {
+    e.preventDefault()
+
+    if (!googleProfileForm.name.trim()) {
+      alert('Please enter your name')
+      return
+    }
+
+    if (!googleProfileForm.dateOfBirth) {
+      alert('Please enter your date of birth')
+      return
+    }
+
+    if (!googleProfileForm.phone.trim()) {
+      alert('Please enter your phone number')
+      return
+    }
+
+    setIsSubmittingGoogleProfile(true)
+    try {
+      const response = await userService.completeGoogleProfile({
+        name: googleProfileForm.name.trim(),
+        dateOfBirth: googleProfileForm.dateOfBirth,
+        phone: googleProfileForm.phone.trim()
+      })
+
+      if (response.user) {
+        setKycData(prev => ({
+          ...prev,
+          fullName: response.user.name,
+          phone: response.user.phone,
+          dateOfBirth: response.user.dateOfBirth
+        }))
+        setProfileIncomplete(false)
+        setShowGoogleProfileForm(false)
+        localStorage.removeItem('profileIncomplete')
+        alert('Profile completed successfully!')
+        
+        // Refresh profile data
+        const profile = await userService.getProfile()
+        if (profile.user) {
+          setKycData({
+            fullName: profile.user.name || '',
+            email: profile.user.email || '',
+            phone: profile.user.phone || '',
+            dateOfBirth: profile.user.dateOfBirth || '',
+            address: profile.user.address || '',
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Error completing Google profile:', error)
+      alert('Failed to complete profile. Please try again.')
+    } finally {
+      setIsSubmittingGoogleProfile(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="profile">
@@ -247,6 +334,68 @@ const Profile = () => {
   return (
     <div className="profile">
       <h1 className="profile-title">Profile</h1>
+
+      {/* Google Profile Completion Form */}
+      {showGoogleProfileForm && profileIncomplete && authMethod === 'google' && (
+        <div className="profile-section">
+          <div className="profile-card google-profile-completion">
+            <h2 className="section-title">Complete Your Profile</h2>
+            <p className="completion-message">
+              Please provide the following information to complete your profile:
+            </p>
+            <form onSubmit={handleCompleteGoogleProfile} className="google-profile-form">
+              <div className="form-group">
+                <label htmlFor="google-name">Full Name *</label>
+                <input
+                  type="text"
+                  id="google-name"
+                  name="name"
+                  value={googleProfileForm.name}
+                  onChange={handleGoogleProfileChange}
+                  className="form-input"
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="google-dob">Date of Birth *</label>
+                <input
+                  type="date"
+                  id="google-dob"
+                  name="dateOfBirth"
+                  value={googleProfileForm.dateOfBirth}
+                  onChange={handleGoogleProfileChange}
+                  className="form-input"
+                  required
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="google-phone">Phone Number *</label>
+                <input
+                  type="tel"
+                  id="google-phone"
+                  name="phone"
+                  value={googleProfileForm.phone}
+                  onChange={handleGoogleProfileChange}
+                  className="form-input"
+                  placeholder="+1234567890"
+                  required
+                />
+              </div>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="submit-btn"
+                  disabled={isSubmittingGoogleProfile}
+                >
+                  {isSubmittingGoogleProfile ? 'Saving...' : 'Complete Profile'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Personal Information Section */}
       <div className="profile-section">

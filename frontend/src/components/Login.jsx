@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import LoginSuccess from './LoginSuccess'
 import LoginErrorModal from './LoginErrorModal'
 import { userService } from '../services'
+import API_CONFIG from '../services/config.js'
 import './Login.css'
 import './ProviderLogin.css'
 
@@ -31,6 +32,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const googleButtonRef = useRef(null)
 
   // Derive mode flags from loginMode prop
   const isProviderMode = loginMode === 'provider'
@@ -194,28 +197,173 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
     }
   }
 
-  const handleGoogleLogin = () => {
-    // Simulate Google login
-    alert('Google login will be integrated with Google OAuth')
-    
-    // Create user from Google (demo)
-    const currentUser = {
-      id: Date.now().toString(),
-      name: 'Google User',
-      email: 'user@gmail.com',
-      role: loginMode || 'user',
+  const handleGoogleLogin = async () => {
+    if (!API_CONFIG.GOOGLE_CLIENT_ID) {
+      setErrorMessage('Google OAuth is not configured. Please contact support.')
+      setShowErrorModal(true)
+      return
     }
-    
-    localStorage.setItem('currentUser', JSON.stringify(currentUser))
-    localStorage.setItem('loginMethod', 'google')
-    localStorage.setItem('userRole', loginMode || 'user')
-    localStorage.setItem('lastLoginTime', new Date().toLocaleString())
-    
-    // Show success animation - handled at App level
-    if (onLogin) {
-      onLogin()
+
+    setIsGoogleLoading(true)
+
+    try {
+      // Load Google Identity Services script if not already loaded
+      if (!window.google) {
+        await loadGoogleScript()
+        // Wait for Google script to fully initialize
+        await new Promise(resolve => setTimeout(resolve, 300))
+      }
+
+      // Initialize Google Identity Services with credential flow
+      // This is the most reliable method for getting ID tokens
+      window.google.accounts.id.initialize({
+        client_id: API_CONFIG.GOOGLE_CLIENT_ID,
+        callback: handleGoogleCallback,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      })
+
+      // Trigger the credential flow - this shows a popup
+      window.google.accounts.id.prompt((notification) => {
+        console.log('Google prompt notification:', notification)
+        
+        if (notification.isNotDisplayed()) {
+          const reason = notification.getNotDisplayedReason()
+          console.log('One Tap not displayed. Reason:', reason)
+          setIsGoogleLoading(false)
+          
+          // Provide helpful error message based on reason
+          let errorMsg = 'Google sign-in is not available. '
+          if (reason === 'browser_not_supported') {
+            errorMsg += 'Your browser is not supported. Please try Chrome, Firefox, or Safari.'
+          } else if (reason === 'invalid_client') {
+            errorMsg += 'Invalid OAuth client configuration. Please check your Google Cloud Console settings.'
+          } else if (reason === 'missing_client_id') {
+            errorMsg += 'Google Client ID is missing. Please check your configuration.'
+          } else if (reason === 'opt_out_or_no_session') {
+            // User opted out or no session - try again
+            errorMsg = 'Please try clicking the button again.'
+          } else if (reason === 'suppressed_by_user') {
+            errorMsg = 'Google sign-in was blocked. Please allow popups and try again.'
+          } else if (reason === 'unregistered_origin') {
+            errorMsg = 'This origin is not registered. Please add http://localhost:5173 to authorized JavaScript origins in Google Cloud Console.'
+          } else if (reason === 'unknown_reason') {
+            errorMsg = 'Unknown error. Please ensure your OAuth app is PUBLISHED (not in Testing mode) in Google Cloud Console.'
+          } else {
+            errorMsg += `Reason: ${reason}. Please ensure your OAuth app is PUBLISHED in Google Cloud Console.`
+          }
+          
+          setErrorMessage(errorMsg)
+          setShowErrorModal(true)
+        } else if (notification.isSkippedMoment()) {
+          const reason = notification.getSkippedReason()
+          console.log('One Tap skipped. Reason:', reason)
+          setIsGoogleLoading(false)
+          // User can try again - don't show error, just let them retry
+        } else if (notification.isDismissedMoment()) {
+          const reason = notification.getDismissedReason()
+          console.log('One Tap dismissed. Reason:', reason)
+          setIsGoogleLoading(false)
+          // User dismissed - they can try again
+        }
+      })
+    } catch (error) {
+      console.error('Google login error:', error)
+      setIsGoogleLoading(false)
+      
+      let errorMsg = 'Failed to initialize Google login. '
+      if (error.message?.includes('popup')) {
+        errorMsg += 'Please allow popups for this site and try again.'
+      } else if (error.message?.includes('origin')) {
+        errorMsg += 'Please check your Google Cloud Console authorized JavaScript origins match http://localhost:5173 exactly.'
+      } else {
+        errorMsg += 'Please ensure your OAuth app is PUBLISHED (not in Testing mode) in Google Cloud Console.'
+      }
+      
+      setErrorMessage(errorMsg)
+      setShowErrorModal(true)
     }
   }
+
+  const loadGoogleScript = () => {
+    return new Promise((resolve, reject) => {
+      if (window.google) {
+        resolve()
+        return
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error('Failed to load Google script'))
+      document.head.appendChild(script)
+    })
+  }
+
+  const handleGoogleCallback = async (response) => {
+    try {
+      setIsGoogleLoading(true)
+
+      // Send the credential to backend
+      const result = await userService.loginWithGoogle({
+        idToken: response.credential,
+        role: loginMode || 'user'
+      })
+
+      // Save user data
+      if (result.user) {
+        localStorage.setItem('currentUser', JSON.stringify(result.user))
+        const userRole = result.user.role || loginMode || 'user'
+        localStorage.setItem('userRole', userRole)
+        localStorage.setItem('lastLoginTime', new Date().toLocaleString())
+      }
+
+      setIsGoogleLoading(false)
+
+      // Show success animation - handled at App level
+      if (onLogin) {
+        onLogin()
+      }
+    } catch (error) {
+      console.error('Google login callback error:', error)
+      setIsGoogleLoading(false)
+      
+      let errorMsg = 'Google login failed. Please try again.'
+      if (error.response?.data?.error?.message) {
+        errorMsg = error.response.data.error.message
+      } else if (error.message) {
+        errorMsg = error.message
+      }
+
+      setErrorMessage(errorMsg)
+      setShowErrorModal(true)
+    }
+  }
+
+
+  // Load Google script on component mount and initialize
+  useEffect(() => {
+    if (API_CONFIG.GOOGLE_CLIENT_ID) {
+      loadGoogleScript()
+        .then(() => {
+          // Initialize Google Identity Services for One Tap
+          if (window.google && window.google.accounts) {
+            window.google.accounts.id.initialize({
+              client_id: API_CONFIG.GOOGLE_CLIENT_ID,
+              callback: handleGoogleCallback,
+            })
+            
+            // Optionally show One Tap automatically (can be disabled if not desired)
+            // window.google.accounts.id.prompt()
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load Google script:', err)
+        })
+    }
+  }, [])
 
   const handleWalletLogin = () => {
     // Always show wallet selection modal
@@ -565,26 +713,36 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                     type="button"
                     className="provider-social-button provider-google-button"
                     onClick={handleGoogleLogin}
+                    disabled={isGoogleLoading || isLoading}
                   >
-                    <svg className="provider-social-icon" viewBox="0 0 24 24" width="20" height="20">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    Sign in with Google
+                    {isGoogleLoading ? (
+                      <>
+                        <span className="loading-spinner">⏳</span>
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="provider-social-icon" viewBox="0 0 24 24" width="20" height="20">
+                          <path
+                            fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                          />
+                          <path
+                            fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                          />
+                        </svg>
+                        Sign in with Google
+                      </>
+                    )}
                   </button>
 
                   <button
@@ -745,29 +903,40 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
 
                 <div className="social-login">
                   <button
+                    ref={googleButtonRef}
                     type="button"
                     className="social-button google-button"
                     onClick={handleGoogleLogin}
+                    disabled={isGoogleLoading || isLoading}
                   >
-                    <svg className="social-icon" viewBox="0 0 24 24" width="20" height="20">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                    Sign in with Google
+                    {isGoogleLoading ? (
+                      <>
+                        <span className="loading-spinner">⏳</span>
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="social-icon" viewBox="0 0 24 24" width="20" height="20">
+                          <path
+                            fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                          />
+                          <path
+                            fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                          />
+                        </svg>
+                        Sign in with Google
+                      </>
+                    )}
                   </button>
 
                   <button
