@@ -627,22 +627,22 @@ async function updateProviderAvailability(req, res, next) {
  */
 async function getAllProviders(req, res, next) {
   try {
-    const { verified, status, specialty } = req.query;
+    const { verified, status, specialty, search } = req.query;
     
     const filters = {};
-    // Only show providers who are ready (have set availability)
-    // Default: only show ready providers unless status is explicitly provided
+    // Show providers based on status filter
+    // If status is provided, use it; otherwise show all providers (no status filter)
     if (status) {
       filters.status = status;
-    } else {
-      filters.status = 'ready'; // Default: only show ready providers
     }
+    // If no status filter, show all providers regardless of status
     // Note: Providers are auto-verified when they set availability, so verified filter is optional
     // If verified filter is provided, use it; otherwise show all ready providers
     if (verified !== undefined) {
       filters.verified = verified === 'true' || verified === true;
     }
     if (specialty) filters.specialty = specialty;
+    if (search) filters.search = search; // Add search filter
 
     const providers = await Provider.findAll(filters);
     

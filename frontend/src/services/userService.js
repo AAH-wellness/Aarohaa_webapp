@@ -10,6 +10,7 @@
  * - POST /users/logout - User logout
  * - GET /users/profile - Get user profile
  * - PUT /users/profile - Update user profile
+ * - GET /users/providers - Get all providers (with optional filters)
  * - POST /users/forgot-password - Request password reset
  * - POST /users/reset-password - Reset password
  */
@@ -217,6 +218,38 @@ class UserService {
     }
   }
 
+  /**
+   * Get all providers (for user dashboard)
+   * @param {Object} filters - { status, verified, specialty }
+   * @returns {Promise<Array>} Array of provider objects
+   */
+  async getAllProviders(filters = {}) {
+    if (this.useMock) {
+      return this.mockGetAllProviders(filters)
+    }
+
+    try {
+      // Build query string from filters object
+      const queryParams = new URLSearchParams()
+      if (filters.status) queryParams.append('status', filters.status)
+      if (filters.verified !== undefined) queryParams.append('verified', filters.verified)
+      if (filters.specialty) queryParams.append('specialty', filters.specialty)
+      if (filters.search) queryParams.append('search', filters.search)
+      
+      const queryString = queryParams.toString()
+      const url = queryString 
+        ? `${this.baseUrl}/providers?${queryString}` 
+        : `${this.baseUrl}/providers`
+      
+      // Backend returns { providers: [...] }, extract the array
+      const response = await apiClient.get(url)
+      return response.providers || []
+    } catch (error) {
+      console.error('Get all providers error:', error)
+      throw error
+    }
+  }
+
   // ========== MOCK IMPLEMENTATIONS (Current localStorage-based) ==========
 
   async mockRegister(userData) {
@@ -349,6 +382,56 @@ class UserService {
     localStorage.setItem('currentUser', JSON.stringify(updated))
     localStorage.removeItem('profileIncomplete')
     return { user: updated, message: 'Profile completed successfully' }
+  }
+
+  async mockGetAllProviders(filters = {}) {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Mock providers matching backend response format
+    const mockProviders = [
+      {
+        id: 1,
+        name: 'Dr. Maya Patel',
+        email: 'maya.patel@example.com',
+        specialty: 'Yoga Therapy',
+        title: 'Certified Yoga Therapist',
+        status: 'ready',
+        verified: true,
+        rating: 4.8,
+        reviewsCount: 45,
+        hourlyRate: 50,
+        bio: 'Experienced yoga therapist specializing in stress management',
+      },
+      {
+        id: 2,
+        name: 'Sarah Rodriguez',
+        email: 'sarah.rodriguez@example.com',
+        specialty: 'Meditation',
+        title: 'Meditation Instructor',
+        status: 'ready',
+        verified: true,
+        rating: 4.9,
+        reviewsCount: 38,
+        hourlyRate: 60,
+        bio: 'Certified meditation instructor with 10+ years of experience',
+      },
+    ]
+    
+    // Apply filters (matching backend behavior)
+    let filtered = [...mockProviders]
+    if (filters.status) {
+      filtered = filtered.filter(p => p.status === filters.status)
+    }
+    if (filters.verified !== undefined) {
+      filtered = filtered.filter(p => p.verified === filters.verified)
+    }
+    if (filters.specialty) {
+      filtered = filtered.filter(p => 
+        p.specialty.toLowerCase().includes(filters.specialty.toLowerCase())
+      )
+    }
+    
+    return filtered
   }
 }
 

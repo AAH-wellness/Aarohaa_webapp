@@ -5,38 +5,91 @@ class Provider {
    * Create providers table if it doesn't exist
    */
   static async createTable() {
-    const query = `
-      CREATE TABLE IF NOT EXISTS providers (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        phone VARCHAR(20),
-        specialty VARCHAR(255),
-        title VARCHAR(255),
-        bio TEXT,
-        hourly_rate DECIMAL(10, 2) DEFAULT 0,
-        rating DECIMAL(3, 2) DEFAULT 0,
-        sessions_completed INTEGER DEFAULT 0,
-        reviews_count INTEGER DEFAULT 0,
-        verified BOOLEAN DEFAULT false,
-        status VARCHAR(50) DEFAULT 'pending',
-        availability JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
-      CREATE INDEX IF NOT EXISTS idx_providers_email ON providers(email);
-      CREATE INDEX IF NOT EXISTS idx_providers_verified ON providers(verified);
-      CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status);
-    `;
-    
     try {
-      await pool.query(query);
-      console.log('✅ Providers table created/verified');
+      // Check if table exists
+      const tableExists = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'providers'
+        );
+      `);
+      
+      if (!tableExists.rows[0].exists) {
+        // Create table if it doesn't exist
+        const createQuery = `
+          CREATE TABLE providers (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            phone VARCHAR(20),
+            specialty VARCHAR(255),
+            title VARCHAR(255),
+            bio TEXT,
+            hourly_rate DECIMAL(10, 2) DEFAULT 0,
+            rating DECIMAL(3, 2) DEFAULT 0,
+            sessions_completed INTEGER DEFAULT 0,
+            reviews_count INTEGER DEFAULT 0,
+            verified BOOLEAN DEFAULT false,
+            status VARCHAR(50) DEFAULT 'pending',
+            availability JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
+          CREATE INDEX IF NOT EXISTS idx_providers_email ON providers(email);
+          CREATE INDEX IF NOT EXISTS idx_providers_verified ON providers(verified);
+          CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status);
+        `;
+        await pool.query(createQuery);
+        console.log('✅ Providers table created');
+      } else {
+        // Table exists, check if user_id column exists
+        const columnExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'providers' 
+            AND column_name = 'user_id'
+          );
+        `);
+        
+        if (!columnExists.rows[0].exists) {
+          // Add user_id column if it doesn't exist
+          console.log('⚠️  Adding missing user_id column to providers table...');
+          await pool.query(`
+            ALTER TABLE providers 
+            ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+          `);
+          
+          // Update existing rows to have a user_id (link to first user or set to NULL temporarily)
+          // For existing providers without users, we'll set user_id to NULL and make it nullable
+          await pool.query(`
+            ALTER TABLE providers 
+            ALTER COLUMN user_id DROP NOT NULL;
+          `);
+          
+          // Create index on user_id
+          await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
+          `);
+          
+          console.log('✅ Added user_id column to providers table');
+        }
+        
+        // Ensure other indexes exist
+        await pool.query(`
+          CREATE INDEX IF NOT EXISTS idx_providers_email ON providers(email);
+          CREATE INDEX IF NOT EXISTS idx_providers_verified ON providers(verified);
+          CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status);
+        `);
+        
+        console.log('✅ Providers table verified');
+      }
     } catch (error) {
-      console.error('❌ Error creating providers table:', error);
+      console.error('❌ Error creating/updating providers table:', error);
       throw error;
     }
   }
@@ -139,6 +192,19 @@ class Provider {
     if (filters.specialty) {
       query += ` AND specialty ILIKE $${paramCount++}`;
       params.push(`%${filters.specialty}%`);
+    }
+
+    // Search across multiple fields (name, title, specialty, bio)
+    if (filters.search) {
+      const searchTerm = `%${filters.search}%`;
+      query += ` AND (
+        name ILIKE $${paramCount} OR
+        title ILIKE $${paramCount} OR
+        specialty ILIKE $${paramCount} OR
+        bio ILIKE $${paramCount}
+      )`;
+      params.push(searchTerm);
+      paramCount++;
     }
 
     query += ' ORDER BY created_at DESC';

@@ -35,6 +35,106 @@
   letter-spacing: -0.5px;
 }
 
+.search-container {
+  margin-bottom: 32px;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.08);
+  border: 2px solid rgba(14, 72, 38, 0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.search-box:focus-within {
+  border-color: #0e4826;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.15), 0 0 0 3px rgba(14, 72, 38, 0.1);
+}
+
+.search-icon {
+  font-size: 20px;
+  color: #666;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 16px 0;
+  font-size: 16px;
+  color: #333;
+  background: transparent;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.search-clear:hover {
+  color: #0e4826;
+  background-color: rgba(14, 72, 38, 0.05);
+}
+
+.search-clear:active {
+  transform: scale(0.9);
+}
+
+.search-loading {
+  font-size: 18px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  color: #0e4826;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.no-results-message {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 16px;
+  color: #666;
+  background-color: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.08);
+  margin-bottom: 24px;
+}
+
 .providers-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -234,5 +334,25 @@
   
   .providers-title {
     font-size: 24px;
+  }
+
+  .search-box {
+    border-radius: 12px;
+  }
+
+  .search-input {
+    font-size: 14px;
+    padding: 14px 0;
+  }
+
+  .search-icon {
+    font-size: 18px;
+    padding: 0 12px;
+  }
+
+  .search-clear {
+    padding: 0 12px;
+    width: 36px;
+    height: 36px;
   }
 }
