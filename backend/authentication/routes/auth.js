@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { 
   register, 
+  registerProvider,
   login, 
   loginWithGoogle,
   completeGoogleProfile,
@@ -23,8 +24,11 @@ const {
 const { validateRegister, validateLogin } = require('../validators/authValidator');
 const { authenticateToken } = require('../middleware/auth');
 
-// Register new user
+// Register new user (ALWAYS creates role='user', NO provider record)
 router.post('/register', validateRegister, register);
+
+// Register new provider (creates record ONLY in providers table, NOT in users table)
+router.post('/register/provider', validateRegister, registerProvider);
 
 // Login user
 router.post('/login', validateLogin, login);

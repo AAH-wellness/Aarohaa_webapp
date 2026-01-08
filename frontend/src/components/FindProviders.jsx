@@ -23,7 +23,11 @@ const FindProviders = ({ onBookSession }) => {
         }
         setError(null)
         // Fetch providers from backend database with optional search parameter
-        const filters = searchQuery.trim() ? { search: searchQuery.trim() } : {}
+        // Only show providers with status='ready' (have set their availability)
+        const filters = { status: 'ready' }
+        if (searchQuery.trim()) {
+          filters.search = searchQuery.trim()
+        }
         const providersList = await userService.getAllProviders(filters)
         setProviders(providersList)
         hasLoadedOnce.current = true

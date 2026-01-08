@@ -527,15 +527,13 @@
 }
 
 .password-input {
-  padding: 14px 16px;
-  padding-left: 50px;
+  padding-left: 54px;
   padding-right: 50px;
 }
 
 .password-input:focus,
 .password-input.has-value {
-  padding: 14px 16px;
-  padding-left: 16px;
+  padding-left: 18px;
   padding-right: 50px;
 }
 
@@ -1203,5 +1201,295 @@
 
   .wallet-modal-content {
     padding: 20px;
+  }
+}
+
+/* ============================================
+   PROVIDER LOGIN STYLES
+   ============================================ */
+
+.provider-login-form {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.provider-login-form .form-group {
+  margin-bottom: 20px;
+}
+
+.provider-login-form .form-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.provider-login-button {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.2);
+  margin-top: 8px;
+}
+
+.provider-login-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0f5a2f 0%, #0b4525 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.3);
+}
+
+.provider-login-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(14, 72, 38, 0.2);
+}
+
+.provider-login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Provider Divider */
+.provider-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+  position: relative;
+}
+
+.provider-divider::before,
+.provider-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(14, 72, 38, 0.15);
+}
+
+.provider-divider span {
+  padding: 0 16px;
+  color: rgba(14, 72, 38, 0.6);
+  font-size: 14px;
+  font-weight: 500;
+  background: #f5f5f0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Provider Social Login Container */
+.provider-social-login {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+/* Provider Social Buttons */
+.provider-social-button {
+  width: 100%;
+  padding: 14px 20px;
+  border: 2px solid rgba(14, 72, 38, 0.15);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0e4826;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(14, 72, 38, 0.08);
+}
+
+.provider-social-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(14, 72, 38, 0.05), transparent);
+  transition: left 0.5s ease;
+}
+
+.provider-social-button:hover::before {
+  left: 100%;
+}
+
+.provider-social-button:hover {
+  border-color: rgba(14, 72, 38, 0.3);
+  background: rgba(14, 72, 38, 0.02);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.15);
+}
+
+.provider-social-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(14, 72, 38, 0.1);
+}
+
+.provider-social-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Google Button Specific Styles */
+.provider-google-button {
+  background: #ffffff;
+  color: #0e4826;
+}
+
+.provider-google-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(66, 133, 244, 0.3);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.15);
+}
+
+.provider-google-button .provider-social-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Wallet Button Specific Styles */
+.provider-wallet-button {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  color: #0e4826;
+  border-color: rgba(14, 72, 38, 0.2);
+}
+
+.provider-wallet-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-color: rgba(14, 72, 38, 0.4);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.2);
+}
+
+.provider-wallet-button .provider-social-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0e4826;
+  stroke-width: 2.5;
+}
+
+/* Provider Social Icon */
+.provider-social-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Loading Spinner in Buttons */
+.provider-social-button .loading-spinner-icon {
+  animation: spin 1s linear infinite;
+}
+
+.provider-social-button span {
+  display: inline-block;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Provider Switch Text */
+.provider-switch-text {
+  text-align: center;
+  color: rgba(14, 72, 38, 0.7);
+  font-size: 14px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.provider-switch-link {
+  background: none;
+  border: none;
+  color: #0e4826;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(14, 72, 38, 0.3);
+  text-underline-offset: 3px;
+  transition: all 0.2s ease;
+  padding: 0;
+  font-size: 14px;
+}
+
+.provider-switch-link:hover {
+  color: #0a3620;
+  text-decoration-color: #0e4826;
+}
+
+/* Provider Signup Text */
+.provider-signup-text {
+  text-align: center;
+  color: rgba(14, 72, 38, 0.7);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.provider-signup-link {
+  background: none;
+  border: none;
+  color: #0e4826;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(14, 72, 38, 0.3);
+  text-underline-offset: 3px;
+  transition: all 0.2s ease;
+  padding: 0;
+  font-size: 14px;
+}
+
+.provider-signup-link:hover {
+  color: #0a3620;
+  text-decoration-color: #0e4826;
+}
+
+/* Responsive Styles for Provider Login */
+@media (max-width: 768px) {
+  .provider-social-login {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .provider-social-button {
+    padding: 12px 18px;
+    font-size: 14px;
+    gap: 10px;
+  }
+
+  .provider-social-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .provider-divider {
+    margin: 20px 0;
+  }
+
+  .provider-divider span {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .provider-switch-text,
+  .provider-signup-text {
+    font-size: 13px;
   }
 }

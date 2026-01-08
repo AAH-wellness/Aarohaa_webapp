@@ -370,7 +370,7 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
       const fullPhoneNumber = `${formData.countryCode}${formData.phone.replace(/^\+/, '')}`
       
       if (isProviderMode) {
-        // Register as provider - stores in providers table AND users table
+        // Register as provider - stores ONLY in providers table (NOT in users table)
         const response = await userService.registerProvider({
           name: formData.fullName,
           email: formData.email,

@@ -155,11 +155,23 @@ function App() {
 
   const handleLogin = () => {
     const role = localStorage.getItem('userRole') || 'user'
+    console.log('Login - User role:', role)
     setIsLoggedIn(true)
     setUserRole(role)
     setShowRegister(false)
-    // Always default to user view on login
-    setActiveView('My Appointments')
+    
+    // Navigate to appropriate dashboard based on role
+    if (role === 'provider') {
+      console.log('Navigating to provider dashboard')
+      setProviderActiveView('Dashboard')
+    } else if (role === 'admin') {
+      console.log('Navigating to admin dashboard')
+      setAdminActiveView('Dashboard')
+    } else {
+      // Default to user view
+      console.log('Navigating to user dashboard')
+      setActiveView('My Appointments')
+    }
   }
 
   const handleRegister = () => {
@@ -167,8 +179,16 @@ function App() {
     setIsLoggedIn(true)
     setUserRole(role)
     setShowRegister(false)
-    // Always default to user view on register
-    setActiveView('My Appointments')
+    
+    // Navigate to appropriate dashboard based on role
+    if (role === 'provider') {
+      setProviderActiveView('Dashboard')
+    } else if (role === 'admin') {
+      setAdminActiveView('Dashboard')
+    } else {
+      // Default to user view
+      setActiveView('My Appointments')
+    }
   }
 
   const handleNavigateToRegister = () => {
@@ -339,6 +359,7 @@ function App() {
               <Register
                 onRegister={handleRegister}
                 onNavigateToLogin={handleNavigateToLogin}
+                registrationMode={loginMode === 'provider' ? 'provider' : 'user'}
               />
             </div>
           </div>

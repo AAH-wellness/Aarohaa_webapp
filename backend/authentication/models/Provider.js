@@ -20,9 +20,9 @@ class Provider {
         const createQuery = `
           CREATE TABLE providers (
             id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             name VARCHAR(255) NOT NULL,
             email VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
             phone VARCHAR(20),
             specialty VARCHAR(255),
             title VARCHAR(255),
@@ -35,10 +35,10 @@ class Provider {
             status VARCHAR(50) DEFAULT 'pending',
             availability JSONB,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP
           );
           
-          CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
           CREATE INDEX IF NOT EXISTS idx_providers_email ON providers(email);
           CREATE INDEX IF NOT EXISTS idx_providers_verified ON providers(verified);
           CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status);
@@ -46,8 +46,64 @@ class Provider {
         await pool.query(createQuery);
         console.log('✅ Providers table created');
       } else {
-        // Table exists, check if user_id column exists
-        const columnExists = await pool.query(`
+        // Table exists - migrate to new schema
+        console.log('⚠️  Migrating providers table to new schema...');
+        
+        // Check if password column exists
+        const passwordExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'providers' 
+            AND column_name = 'password'
+          );
+        `);
+        
+        if (!passwordExists.rows[0].exists) {
+          // Add password column (nullable first, then we'll update it)
+          await pool.query(`
+            ALTER TABLE providers 
+            ADD COLUMN password VARCHAR(255);
+          `);
+          
+          // For existing rows, we need to handle them - delete providers without passwords
+          // since they can't authenticate without a password
+          await pool.query(`
+            DELETE FROM providers WHERE password IS NULL;
+          `);
+          
+          // Now make password NOT NULL
+          await pool.query(`
+            ALTER TABLE providers 
+            ALTER COLUMN password SET NOT NULL;
+          `);
+          
+          console.log('✅ Added password column to providers table');
+        } else {
+          // Password column exists, but check if it's nullable
+          const passwordNullable = await pool.query(`
+            SELECT is_nullable 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'providers' 
+            AND column_name = 'password';
+          `);
+          
+          // If it's nullable, make it NOT NULL (after cleaning up NULL values)
+          if (passwordNullable.rows[0]?.is_nullable === 'YES') {
+            await pool.query(`
+              DELETE FROM providers WHERE password IS NULL;
+            `);
+            await pool.query(`
+              ALTER TABLE providers 
+              ALTER COLUMN password SET NOT NULL;
+            `);
+            console.log('✅ Made password column NOT NULL');
+          }
+        }
+        
+        // Check if user_id column exists and make it nullable if it does
+        const userIdExists = await pool.query(`
           SELECT EXISTS (
             SELECT FROM information_schema.columns 
             WHERE table_schema = 'public' 
@@ -56,27 +112,31 @@ class Provider {
           );
         `);
         
-        if (!columnExists.rows[0].exists) {
-          // Add user_id column if it doesn't exist
-          console.log('⚠️  Adding missing user_id column to providers table...');
-          await pool.query(`
-            ALTER TABLE providers 
-            ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
-          `);
-          
-          // Update existing rows to have a user_id (link to first user or set to NULL temporarily)
-          // For existing providers without users, we'll set user_id to NULL and make it nullable
+        if (userIdExists.rows[0].exists) {
+          // Make user_id nullable (providers are now independent)
           await pool.query(`
             ALTER TABLE providers 
             ALTER COLUMN user_id DROP NOT NULL;
           `);
-          
-          // Create index on user_id
+          console.log('✅ Made user_id nullable in providers table');
+        }
+        
+        // Check if last_login column exists
+        const lastLoginExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'providers' 
+            AND column_name = 'last_login'
+          );
+        `);
+        
+        if (!lastLoginExists.rows[0].exists) {
           await pool.query(`
-            CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
+            ALTER TABLE providers 
+            ADD COLUMN last_login TIMESTAMP;
           `);
-          
-          console.log('✅ Added user_id column to providers table');
+          console.log('✅ Added last_login column to providers table');
         }
         
         // Ensure other indexes exist
@@ -86,7 +146,7 @@ class Provider {
           CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status);
         `);
         
-        console.log('✅ Providers table verified');
+        console.log('✅ Providers table migration completed');
       }
     } catch (error) {
       console.error('❌ Error creating/updating providers table:', error);
@@ -95,34 +155,53 @@ class Provider {
   }
 
   /**
-   * Create a new provider
+   * Create a new provider (independent from users table)
    */
   static async create(providerData) {
-    const { userId, name, email, phone, specialty, title, bio, hourlyRate } = providerData;
+    const { passwordHash, name, email, phone, specialty, title, bio, hourlyRate } = providerData;
+    
+    // Check if last_login column exists before including it in RETURNING
+    const lastLoginExists = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'providers' 
+        AND column_name = 'last_login'
+      );
+    `);
+    
+    const returnColumns = lastLoginExists.rows[0].exists
+      ? 'id, name, email, phone, specialty, title, bio, hourly_rate, rating, sessions_completed, reviews_count, verified, status, availability, created_at, updated_at, last_login'
+      : 'id, name, email, phone, specialty, title, bio, hourly_rate, rating, sessions_completed, reviews_count, verified, status, availability, created_at, updated_at';
+    
     const query = `
-      INSERT INTO providers (user_id, name, email, phone, specialty, title, bio, hourly_rate, created_at, updated_at)
+      INSERT INTO providers (name, email, password, phone, specialty, title, bio, hourly_rate, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      RETURNING id, user_id, name, email, phone, specialty, title, bio, hourly_rate, rating, sessions_completed, reviews_count, verified, status, availability, created_at, updated_at
+      RETURNING ${returnColumns}
     `;
     
     try {
       const result = await pool.query(query, [
-        userId,
         name,
         email,
+        passwordHash,
         phone || null,
         specialty || null,
         title || null,
         bio || null,
         hourlyRate || 0
       ]);
-      return result.rows[0];
+      
+      // Add last_login as null if column doesn't exist (for backward compatibility)
+      const provider = result.rows[0];
+      if (!lastLoginExists.rows[0].exists) {
+        provider.last_login = null;
+      }
+      
+      return provider;
     } catch (error) {
       if (error.code === '23505') { // Unique violation
         throw new Error('Provider with this email already exists');
-      }
-      if (error.code === '23503') { // Foreign key violation
-        throw new Error('User not found');
       }
       console.error('Error creating provider:', error);
       throw error;

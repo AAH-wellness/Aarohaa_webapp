@@ -596,11 +596,19 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
               <>
                 <form className="provider-login-form" onSubmit={handleSubmit}>
                   <div className="form-group">
-                    <div className="input-container">
+                    <div className="input-field-wrapper">
+                      <div className={`email-icon-wrapper ${formData.email || focused.email ? 'hidden' : ''}`}>
+                        <svg className="email-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                          <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                      </div>
+                      <label className={`floating-label ${formData.email || focused.email ? 'active' : ''}`}>
+                        Email
+                      </label>
                       <input
                         type="email"
                         name="email"
-                        placeholder=""
                         value={formData.email}
                         onChange={handleInputChange}
                         onBlur={(e) => {
@@ -611,18 +619,9 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                           setTouched({ ...touched, email: true })
                           setFocused({ ...focused, email: true })
                         }}
-                        className={`form-input ${touched.email && errors.email ? 'error' : ''}`}
+                        className={`form-input email-input ${touched.email && errors.email ? 'error' : ''} ${formData.email || focused.email ? 'has-value' : ''}`}
                         required
                       />
-                      <div className={`input-icon-wrapper ${formData.email || focused.email ? 'focused' : ''}`}>
-                        <span className="input-icon">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                            <polyline points="22,6 12,13 2,6"></polyline>
-                          </svg>
-                        </span>
-                        <span className="floating-label">Email</span>
-                      </div>
                     </div>
                     {touched.email && errors.email && (
                       <p className="error-message">{errors.email}</p>
@@ -630,54 +629,51 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                   </div>
 
                   <div className="form-group">
-                    <div className="input-container">
-                      <div className="input-wrapper">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          name="password"
-                          placeholder=""
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          onBlur={(e) => {
-                            handleBlur(e)
-                            setFocused({ ...focused, password: false })
-                          }}
-                          onFocus={() => {
-                            setTouched({ ...touched, password: true })
-                            setFocused({ ...focused, password: true })
-                          }}
-                          className={`form-input ${touched.password && errors.password ? 'error' : ''}`}
-                          required
-                        />
-                        <div className={`input-icon-wrapper password-icon-wrapper ${formData.password || focused.password ? 'focused' : ''}`}>
-                          <span className="input-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
-                          </span>
-                          <span className="floating-label">Password</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="password-toggle"
-                          onClick={() => setShowPassword(!showPassword)}
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        >
-                          {showPassword ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                              <circle cx="12" cy="12" r="3"></circle>
-                              <line x1="1" y1="1" x2="23" y2="23"></line>
-                            </svg>
-                          ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                              <line x1="1" y1="1" x2="23" y2="23"></line>
-                            </svg>
-                          )}
-                        </button>
+                    <div className="input-field-wrapper">
+                      <div className={`password-icon-wrapper ${formData.password || focused.password ? 'hidden' : ''}`}>
+                        <svg className="password-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
                       </div>
+                      <label className={`floating-label ${formData.password || focused.password ? 'active' : ''}`}>
+                        Password
+                      </label>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        onBlur={(e) => {
+                          handleBlur(e)
+                          setFocused({ ...focused, password: false })
+                        }}
+                        onFocus={() => {
+                          setTouched({ ...touched, password: true })
+                          setFocused({ ...focused, password: true })
+                        }}
+                        className={`form-input password-input ${touched.password && errors.password ? 'error' : ''} ${formData.password || focused.password ? 'has-value' : ''}`}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        )}
+                      </button>
                     </div>
                     {touched.password && errors.password && (
                       <p className="error-message">{errors.password}</p>
@@ -717,8 +713,11 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                   >
                     {isGoogleLoading ? (
                       <>
-                        <span className="loading-spinner">⏳</span>
-                        Signing in...
+                        <svg className="provider-social-icon loading-spinner-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" opacity="0.3"/>
+                          <path d="M12 2a10 10 0 0 1 10 10" strokeDasharray="15.7 15.7"/>
+                        </svg>
+                        <span>Signing in...</span>
                       </>
                     ) : (
                       <>
@@ -740,7 +739,7 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                           />
                         </svg>
-                        Sign in with Google
+                        <span>Sign in with Google</span>
                       </>
                     )}
                   </button>
@@ -749,13 +748,13 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                     type="button"
                     className="provider-social-button provider-wallet-button"
                     onClick={handleWalletLogin}
+                    disabled={isLoading}
                   >
-                    <svg className="provider-social-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
-                      <path d="M2 17L12 22L22 17"/>
-                      <path d="M2 12L12 17L22 12"/>
+                    <svg className="provider-social-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="6" width="20" height="12" rx="2" ry="2"/>
+                      <path d="M6 10h12M6 14h8"/>
                     </svg>
-                    Connect Wallet
+                    <span>Connect Wallet</span>
                   </button>
                 </div>
 

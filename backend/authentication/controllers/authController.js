@@ -47,38 +47,18 @@ async function register(req, res, next) {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Create user
+    // Create user - ALWAYS with role='user' (ignore any role parameter)
     const user = await User.create({
       email,
       passwordHash,
       name,
-      role: role || 'user',
+      role: 'user', // ALWAYS 'user' for /register endpoint
       phone: phone || null
     });
 
-    // If role is provider, create provider record in providers table
-    if (role === 'provider') {
-      try {
-        await Provider.create({
-          userId: user.id,
-          name: user.name,
-          email: user.email,
-          phone: phone || null,
-          specialty: null,
-          title: null,
-          bio: null,
-          hourlyRate: 0
-        });
-        console.log(`✅ Provider record created for user ${user.id}`);
-      } catch (error) {
-        console.error('Error creating provider record:', error);
-        // Continue even if provider creation fails (user is still created)
-      }
-    }
-
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: 'user' },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
@@ -89,7 +69,7 @@ async function register(req, res, next) {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: 'user', // ALWAYS 'user' for /register endpoint
         phone: user.phone,
         createdAt: user.created_at
       },
@@ -97,6 +77,124 @@ async function register(req, res, next) {
       message: 'Registration successful'
     });
   } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Register a new provider
+ * Separate endpoint for provider registration
+ * Creates provider record ONLY in providers table (NOT in users table)
+ */
+async function registerProvider(req, res, next) {
+  try {
+    const { email, password, name, phone, specialty, title, bio, hourlyRate } = req.body;
+
+    // Validation
+    if (!email || !password || !name || !phone) {
+      return res.status(400).json({
+        error: {
+          message: 'Email, password, name, and phone number are required',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+
+    // Check if provider already exists
+    const existingProvider = await Provider.findByEmail(email);
+    if (existingProvider) {
+      return res.status(409).json({
+        error: {
+          message: 'Email already registered as provider',
+          code: 'EMAIL_EXISTS',
+          status: 409
+        }
+      });
+    }
+
+    // Check if user with same email exists (prevent duplicate emails across tables)
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({
+        error: {
+          message: 'Email already registered as user',
+          code: 'EMAIL_EXISTS',
+          status: 409
+        }
+      });
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Create provider record ONLY in providers table (NOT in users table)
+    const provider = await Provider.create({
+      passwordHash,
+      name,
+      email,
+      phone: phone || null,
+      specialty: specialty || null,
+      title: title || null,
+      bio: bio || null,
+      hourlyRate: hourlyRate || 0
+    });
+
+    console.log(`✅ Provider registered: ${provider.email} (ID: ${provider.id})`);
+
+    // Generate JWT token (use provider.id and role='provider')
+    const token = jwt.sign(
+      { userId: provider.id, email: provider.email, role: 'provider' },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    // Return provider (without password hash) and token
+    res.status(201).json({
+      user: {
+        id: provider.id,
+        email: provider.email,
+        name: provider.name,
+        role: 'provider',
+        phone: provider.phone,
+        createdAt: provider.created_at
+      },
+      token,
+      message: 'Provider registration successful'
+    });
+  } catch (error) {
+    console.error('Provider registration error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      table: error.table,
+      column: error.column
+    });
+    
+    // Provide more specific error messages
+    if (error.code === '23502') { // NOT NULL violation
+      return res.status(500).json({
+        error: {
+          message: 'Database configuration error: password column is missing or nullable. Please run FIX_PROVIDERS_TABLE.sql script.',
+          code: 'DATABASE_ERROR',
+          status: 500
+        }
+      });
+    }
+    
+    if (error.code === '23505') { // Unique violation
+      return res.status(409).json({
+        error: {
+          message: 'Email already registered',
+          code: 'EMAIL_EXISTS',
+          status: 409
+        }
+      });
+    }
+    
     next(error);
   }
 }
@@ -119,10 +217,30 @@ async function login(req, res, next) {
       });
     }
 
-    // Find user by email
-    const user = await User.findByEmail(email);
+    // Try to find user by email first
+    let user = await User.findByEmail(email);
+    let isProvider = false;
+    
+    // If not found in users table, check providers table
     if (!user) {
-      console.log(`Login attempt failed: User not found for email: ${email}`);
+      const provider = await Provider.findByEmail(email);
+      if (provider) {
+        isProvider = true;
+        // Convert provider to user-like object for consistent handling
+        user = {
+          id: provider.id,
+          email: provider.email,
+          name: provider.name,
+          role: 'provider',
+          phone: provider.phone,
+          password: provider.password,
+          created_at: provider.created_at
+        };
+      }
+    }
+
+    if (!user) {
+      console.log(`Login attempt failed: User/Provider not found for email: ${email}`);
       return res.status(401).json({
         error: {
           message: 'Invalid email or password',
@@ -132,12 +250,12 @@ async function login(req, res, next) {
       });
     }
 
-    console.log(`Login attempt for user: ${user.email}, role: ${user.role || 'not set'}`);
+    console.log(`Login attempt for ${isProvider ? 'provider' : 'user'}: ${user.email}, role: ${user.role || 'not set'}`);
 
     // Verify password - THIS IS THE CRITICAL PART
     // Check if password exists and is hashed
     if (!user.password) {
-      console.log(`Login attempt failed: No password set for user: ${user.email}`);
+      console.log(`Login attempt failed: No password set for ${isProvider ? 'provider' : 'user'}: ${user.email}`);
       return res.status(401).json({
         error: {
           message: 'Invalid email or password',
@@ -151,7 +269,7 @@ async function login(req, res, next) {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     
     if (!isPasswordValid) {
-      console.log(`Login attempt failed: Invalid password for user: ${user.email}`);
+      console.log(`Login attempt failed: Invalid password for ${isProvider ? 'provider' : 'user'}: ${user.email}`);
       return res.status(401).json({
         error: {
           message: 'Invalid email or password',
@@ -161,14 +279,18 @@ async function login(req, res, next) {
       });
     }
 
-    console.log(`Login successful for user: ${user.email}, role: ${user.role || 'not set'}`);
+    console.log(`Login successful for ${isProvider ? 'provider' : 'user'}: ${user.email}, role: ${user.role || 'not set'}`);
 
     // Update last_login timestamp
-    await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+    if (isProvider) {
+      await pool.query('UPDATE providers SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+    } else {
+      await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+    }
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: user.role || (isProvider ? 'provider' : 'user') },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
@@ -179,7 +301,7 @@ async function login(req, res, next) {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role || 'user',
+        role: user.role || (isProvider ? 'provider' : 'user'),
         phone: user.phone || null,
         createdAt: user.created_at
       },
@@ -394,25 +516,25 @@ async function updateProfile(req, res, next) {
  */
 async function getProviderProfile(req, res, next) {
   try {
-    // Get userId from JWT token (could be userId or id)
-    const userId = req.user?.userId || req.user?.id || req.body.userId || req.query.userId;
+    // Get provider ID from JWT token (userId in token is actually provider.id for providers)
+    const providerId = req.user?.userId || req.user?.id || req.body.userId || req.query.userId;
     
-    if (!userId) {
-      console.error('getProviderProfile: No userId found in request', { user: req.user, body: req.body, query: req.query });
+    if (!providerId) {
+      console.error('getProviderProfile: No providerId found in request', { user: req.user, body: req.body, query: req.query });
       return res.status(401).json({
         error: {
-          message: 'User not authenticated',
+          message: 'Provider not authenticated',
           code: 'UNAUTHORIZED',
           status: 401
         }
       });
     }
 
-    console.log('getProviderProfile: Fetching provider for userId:', userId);
-    const provider = await Provider.findByUserId(userId);
+    console.log('getProviderProfile: Fetching provider for id:', providerId);
+    const provider = await Provider.findById(providerId);
     
     if (!provider) {
-      console.error('getProviderProfile: Provider not found for userId:', userId);
+      console.error('getProviderProfile: Provider not found for id:', providerId);
       return res.status(404).json({
         error: {
           message: 'Provider profile not found. Please ensure you have registered as a provider.',
@@ -426,7 +548,6 @@ async function getProviderProfile(req, res, next) {
     res.json({
       provider: {
         id: provider.id,
-        userId: provider.user_id,
         name: provider.name,
         email: provider.email,
         phone: provider.phone,
@@ -454,20 +575,20 @@ async function getProviderProfile(req, res, next) {
  */
 async function updateProviderProfile(req, res, next) {
   try {
-    const userId = req.user?.userId || req.body.userId;
+    const providerId = req.user?.userId || req.body.userId;
     
-    if (!userId) {
+    if (!providerId) {
       return res.status(401).json({
         error: {
-          message: 'User not authenticated',
+          message: 'Provider not authenticated',
           code: 'UNAUTHORIZED',
           status: 401
         }
       });
     }
 
-    // Find provider by user ID
-    const provider = await Provider.findByUserId(userId);
+    // Find provider by ID (userId in token is actually provider.id for providers)
+    const provider = await Provider.findById(providerId);
     if (!provider) {
       return res.status(404).json({
         error: {
@@ -504,7 +625,6 @@ async function updateProviderProfile(req, res, next) {
     res.json({
       provider: {
         id: updatedProvider.id,
-        userId: updatedProvider.user_id,
         name: updatedProvider.name,
         email: updatedProvider.email,
         phone: updatedProvider.phone,
@@ -533,19 +653,19 @@ async function updateProviderProfile(req, res, next) {
  */
 async function getProviderAvailability(req, res, next) {
   try {
-    const userId = req.user?.userId || req.body.userId || req.query.userId;
+    const providerId = req.user?.userId || req.body.userId || req.query.userId;
     
-    if (!userId) {
+    if (!providerId) {
       return res.status(401).json({
         error: {
-          message: 'User not authenticated',
+          message: 'Provider not authenticated',
           code: 'UNAUTHORIZED',
           status: 401
         }
       });
     }
 
-    const provider = await Provider.findByUserId(userId);
+    const provider = await Provider.findById(providerId);
     if (!provider) {
       return res.status(404).json({
         error: {
@@ -572,19 +692,19 @@ async function getProviderAvailability(req, res, next) {
  */
 async function updateProviderAvailability(req, res, next) {
   try {
-    const userId = req.user?.userId || req.body.userId;
+    const providerId = req.user?.userId || req.body.userId;
     
-    if (!userId) {
+    if (!providerId) {
       return res.status(401).json({
         error: {
-          message: 'User not authenticated',
+          message: 'Provider not authenticated',
           code: 'UNAUTHORIZED',
           status: 401
         }
       });
     }
 
-    const provider = await Provider.findByUserId(userId);
+    const provider = await Provider.findById(providerId);
     if (!provider) {
       return res.status(404).json({
         error: {
@@ -609,14 +729,24 @@ async function updateProviderAvailability(req, res, next) {
 
     const updatedProvider = await Provider.updateAvailability(provider.id, availability);
     
+    console.log(`✅ Provider ${provider.id} availability updated. Status set to 'ready', verified: true`);
+    
     res.json({
       provider: {
         id: updatedProvider.id,
-        availability: updatedProvider.availability || {}
+        availability: updatedProvider.availability || {},
+        status: updatedProvider.status,
+        verified: updatedProvider.verified
       },
-      message: 'Availability updated successfully'
+      message: 'Availability updated successfully. Your profile is now visible to users.'
     });
   } catch (error) {
+    console.error('Error updating provider availability:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail
+    });
     next(error);
   }
 }
@@ -630,13 +760,11 @@ async function getAllProviders(req, res, next) {
     const { verified, status, specialty, search } = req.query;
     
     const filters = {};
-    // Show providers based on status filter
-    // If status is provided, use it; otherwise show all providers (no status filter)
-    if (status) {
-      filters.status = status;
-    }
-    // If no status filter, show all providers regardless of status
-    // Note: Providers are auto-verified when they set availability, so verified filter is optional
+    // Default to showing only 'ready' providers (those who have set availability)
+    // If status is explicitly provided, use it; otherwise default to 'ready'
+    filters.status = status || 'ready';
+    
+    // Note: Providers are auto-verified when they set availability
     // If verified filter is provided, use it; otherwise show all ready providers
     if (verified !== undefined) {
       filters.verified = verified === 'true' || verified === true;
@@ -993,19 +1121,19 @@ async function getUpcomingBookings(req, res, next) {
  */
 async function getProviderBookings(req, res, next) {
   try {
-    const userId = req.user?.userId;
-    if (!userId) {
+    const providerId = req.user?.userId;
+    if (!providerId) {
       return res.status(401).json({
         error: {
-          message: 'User not authenticated',
+          message: 'Provider not authenticated',
           code: 'UNAUTHORIZED',
           status: 401
         }
       });
     }
 
-    // Get provider by user_id
-    const provider = await Provider.findByUserId(userId);
+    // Get provider by ID (userId in token is actually provider.id for providers)
+    const provider = await Provider.findById(providerId);
     if (!provider) {
       return res.status(404).json({
         error: {
@@ -1405,6 +1533,7 @@ async function cancelBooking(req, res, next) {
 
 module.exports = {
   register,
+  registerProvider,
   login,
   loginWithGoogle,
   completeGoogleProfile,
