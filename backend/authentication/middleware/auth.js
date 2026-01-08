@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-production';
+const JWT_CONFIG = require('../config/jwt');
 
 /**
  * Middleware to verify JWT token and attach user info to request
@@ -12,7 +11,7 @@ function authenticateToken(req, res, next) {
   
   // If no token in header, try to get from body (for backward compatibility)
   if (!token && req.body && req.body.token) {
-    const decoded = jwt.verify(req.body.token, JWT_SECRET);
+    const decoded = jwt.verify(req.body.token, JWT_CONFIG.SECRET);
     req.user = decoded;
     return next();
   }
@@ -28,7 +27,7 @@ function authenticateToken(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_CONFIG.SECRET);
     req.user = decoded;
     next();
   } catch (error) {

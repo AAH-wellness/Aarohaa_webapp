@@ -6,9 +6,11 @@
  * - Error handling
  * - Retry logic
  * - Request/response interceptors
+ * - Automatic logout on token expiration
  */
 
 import API_CONFIG from './config.js'
+import { clearAuthData } from './authService.js'
 
 class ApiClient {
   constructor() {
@@ -55,6 +57,30 @@ class ApiClient {
       // Handle non-2xx responses
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }))
+        
+        // Handle authentication errors (401 Unauthorized, 403 Forbidden)
+        // These indicate expired or invalid tokens
+        if (response.status === 401 || response.status === 403) {
+          // Check if error code indicates token issue
+          const errorCode = errorData?.error?.code || errorData?.code
+          if (
+            errorCode === 'INVALID_TOKEN' ||
+            errorCode === 'AUTH_ERROR' ||
+            errorCode === 'NO_TOKEN' ||
+            errorCode === 'TokenExpiredError' ||
+            response.status === 401
+          ) {
+            // Clear auth data and trigger logout
+            console.warn('Authentication error detected, clearing session:', errorData)
+            clearAuthData()
+            
+            // Dispatch custom event for App component to handle
+            window.dispatchEvent(new CustomEvent('auth:logout', {
+              detail: { reason: 'TOKEN_EXPIRED', message: 'Your session has expired. Please log in again.' }
+            }))
+          }
+        }
+        
         throw new ApiError(
           errorData.message || `HTTP ${response.status}`,
           response.status,
@@ -70,6 +96,11 @@ class ApiClient {
       
       return await response.text()
     } catch (error) {
+      // Don't retry on authentication errors (401/403)
+      if (error.status === 401 || error.status === 403) {
+        throw error
+      }
+      
       // Retry on network errors or 5xx errors
       if (
         retryCount < API_CONFIG.MAX_RETRIES &&
