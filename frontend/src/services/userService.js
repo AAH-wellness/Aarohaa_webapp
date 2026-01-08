@@ -17,6 +17,7 @@
 
 import apiClient from './apiClient.js'
 import API_CONFIG from './config.js'
+import { clearAuthData } from './authService.js'
 
 class UserService {
   constructor() {
@@ -164,11 +165,8 @@ class UserService {
     try {
       await apiClient.post(`${this.baseUrl}/logout`)
     } finally {
-      // Clear local storage
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('isLoggedIn')
-      localStorage.removeItem('userRole')
-      localStorage.removeItem('loginMethod')
+      // Clear auth data using centralized service
+      clearAuthData()
     }
   }
 
@@ -428,11 +426,8 @@ class UserService {
 
   async mockLogout() {
     await new Promise(resolve => setTimeout(resolve, 200))
-    localStorage.removeItem('isLoggedIn')
-    localStorage.removeItem('userRole')
-    localStorage.removeItem('loginMethod')
-    localStorage.removeItem('currentUser')
-    localStorage.removeItem('authToken')
+    // Clear auth data using centralized service
+    clearAuthData()
     return { message: 'Logout successful' }
   }
 

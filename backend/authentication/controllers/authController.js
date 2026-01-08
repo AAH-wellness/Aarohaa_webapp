@@ -5,9 +5,8 @@ const User = require('../models/User');
 const Provider = require('../models/Provider');
 const UserLoginEvent = require('../models/UserLoginEvent');
 const { pool } = require('../config/database');
+const JWT_CONFIG = require('../config/jwt');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
 // Initialize Google OAuth client
@@ -59,8 +58,8 @@ async function register(req, res, next) {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: 'user' },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_CONFIG.SECRET,
+      { expiresIn: JWT_CONFIG.EXPIRES_IN }
     );
 
     // Return user (without password hash) and token
@@ -146,8 +145,8 @@ async function registerProvider(req, res, next) {
     // Generate JWT token (use provider.id and role='provider')
     const token = jwt.sign(
       { userId: provider.id, email: provider.email, role: 'provider' },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_CONFIG.SECRET,
+      { expiresIn: JWT_CONFIG.EXPIRES_IN }
     );
 
     // Return provider (without password hash) and token
@@ -291,8 +290,8 @@ async function login(req, res, next) {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role || (isProvider ? 'provider' : 'user') },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_CONFIG.SECRET,
+      { expiresIn: JWT_CONFIG.EXPIRES_IN }
     );
 
     // Return user (without password hash) and token
@@ -1325,8 +1324,8 @@ async function loginWithGoogle(req, res, next) {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_CONFIG.SECRET,
+      { expiresIn: JWT_CONFIG.EXPIRES_IN }
     );
 
     // Check if profile is incomplete (for Google users)

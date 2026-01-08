@@ -36,6 +36,7 @@ import AdminSettings from './components/AdminSettings'
 import AdminAuditLog from './components/AdminAuditLog'
 import AdminProfile from './components/AdminProfile'
 import MaintenanceMode from './components/MaintenanceMode'
+import { authService } from './services'
 import './App.css'
 
 function App() {
@@ -63,26 +64,72 @@ function App() {
     
     checkMaintenanceMode()
     
-    // Check if user is logged in
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true'
-    const role = localStorage.getItem('userRole') || 'user'
-    setIsLoggedIn(loggedIn)
-    setUserRole(role)
-    
-    // Set default view based on role
-    if (role === 'provider') {
-      setProviderActiveView('Dashboard')
-    } else if (role === 'admin') {
-      setAdminActiveView('Dashboard')
-    } else {
-      setActiveView('My Appointments')
+    // Validate token on app load
+    const validateTokenOnLoad = async () => {
+      const token = authService.getAuthToken()
+      const storedLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
+      const role = localStorage.getItem('userRole') || 'user'
+      
+      // If no token but marked as logged in, clear invalid state
+      if (!token && storedLoggedIn) {
+        console.warn('Token missing but user marked as logged in, clearing auth state')
+        authService.clearAuthData()
+        setIsLoggedIn(false)
+        setUserRole('user')
+        return
+      }
+      
+      // If token exists, validate it
+      if (token) {
+        const validation = authService.validateToken(token)
+        
+        if (!validation.isValid) {
+          // Token is expired or invalid
+          console.warn('Token validation failed on app load:', validation.reason, validation.message)
+          authService.clearAuthData()
+          setIsLoggedIn(false)
+          setUserRole('user')
+          return
+        }
+        
+        // Token is valid, set logged in state
+        setIsLoggedIn(true)
+        setUserRole(role)
+        
+        // Set default view based on role
+        if (role === 'provider') {
+          setProviderActiveView('Dashboard')
+        } else if (role === 'admin') {
+          setAdminActiveView('Dashboard')
+        } else {
+          setActiveView('My Appointments')
+        }
+      } else {
+        // No token, user is not logged in
+        setIsLoggedIn(false)
+        setUserRole('user')
+      }
     }
+    
+    // Run token validation
+    validateTokenOnLoad()
     
     // Check if there are any appointments in localStorage
     const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
     if (appointments.length > 0) {
       setHasBookedSession(true)
     }
+
+    // Listen for auth logout events (from API client)
+    const handleAuthLogout = (event) => {
+      console.log('Auth logout event received:', event.detail)
+      setIsLoggedIn(false)
+      setUserRole('user')
+      setShowRegister(false)
+      setActiveView('My Appointments')
+      setProviderActiveView('Dashboard')
+    }
+    window.addEventListener('auth:logout', handleAuthLogout)
 
     // Listen for storage changes to update maintenance mode in real-time
     const handleStorageChange = (e) => {
@@ -96,6 +143,7 @@ function App() {
     const interval = setInterval(checkMaintenanceMode, 1000)
     
     return () => {
+      window.removeEventListener('auth:logout', handleAuthLogout)
       window.removeEventListener('storage', handleStorageChange)
       clearInterval(interval)
     }
@@ -269,12 +317,10 @@ function App() {
       // Disconnect wallet first
       await disconnectWallet()
 
-      // Clear login status but keep appointments (optional)
-      localStorage.removeItem('isLoggedIn')
-      localStorage.removeItem('loginMethod')
-      localStorage.removeItem('userRole')
-      // Optionally clear all data:
-      // localStorage.clear()
+      // Clear all auth data using centralized service
+      authService.clearAuthData()
+      
+      // Update state
       setIsLoggedIn(false)
       setShowRegister(false)
       setUserRole('user')
