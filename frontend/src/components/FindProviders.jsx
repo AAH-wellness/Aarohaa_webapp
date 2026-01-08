@@ -1,35 +1,67 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { userService } from '../services'
 import './FindProviders.css'
 
 const FindProviders = ({ onBookSession }) => {
   const [providers, setProviders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searching, setSearching] = useState(false)
   const [error, setError] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchInputRef = useRef(null)
+  const hasLoadedOnce = useRef(false)
 
+  // Debounced search effect
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        setLoading(true)
+        // Only show full loading on initial load, use searching state for subsequent searches
+        if (!hasLoadedOnce.current) {
+          setLoading(true)
+        } else {
+          setSearching(true)
+        }
         setError(null)
-        // Fetch providers from backend database
-        const providersList = await userService.getAllProviders({ status: 'ready' })
+        // Fetch providers from backend database with optional search parameter
+        const filters = searchQuery.trim() ? { search: searchQuery.trim() } : {}
+        const providersList = await userService.getAllProviders(filters)
         setProviders(providersList)
+        hasLoadedOnce.current = true
       } catch (err) {
         console.error('Error fetching providers:', err)
         setError('Failed to load providers. Please try again later.')
         setProviders([])
       } finally {
         setLoading(false)
+        setSearching(false)
       }
     }
 
-    fetchProviders()
-  }, [])
+    // Debounce search: wait 500ms after user stops typing
+    const timeoutId = setTimeout(() => {
+      fetchProviders()
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
 
   const handleBookSession = (providerId) => {
     if (onBookSession) {
       onBookSession(providerId)
+    }
+  }
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value)
+  }
+
+  const handleClearSearch = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setSearchQuery('')
+    // Maintain focus on search input after clearing
+    if (searchInputRef.current) {
+      searchInputRef.current.focus()
     }
   }
 
@@ -49,7 +81,8 @@ const FindProviders = ({ onBookSession }) => {
     return (hourlyRate / 60).toFixed(2)
   }
 
-  if (loading) {
+  // Show loading only on initial page load
+  if (loading && providers.length === 0) {
     return (
       <div className="find-providers">
         <h1 className="providers-title">Find Wellness Professionals</h1>
@@ -67,10 +100,45 @@ const FindProviders = ({ onBookSession }) => {
     )
   }
 
-  if (providers.length === 0) {
+  const hasSearchQuery = searchQuery.trim().length > 0
+  const showNoResults = !loading && providers.length === 0 && hasSearchQuery
+
+  if (providers.length === 0 && !hasSearchQuery) {
     return (
       <div className="find-providers">
         <h1 className="providers-title">Find Wellness Professionals</h1>
+      <div className="search-container">
+        <div className="search-box">
+          <span className="search-icon">🔍</span>
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="search-input"
+            placeholder="Search by name, title, specialty, or bio..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+              }
+            }}
+            autoFocus={false}
+          />
+          {searching && (
+            <span className="search-loading">⏳</span>
+          )}
+          {hasSearchQuery && !searching && (
+            <button 
+              type="button"
+              className="search-clear" 
+              onClick={handleClearSearch} 
+              aria-label="Clear search"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
         <div className="no-providers-message">
           No providers available at the moment. Please check back later.
         </div>
@@ -81,7 +149,30 @@ const FindProviders = ({ onBookSession }) => {
   return (
     <div className="find-providers">
       <h1 className="providers-title">Find Wellness Professionals</h1>
-      <div className="providers-grid">
+      <div className="search-container">
+        <div className="search-box">
+          <span className="search-icon">🔍</span>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by name, title, specialty, or bio..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+          {hasSearchQuery && (
+            <button className="search-clear" onClick={handleClearSearch} aria-label="Clear search">
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+      {showNoResults && (
+        <div className="no-results-message">
+          No providers found matching "{searchQuery}". Try a different search term.
+        </div>
+      )}
+      {!showNoResults && (
+        <div className="providers-grid">
         {providers.map((provider) => (
           <div key={provider.id} className="provider-card">
             <div className="provider-header">
@@ -113,7 +204,8 @@ const FindProviders = ({ onBookSession }) => {
             </button>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
