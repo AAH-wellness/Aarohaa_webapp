@@ -268,6 +268,19 @@ async function login(req, res, next) {
       });
     }
 
+    // SECURITY: Reject providers trying to login via user endpoint
+    // Providers must use the provider login endpoint (/login/provider)
+    if (user.role === 'provider') {
+      console.log(`User login attempt rejected: Email '${email}' is a provider and must use provider login endpoint`);
+      return res.status(403).json({
+        error: {
+          message: 'Provider accounts must use the provider login. Please use the provider login form.',
+          code: 'PROVIDER_USE_PROVIDER_LOGIN',
+          status: 403
+        }
+      });
+    }
+
     console.log(`User login successful: ${user.email}`);
 
     // Update last_login timestamp
