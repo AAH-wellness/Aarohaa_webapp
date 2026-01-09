@@ -86,9 +86,9 @@ class UserService {
     }
 
     try {
-      // Use /api/login endpoint (user login only)
-      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
-      const response = await apiClient.post(`${apiBaseUrl}/login`, credentials)
+      // Use /api/users/login endpoint (user login only)
+      // Routes are mounted at /api/users, so login is at /api/users/login
+      const response = await apiClient.post(`${this.baseUrl}/login`, credentials)
       if (response.token) {
         localStorage.setItem('authToken', response.token)
         localStorage.setItem('isLoggedIn', 'true')
@@ -113,9 +113,9 @@ class UserService {
     }
 
     try {
-      // Use /api/login/provider endpoint (provider login only)
-      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
-      const response = await apiClient.post(`${apiBaseUrl}/login/provider`, credentials)
+      // Use /api/users/login/provider endpoint (provider login only)
+      // Routes are mounted at /api/users, so provider login is at /api/users/login/provider
+      const response = await apiClient.post(`${this.baseUrl}/login/provider`, credentials)
       if (response.token) {
         localStorage.setItem('authToken', response.token)
         localStorage.setItem('isLoggedIn', 'true')
