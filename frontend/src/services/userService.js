@@ -76,7 +76,7 @@ class UserService {
   }
 
   /**
-   * Login user
+   * Login user (ONLY checks users table)
    * @param {Object} credentials - { email, password, loginMethod }
    * @returns {Promise<Object>} User object with token
    */
@@ -86,7 +86,9 @@ class UserService {
     }
 
     try {
-      const response = await apiClient.post(`${this.baseUrl}/login`, credentials)
+      // Use /api/login endpoint (user login only)
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      const response = await apiClient.post(`${apiBaseUrl}/login`, credentials)
       if (response.token) {
         localStorage.setItem('authToken', response.token)
         localStorage.setItem('isLoggedIn', 'true')
@@ -96,6 +98,33 @@ class UserService {
       return response
     } catch (error) {
       console.error('Login error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Login provider (ONLY checks providers table)
+   * @param {Object} credentials - { email, password }
+   * @returns {Promise<Object>} Provider object with token
+   */
+  async loginProvider(credentials) {
+    if (this.useMock) {
+      return this.mockLogin(credentials)
+    }
+
+    try {
+      // Use /api/login/provider endpoint (provider login only)
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      const response = await apiClient.post(`${apiBaseUrl}/login/provider`, credentials)
+      if (response.token) {
+        localStorage.setItem('authToken', response.token)
+        localStorage.setItem('isLoggedIn', 'true')
+        localStorage.setItem('userRole', response.user.role || 'provider')
+        localStorage.setItem('loginMethod', 'email')
+      }
+      return response
+    } catch (error) {
+      console.error('Provider login error:', error)
       throw error
     }
   }

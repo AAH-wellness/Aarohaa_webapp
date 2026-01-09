@@ -1,25 +1,37 @@
 import React, { useState, useEffect } from 'react'
 import './ProviderAppointments.css'
+import { apiClient, API_CONFIG } from '../services'
 
-const ProviderAppointments = () => {
+const ProviderAppointments = ({ onJoinSession }) => {
   const [appointments, setAppointments] = useState([])
-  const [filter, setFilter] = useState('upcoming') // 'upcoming', 'today', 'all'
+  const [filter, setFilter] = useState('today') // 'upcoming', 'today', 'all'
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadAppointments = () => {
-      const stored = localStorage.getItem('appointments')
-      if (stored) {
-        const allAppointments = JSON.parse(stored)
-        const now = new Date()
+    const loadAppointments = async () => {
+      try {
+        setLoading(true)
+        const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+        const response = await apiClient.get(`${apiBaseUrl}/provider/bookings`)
         
+        // Transform backend booking format to appointment format
+        const allAppointments = (response.bookings || []).map(booking => ({
+          id: booking.id,
+          userId: booking.userId,
+          patientName: booking.userName || 'Patient',
+          userEmail: booking.userEmail,
+          userPhone: booking.userPhone,
+          dateTime: booking.appointmentDate,
+          sessionType: booking.sessionType || 'Video Consultation',
+          notes: booking.notes,
+          status: booking.status || 'scheduled',
+          createdAt: booking.createdAt
+        }))
+        
+        const now = new Date()
         let filtered = allAppointments
         
-        if (filter === 'upcoming') {
-          filtered = allAppointments.filter(apt => {
-            const appointmentDate = new Date(apt.dateTime)
-            return appointmentDate > now
-          })
-        } else if (filter === 'today') {
+        if (filter === 'today') {
           const today = new Date()
           today.setHours(0, 0, 0, 0)
           const tomorrow = new Date(today)
@@ -27,13 +39,30 @@ const ProviderAppointments = () => {
           
           filtered = allAppointments.filter(apt => {
             const appointmentDate = new Date(apt.dateTime)
-            return appointmentDate >= today && appointmentDate < tomorrow
+            return appointmentDate >= today && appointmentDate < tomorrow && 
+                   apt.status !== 'cancelled' && apt.status !== 'completed'
           })
+        } else if (filter === 'upcoming') {
+          filtered = allAppointments.filter(apt => {
+            const appointmentDate = new Date(apt.dateTime)
+            return appointmentDate > now && 
+                   apt.status !== 'cancelled' && apt.status !== 'completed'
+          })
+        } else if (filter === 'all') {
+          // Show all non-cancelled, non-completed appointments
+          filtered = allAppointments.filter(apt => 
+            apt.status !== 'cancelled' && apt.status !== 'completed'
+          )
         }
         
         // Sort by date
         filtered.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
         setAppointments(filtered)
+      } catch (error) {
+        console.error('Error loading provider appointments:', error)
+        setAppointments([])
+      } finally {
+        setLoading(false)
       }
     }
 
@@ -132,7 +161,14 @@ const ProviderAppointments = () => {
       </div>
 
       <div className="provider-appointments-container">
-        {appointments.length === 0 ? (
+        {loading ? (
+          <div className="provider-no-appointments">
+            <div className="provider-no-appointments-icon">⏳</div>
+            <p className="provider-no-appointments-message">
+              Loading appointments...
+            </p>
+          </div>
+        ) : appointments.length === 0 ? (
           <div className="provider-no-appointments">
             <div className="provider-no-appointments-icon">📅</div>
             <p className="provider-no-appointments-message">
@@ -172,7 +208,24 @@ const ProviderAppointments = () => {
                     </div>
                   </div>
                   <div className="provider-appointment-actions">
-                    <button className="provider-join-session-btn">
+                    <button 
+                      className="provider-join-session-btn"
+                      onClick={() => {
+                        if (onJoinSession) {
+                          onJoinSession({
+                            id: appointment.id,
+                            providerId: null, // Provider is viewing their own appointments
+                            providerName: null,
+                            dateTime: appointment.dateTime,
+                            sessionType: appointment.sessionType,
+                            notes: appointment.notes,
+                            status: appointment.status,
+                            userId: appointment.userId,
+                            userName: appointment.patientName
+                          })
+                        }
+                      }}
+                    >
                       Join Session
                     </button>
                     <button className="provider-view-details-btn">

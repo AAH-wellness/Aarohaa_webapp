@@ -62,7 +62,7 @@ class Booking {
       
       const createdBooking = result.rows[0];
       
-      // Also insert into provider_bookings table if it exists (with same data)
+      // Also insert into provider_bookings table (required for provider to see bookings)
       // This ensures both tables stay in sync
       try {
         const providerBookingQuery = `
@@ -70,7 +70,7 @@ class Booking {
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           RETURNING id
         `;
-        await pool.query(providerBookingQuery, [
+        const providerResult = await pool.query(providerBookingQuery, [
           parseInt(userId),
           parseInt(providerId),
           appointmentDate,
@@ -80,10 +80,19 @@ class Booking {
           userName || null,
           providerName || null
         ]);
-        console.log('Booking.create - Also created entry in provider_bookings table');
+        console.log('Booking.create - Successfully created entry in provider_bookings table with ID:', providerResult.rows[0]?.id);
       } catch (providerBookingError) {
-        // If provider_bookings table doesn't exist or insert fails, log but don't fail the main booking
-        console.warn('Booking.create - Could not insert into provider_bookings (this is okay if table doesn\'t exist):', providerBookingError.message);
+        // Log the error but don't fail the main booking
+        console.error('Booking.create - ERROR inserting into provider_bookings:', {
+          error: providerBookingError.message,
+          code: providerBookingError.code,
+          detail: providerBookingError.detail,
+          userId,
+          providerId,
+          appointmentDate
+        });
+        // Note: We continue even if this fails, but provider won't see the booking
+        // In production, you might want to retry or alert admin
       }
       
       console.log('Booking.create - Successfully created booking:', createdBooking);
@@ -154,16 +163,18 @@ class Booking {
     const query = `
       SELECT 
         b.*,
-        u.name as user_name,
-        u.email as user_email,
-        u.phone as user_phone
+        COALESCE(u.name, b.user_name) as user_name,
+        COALESCE(u.email, NULL) as user_email,
+        COALESCE(u.phone, NULL) as user_phone
       FROM provider_bookings b
-      JOIN users u ON b.user_id = u.id
+      LEFT JOIN users u ON b.user_id = u.id
       WHERE b.provider_id = $1
-      ORDER BY b.appointment_date DESC
+      ORDER BY b.appointment_date ASC
     `;
     try {
+      console.log('Booking.findByProviderId: Querying for provider_id:', providerId);
       const result = await pool.query(query, [providerId]);
+      console.log('Booking.findByProviderId: Found', result.rows.length, 'bookings');
       return result.rows;
     } catch (error) {
       console.error('Error finding bookings by provider_id:', error);

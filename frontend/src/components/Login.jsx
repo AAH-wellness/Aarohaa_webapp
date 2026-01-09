@@ -146,11 +146,18 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
 
     try {
       // Call backend API to login
-      const response = await userService.login({
-        email: formData.email,
-        password: formData.password,
-        loginMethod: 'email'
-      })
+      // If provider mode, use provider login endpoint (ONLY checks providers table)
+      // Otherwise, use user login endpoint (ONLY checks users table)
+      const response = isProviderMode 
+        ? await userService.loginProvider({
+            email: formData.email,
+            password: formData.password
+          })
+        : await userService.login({
+            email: formData.email,
+            password: formData.password,
+            loginMethod: 'email'
+          })
 
       // Save remember password preference
       if (formData.rememberPassword) {

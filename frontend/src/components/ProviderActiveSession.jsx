@@ -1,19 +1,68 @@
 import React, { useState, useEffect, useRef } from 'react'
 import './ProviderActiveSession.css'
+import { apiClient, API_CONFIG } from '../services'
 
-const ProviderActiveSession = () => {
+const ProviderActiveSession = ({ selectedAppointment }) => {
   const [isCallStarted, setIsCallStarted] = useState(false)
   const [sessionTime, setSessionTime] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [notes, setNotes] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [patientInfo, setPatientInfo] = useState({
-    name: 'John Doe',
-    sessionType: 'Video Consultation',
-  })
+  const [activeAppointment, setActiveAppointment] = useState(null)
+  const [loadingAppointments, setLoadingAppointments] = useState(true)
   const videoRef = useRef(null)
   const streamRef = useRef(null)
+
+  useEffect(() => {
+    // If selectedAppointment is passed, use it directly
+    if (selectedAppointment) {
+      setActiveAppointment(selectedAppointment)
+      setLoadingAppointments(false)
+      return
+    }
+
+    // Otherwise, load provider's appointments from backend
+    const loadProviderAppointments = async () => {
+      try {
+        setLoadingAppointments(true)
+        const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+        const response = await apiClient.get(`${apiBaseUrl}/provider/bookings`)
+        const bookings = response.bookings || []
+        
+        const now = new Date()
+        
+        // Find the next active/upcoming appointment
+        const activeAppt = bookings.find(booking => {
+          const aptDate = new Date(booking.appointmentDate)
+          const diffInMinutes = (aptDate - now) / (1000 * 60)
+          // Active if within 30 minutes before or after start time
+          return diffInMinutes >= -30 && diffInMinutes <= 120 && 
+                 booking.status !== 'cancelled' && booking.status !== 'completed'
+        })
+        
+        if (activeAppt) {
+          setActiveAppointment({
+            id: activeAppt.id,
+            userId: activeAppt.userId,
+            userName: activeAppt.userName || 'Patient',
+            dateTime: activeAppt.appointmentDate,
+            sessionType: activeAppt.sessionType || 'Video Consultation',
+            notes: activeAppt.notes,
+            status: activeAppt.status
+          })
+        }
+      } catch (error) {
+        console.error('Error loading provider appointments:', error)
+      } finally {
+        setLoadingAppointments(false)
+      }
+    }
+
+    loadProviderAppointments()
+    const interval = setInterval(loadProviderAppointments, 60000)
+    return () => clearInterval(interval)
+  }, [selectedAppointment])
 
   useEffect(() => {
     if (isCallStarted) {
@@ -159,14 +208,50 @@ const ProviderActiveSession = () => {
     }
   }
 
+  if (loadingAppointments) {
+    return (
+      <div className="provider-active-session">
+        <div className="provider-session-container">
+          <div className="provider-session-header">
+            <h1 className="provider-session-title">Loading Sessions...</h1>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!activeAppointment) {
+    return (
+      <div className="provider-active-session">
+        <div className="provider-session-container">
+          <div className="provider-session-header">
+            <h1 className="provider-session-title">No Active Session</h1>
+            <p className="provider-no-session-message">
+              You don't have any active sessions right now. Check your schedule to join upcoming sessions.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const patientName = activeAppointment.userName || 'Patient'
+  const sessionDate = new Date(activeAppointment.dateTime)
+  const now = new Date()
+  const diffInMinutes = (sessionDate - now) / (1000 * 60)
+  const isSessionActive = diffInMinutes <= 5 && diffInMinutes >= -30
+
   return (
     <div className="provider-active-session">
       <div className="provider-session-container">
         <div className="provider-session-header">
           <h1 className="provider-session-title">Active Session</h1>
           <div className="provider-patient-info">
-            <span className="provider-patient-name">Patient: {patientInfo.name}</span>
-            <span className="provider-session-type">{patientInfo.sessionType}</span>
+            <span className="provider-patient-name">Patient: {patientName}</span>
+            <span className="provider-session-type">{activeAppointment.sessionType}</span>
+            <span className="provider-session-time">
+              Scheduled: {sessionDate.toLocaleString()}
+            </span>
           </div>
         </div>
 
@@ -225,16 +310,22 @@ const ProviderActiveSession = () => {
                 <div className="provider-video-icon">💻</div>
                 <p className="provider-video-status">
                   Ready to start session with<br />
-                  {patientInfo.name}
+                  {patientName}
                 </p>
+                {!isSessionActive && diffInMinutes > 5 && (
+                  <p className="provider-session-countdown">
+                    Session starts in {Math.floor(diffInMinutes / 60)}h {Math.floor(diffInMinutes % 60)}m
+                  </p>
+                )}
               </div>
             </div>
             <button
               className="provider-start-call-btn"
               onClick={handleStartCall}
-              disabled={isLoading}
+              disabled={isLoading || !isSessionActive}
+              style={{ opacity: isSessionActive ? 1 : 0.5, cursor: isSessionActive ? 'pointer' : 'not-allowed' }}
             >
-              {isLoading ? 'Starting Call...' : 'Start Session'}
+              {isLoading ? 'Starting Call...' : isSessionActive ? 'Start Session' : 'Session Not Yet Active'}
             </button>
           </div>
         )}

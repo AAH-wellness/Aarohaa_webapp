@@ -4,6 +4,7 @@ const {
   register, 
   registerProvider,
   login, 
+  loginProvider,
   loginWithGoogle,
   completeGoogleProfile,
   logout, 
@@ -31,8 +32,11 @@ router.post('/register', validateRegister, register);
 // Register new provider (creates record ONLY in providers table, NOT in users table)
 router.post('/register/provider', validateRegister, registerProvider);
 
-// Login user
+// Login user (ONLY checks users table)
 router.post('/login', validateLogin, login);
+
+// Login provider (ONLY checks providers table)
+router.post('/login/provider', validateLogin, loginProvider);
 
 // Login with Google OAuth
 router.post('/login/google', loginWithGoogle);

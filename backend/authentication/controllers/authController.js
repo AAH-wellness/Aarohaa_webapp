@@ -200,7 +200,12 @@ async function registerProvider(req, res, next) {
 }
 
 /**
- * Login user
+ * Login user (ONLY checks users table, NOT providers)
+ * 
+ * SECURITY: This function ONLY authenticates against the 'users' table.
+ * If credentials are not found in the 'users' table, it will return
+ * "Invalid email or password" WITHOUT checking the 'providers' table.
+ * Provider credentials will be rejected with "Invalid email or password".
  */
 async function login(req, res, next) {
   try {
@@ -217,30 +222,15 @@ async function login(req, res, next) {
       });
     }
 
-    // Try to find user by email first
-    let user = await User.findByEmail(email);
-    let isProvider = false;
+    // SECURITY: ONLY check users table - NEVER check providers table
+    // If email is not in users table, return "Invalid credentials" immediately
+    const user = await User.findByEmail(email);
     
-    // If not found in users table, check providers table
     if (!user) {
-      const provider = await Provider.findByEmail(email);
-      if (provider) {
-        isProvider = true;
-        // Convert provider to user-like object for consistent handling
-        user = {
-          id: provider.id,
-          email: provider.email,
-          name: provider.name,
-          role: 'provider',
-          phone: provider.phone,
-          password: provider.password,
-          created_at: provider.created_at
-        };
-      }
-    }
-
-    if (!user) {
-      console.log(`Login attempt failed: User/Provider not found for email: ${email}`);
+      // User not found in users table - reject immediately
+      // Do NOT check providers table - this ensures provider credentials
+      // cannot be used to login as a user
+      console.log(`User login attempt failed: Email '${email}' not found in users table`);
       return res.status(401).json({
         error: {
           message: 'Invalid email or password',
@@ -250,12 +240,11 @@ async function login(req, res, next) {
       });
     }
 
-    console.log(`Login attempt for ${isProvider ? 'provider' : 'user'}: ${user.email}, role: ${user.role || 'not set'}`);
+    console.log(`User login attempt for: ${user.email}`);
 
-    // Verify password - THIS IS THE CRITICAL PART
-    // Check if password exists and is hashed
+    // Verify password
     if (!user.password) {
-      console.log(`Login attempt failed: No password set for ${isProvider ? 'provider' : 'user'}: ${user.email}`);
+      console.log(`User login attempt failed: No password set for user: ${user.email}`);
       return res.status(401).json({
         error: {
           message: 'Invalid email or password',
@@ -269,7 +258,7 @@ async function login(req, res, next) {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     
     if (!isPasswordValid) {
-      console.log(`Login attempt failed: Invalid password for ${isProvider ? 'provider' : 'user'}: ${user.email}`);
+      console.log(`User login attempt failed: Invalid password for user: ${user.email}`);
       return res.status(401).json({
         error: {
           message: 'Invalid email or password',
@@ -279,18 +268,14 @@ async function login(req, res, next) {
       });
     }
 
-    console.log(`Login successful for ${isProvider ? 'provider' : 'user'}: ${user.email}, role: ${user.role || 'not set'}`);
+    console.log(`User login successful: ${user.email}`);
 
     // Update last_login timestamp
-    if (isProvider) {
-      await pool.query('UPDATE providers SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
-    } else {
-      await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
-    }
+    await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role || (isProvider ? 'provider' : 'user') },
+      { userId: user.id, email: user.email, role: 'user' },
       JWT_CONFIG.SECRET,
       { expiresIn: JWT_CONFIG.EXPIRES_IN }
     );
@@ -301,12 +286,111 @@ async function login(req, res, next) {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role || (isProvider ? 'provider' : 'user'),
+        role: 'user',
         phone: user.phone || null,
         createdAt: user.created_at
       },
       token,
       message: 'Login successful'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Login provider (ONLY checks providers table, NOT users)
+ * 
+ * SECURITY: This function ONLY authenticates against the 'providers' table.
+ * If credentials are not found in the 'providers' table, it will return
+ * "Invalid email or password" WITHOUT checking the 'users' table.
+ * User credentials will be rejected with "Invalid email or password".
+ */
+async function loginProvider(req, res, next) {
+  try {
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        error: {
+          message: 'Email and password are required',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+
+    // SECURITY: ONLY check providers table - NEVER check users table
+    // If email is not in providers table, return "Invalid credentials" immediately
+    const provider = await Provider.findByEmail(email);
+    
+    if (!provider) {
+      // Provider not found in providers table - reject immediately
+      // Do NOT check users table - this ensures user credentials
+      // cannot be used to login as a provider
+      console.log(`Provider login attempt failed: Email '${email}' not found in providers table`);
+      return res.status(401).json({
+        error: {
+          message: 'Invalid email or password',
+          code: 'INVALID_CREDENTIALS',
+          status: 401
+        }
+      });
+    }
+
+    console.log(`Provider login attempt for: ${provider.email}`);
+
+    // Verify password
+    if (!provider.password) {
+      console.log(`Provider login attempt failed: No password set for provider: ${provider.email}`);
+      return res.status(401).json({
+        error: {
+          message: 'Invalid email or password',
+          code: 'INVALID_CREDENTIALS',
+          status: 401
+        }
+      });
+    }
+    
+    // Verify password using bcrypt
+    const isPasswordValid = await bcrypt.compare(password, provider.password);
+    
+    if (!isPasswordValid) {
+      console.log(`Provider login attempt failed: Invalid password for provider: ${provider.email}`);
+      return res.status(401).json({
+        error: {
+          message: 'Invalid email or password',
+          code: 'INVALID_CREDENTIALS',
+          status: 401
+        }
+      });
+    }
+
+    console.log(`Provider login successful: ${provider.email}`);
+
+    // Update last_login timestamp
+    await pool.query('UPDATE providers SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [provider.id]);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: provider.id, email: provider.email, role: 'provider' },
+      JWT_CONFIG.SECRET,
+      { expiresIn: JWT_CONFIG.EXPIRES_IN }
+    );
+
+    // Return provider (without password hash) and token
+    res.json({
+      user: {
+        id: provider.id,
+        email: provider.email,
+        name: provider.name,
+        role: 'provider',
+        phone: provider.phone || null,
+        createdAt: provider.created_at
+      },
+      token,
+      message: 'Provider login successful'
     });
   } catch (error) {
     next(error);
@@ -1270,30 +1354,37 @@ async function getProviderBookings(req, res, next) {
       });
     }
 
-    // Get upcoming bookings for this provider
+    // Get all bookings for this provider
+    console.log('getProviderBookings: Fetching bookings for provider ID:', provider.id);
     const bookings = await Booking.findByProviderId(provider.id);
+    console.log('getProviderBookings: Found', bookings.length, 'bookings');
     
-    // Filter for upcoming/scheduled bookings
-    const now = new Date();
-    const upcomingBookings = bookings
+    // Filter out cancelled and completed bookings, let frontend handle Today/Upcoming/All filtering
+    const activeBookings = bookings
       .filter(booking => {
-        const appointmentDate = new Date(booking.appointment_date);
-        return appointmentDate > now && booking.status === 'scheduled';
+        const status = booking.status?.toLowerCase() || '';
+        const isActive = status !== 'cancelled' && status !== 'completed';
+        if (!isActive) {
+          console.log('getProviderBookings: Filtering out booking', booking.id, 'with status:', status);
+        }
+        return isActive;
       })
       .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
 
+    console.log('getProviderBookings: Returning', activeBookings.length, 'active bookings');
+
     res.json({
-      bookings: upcomingBookings.map(booking => ({
+      bookings: activeBookings.map(booking => ({
         id: booking.id,
         userId: booking.user_id,
-        userName: booking.user_name,
-        userEmail: booking.user_email,
-        userPhone: booking.user_phone,
-        appointmentDate: booking.appointment_date,
-        sessionType: booking.session_type,
+        userName: booking.user_name || booking.userName || 'Patient',
+        userEmail: booking.user_email || booking.userEmail,
+        userPhone: booking.user_phone || booking.userPhone,
+        appointmentDate: booking.appointment_date || booking.appointmentDate,
+        sessionType: booking.session_type || booking.sessionType || 'Video Consultation',
         notes: booking.notes,
-        status: booking.status,
-        createdAt: booking.created_at
+        status: booking.status || 'scheduled',
+        createdAt: booking.created_at || booking.createdAt
       }))
     });
   } catch (error) {
@@ -1706,6 +1797,7 @@ module.exports = {
   register,
   registerProvider,
   login,
+  loginProvider,
   loginWithGoogle,
   completeGoogleProfile,
   logout,

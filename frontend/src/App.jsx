@@ -47,6 +47,7 @@ function App() {
   const [userRole, setUserRole] = useState('user') // 'user', 'provider', or 'admin'
   const [activeView, setActiveView] = useState('My Appointments')
   const [providerActiveView, setProviderActiveView] = useState('Dashboard')
+  const [providerActiveSession, setProviderActiveSession] = useState(null)
   const [adminActiveView, setAdminActiveView] = useState('Dashboard')
   const [hasBookedSession, setHasBookedSession] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState(null)
@@ -357,11 +358,20 @@ function App() {
   const renderProviderContent = () => {
     switch (providerActiveView) {
       case 'Dashboard':
-        return <ProviderDashboard />
+        return <ProviderDashboard 
+          onJoinSession={(appointment) => {
+            setProviderActiveSession(appointment)
+            setProviderActiveView('Active Sessions')
+          }}
+          onNavigateToSchedule={() => setProviderActiveView('My Schedule')}
+        />
       case 'My Schedule':
-        return <ProviderAppointments />
+        return <ProviderAppointments onJoinSession={(appointment) => {
+          setProviderActiveSession(appointment)
+          setProviderActiveView('Active Sessions')
+        }} />
       case 'Active Sessions':
-        return <ProviderActiveSession />
+        return <ProviderActiveSession selectedAppointment={providerActiveSession} />
       case 'Earnings':
         return <ProviderEarnings />
       case 'Profile':
