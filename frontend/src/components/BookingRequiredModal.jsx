@@ -28,16 +28,19 @@ const BookingRequiredModal = ({ onClose, onNavigateToBooking }) => {
         <div className="modal-icon">
           <div className="icon-bounce">📅</div>
         </div>
-        <h2 className="modal-title">Session Not Booked</h2>
+        <h2 className="modal-title">Session Access Required</h2>
         <p className="modal-message">
-          Please book a session with our providers to access the session!
+          Session can only be accessed if a session is booked with one of our providers.
+        </p>
+        <p className="modal-submessage">
+          Book a session now to start your wellness journey!
         </p>
         <div className="modal-buttons">
           <button className="modal-btn secondary" onClick={handleClose}>
             Close
           </button>
           <button className="modal-btn primary" onClick={handleBookNow}>
-            Book Session Now
+            Book Session
           </button>
         </div>
       </div>

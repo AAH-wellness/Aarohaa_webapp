@@ -23,6 +23,15 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
   useEffect(() => {
     // If selectedAppointment is passed, use it directly
     if (selectedAppointment) {
+      // Check if the selected appointment is cancelled or completed
+      const status = selectedAppointment.status?.toLowerCase() || ''
+      if (status === 'cancelled' || status === 'completed') {
+        setActiveBooking(null)
+        setShowModal(true)
+        // Don't call onActiveSessionChange - let the modal show on the Active Session page
+        return
+      }
+
       const activeBookingData = {
         id: selectedAppointment.id,
         providerId: selectedAppointment.providerId,
@@ -69,9 +78,7 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
         if (!profile.user || !profile.user.id) {
           setActiveBooking(null)
           setShowModal(true)
-          if (onActiveSessionChange) {
-            onActiveSessionChange(null)
-          }
+          // Don't call onActiveSessionChange here - let the modal show
           return
         }
 
@@ -89,12 +96,16 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
         const now = new Date()
         
         // Find the next upcoming booking (not completed or cancelled)
+        // Only include bookings that are confirmed, scheduled, or in progress
         const upcomingBookings = bookings
           .filter(booking => {
             const aptDate = new Date(booking.appointmentDate)
-            return booking.status !== 'completed' && 
-                   booking.status !== 'cancelled' &&
-                   aptDate >= now // Only future or current bookings
+            const status = booking.status?.toLowerCase() || ''
+            // Exclude completed and cancelled bookings
+            // Only include bookings that are in the future or within the last 30 minutes (active session window)
+            const isNotCompletedOrCancelled = status !== 'completed' && status !== 'cancelled'
+            const isFutureOrRecent = aptDate >= new Date(now.getTime() - 30 * 60 * 1000) // Within last 30 min or future
+            return isNotCompletedOrCancelled && isFutureOrRecent
           })
           .sort((a, b) => new Date(a.appointmentDate) - new Date(b.appointmentDate))
         
@@ -118,20 +129,16 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
             onActiveSessionChange(activeBookingData)
           }
         } else {
-          // No upcoming bookings - show modal
+          // No upcoming bookings (all cancelled/completed) - show modal
           setActiveBooking(null)
           setShowModal(true)
-          if (onActiveSessionChange) {
-            onActiveSessionChange(null)
-          }
+          // Don't call onActiveSessionChange - let the modal show on the Active Session page
         }
       } catch (error) {
         console.error('Error checking active booking:', error)
         setActiveBooking(null)
         setShowModal(true)
-        if (onActiveSessionChange) {
-          onActiveSessionChange(null)
-        }
+        // Don't call onActiveSessionChange - let the modal show on the Active Session page
       }
     }
     
@@ -445,21 +452,19 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
     }
   }
 
-  // Show modal if no active booking
-  if (!activeBooking && showModal) {
+  // Show premium modal if no active booking (always accessible but shows modal when no session)
+  if (!activeBooking) {
     return (
       <div className="active-session">
         <BookingRequiredModal
-          onClose={() => setShowModal(false)}
+          onClose={() => {
+            // Don't close the modal - keep it visible since this is the Active Session page
+            // User can click "Book Session" to navigate away
+          }}
           onNavigateToBooking={onNavigateToBooking}
         />
       </div>
     )
-  }
-
-  // Don't show session content if no active booking
-  if (!activeBooking) {
-    return null
   }
 
   const providerName = activeBooking.providerName || 'Your Provider'

@@ -4,7 +4,7 @@ import AppointmentReminder from './AppointmentReminder'
 import CancelBookingModal from './CancelBookingModal'
 import { appointmentService, userService, apiClient, API_CONFIG } from '../services'
 
-const MyAppointments = ({ onJoinSession }) => {
+const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCancelModal, setShowCancelModal] = useState(false)
@@ -166,6 +166,9 @@ const MyAppointments = ({ onJoinSession }) => {
       const response = await apiClient.post(`${apiBaseUrl}/users/bookings/cancel`, { bookingId: selectedAppointment.id })
       console.log('Cancel booking response:', response)
       
+      // Store the cancelled booking ID before clearing
+      const cancelledBookingId = selectedAppointment.id
+      
       // Show success state in modal
       setCancelSuccess(true)
       
@@ -202,6 +205,11 @@ const MyAppointments = ({ onJoinSession }) => {
           // Sort by date
           upcoming.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
           setAppointments(upcoming)
+        }
+        
+        // Notify parent that session was cancelled (to clear active session if it was the active one)
+        if (onSessionCancelled) {
+          onSessionCancelled(cancelledBookingId)
         }
         
         // Close modal after reload

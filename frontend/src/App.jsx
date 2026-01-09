@@ -177,16 +177,35 @@ function App() {
           />
         )
       case 'My Appointments':
-        return <MyAppointments onJoinSession={(appointment) => {
-          setActiveSession(appointment)
-          setActiveView('Active Session')
-        }} />
+        return <MyAppointments 
+          onJoinSession={(appointment) => {
+            setActiveSession(appointment)
+            setActiveView('Active Session')
+          }}
+          onSessionCancelled={(bookingId) => {
+            // If the cancelled session was the active one, clear it
+            if (activeSession && activeSession.id === bookingId) {
+              setActiveSession(null)
+              // If currently on Active Session tab, redirect to My Appointments
+              if (activeView === 'Active Session') {
+                setActiveView('My Appointments')
+              }
+            }
+          }}
+        />
       case 'Active Session':
         return (
           <ActiveSession
             hasBookedSession={hasBookedSession}
-            onNavigateToBooking={() => setActiveView('Find Providers')}
-            onActiveSessionChange={(sessionData) => setActiveSession(sessionData)}
+            onNavigateToBooking={() => {
+              setActiveView('Find Providers')
+              setActiveSession(null)
+            }}
+            onActiveSessionChange={(sessionData) => {
+              setActiveSession(sessionData)
+              // Don't redirect - just update the session state
+              // The modal will show if there's no session
+            }}
             selectedAppointment={activeSession}
           />
         )
