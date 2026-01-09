@@ -43,6 +43,18 @@ async function register(req, res, next) {
       });
     }
 
+    // SECURITY: Check if provider with same email exists (prevent duplicate emails across tables)
+    const existingProvider = await Provider.findByEmail(email);
+    if (existingProvider) {
+      return res.status(409).json({
+        error: {
+          message: 'Email already registered as provider',
+          code: 'EMAIL_EXISTS',
+          status: 409
+        }
+      });
+    }
+
     // Hash password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
