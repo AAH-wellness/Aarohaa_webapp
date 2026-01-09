@@ -50,6 +50,7 @@ function App() {
   const [adminActiveView, setAdminActiveView] = useState('Dashboard')
   const [hasBookedSession, setHasBookedSession] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState(null)
+  const [activeSession, setActiveSession] = useState(null)
   const [maintenanceMode, setMaintenanceMode] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false)
@@ -176,12 +177,17 @@ function App() {
           />
         )
       case 'My Appointments':
-        return <MyAppointments />
+        return <MyAppointments onJoinSession={(appointment) => {
+          setActiveSession(appointment)
+          setActiveView('Active Session')
+        }} />
       case 'Active Session':
         return (
           <ActiveSession
             hasBookedSession={hasBookedSession}
             onNavigateToBooking={() => setActiveView('Find Providers')}
+            onActiveSessionChange={(sessionData) => setActiveSession(sessionData)}
+            selectedAppointment={activeSession}
           />
         )
       case 'Wellness Activities':
@@ -569,6 +575,7 @@ function App() {
         activeView={activeView}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
+        activeSession={activeSession}
       />
       {isSidebarOpen && (
         <div 

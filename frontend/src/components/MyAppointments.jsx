@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import './MyAppointments.css'
 import AppointmentReminder from './AppointmentReminder'
-import { appointmentService, userService } from '../services'
+import CancelBookingModal from './CancelBookingModal'
+import { appointmentService, userService, apiClient, API_CONFIG } from '../services'
 
-const MyAppointments = () => {
+const MyAppointments = ({ onJoinSession }) => {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState(null)
+  const [cancelSuccess, setCancelSuccess] = useState(false)
 
   useEffect(() => {
     // Load appointments using service layer
@@ -30,8 +34,23 @@ const MyAppointments = () => {
           return
         }
         
-        // Use service to get user's appointments from backend
-        const userAppointments = await appointmentService.getUserAppointments(userId)
+        // Get user bookings from backend API
+        const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+        const response = await apiClient.get(`${apiBaseUrl}/users/bookings`)
+        
+        // Transform backend booking format to appointment format
+        const userAppointments = (response.bookings || []).map(booking => ({
+          id: booking.id,
+          providerId: booking.providerId,
+          providerName: booking.providerName || 'Provider',
+          providerInitials: booking.providerName ? 
+            booking.providerName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'PR',
+          dateTime: booking.appointmentDate,
+          sessionType: booking.sessionType || 'Video Consultation',
+          notes: booking.notes,
+          status: booking.status || 'scheduled',
+          createdAt: booking.createdAt
+        }))
         
         // Filter to only show upcoming appointments
         const now = new Date()
@@ -105,37 +124,127 @@ const MyAppointments = () => {
     const now = new Date()
     const diffInMs = appointmentTime - now
     const diffInHours = diffInMs / (1000 * 60 * 60)
-    return diffInHours <= 2 && diffInHours > 0
+    // Returns true if within 2 hours before session (0 to 2 hours before)
+    return diffInHours > 0 && diffInHours <= 2
   }
 
-  const handleCancelSession = async (appointmentId, dateTime) => {
-    const isWithinTwoHoursBefore = isWithinTwoHours(dateTime)
+  const canCancelForFree = (dateTimeString) => {
+    const appointmentTime = new Date(dateTimeString)
+    const now = new Date()
+    const diffInMs = appointmentTime - now
+    const diffInHours = diffInMs / (1000 * 60 * 60)
+    // Free cancellation if more than 2 hours before session
+    return diffInHours > 2
+  }
+
+  const handleCancelSession = (appointmentId, dateTime) => {
+    // Find the appointment details
+    const appointment = appointments.find(apt => apt.id === appointmentId)
+    if (appointment) {
+      setSelectedAppointment(appointment)
+      setShowCancelModal(true)
+      setCancelSuccess(false)
+    }
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!selectedAppointment) return
+
+    const withinTwoHours = isWithinTwoHours(selectedAppointment.dateTime)
     
-    if (isWithinTwoHoursBefore) {
-      const confirmCancel = window.confirm(
-        'Cancelling this session within 2 hours will cost 10 AAH tokens. Do you want to proceed?'
-      )
-      if (!confirmCancel) return
-      
+    // If within 2 hours, show additional warning (but still allow cancellation)
+    if (withinTwoHours) {
       // TODO: Deduct 10 AAH tokens from user's wallet using paymentService
+      console.log('Cancelling within 2 hours - 10 AAH tokens will be charged')
     }
     
     try {
-      // Use service to cancel appointment
-      await appointmentService.cancelAppointment(appointmentId)
+      // Cancel booking via API
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      console.log('Cancelling booking:', selectedAppointment.id)
       
-      // Reload appointments to reflect the change
-      const allAppointments = await appointmentService.getUpcomingAppointments()
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
-      const userId = currentUser.id || 'current-user'
-      const userAppointments = allAppointments.filter(apt => 
-        !apt.userId || apt.userId === userId
-      )
-      userAppointments.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
-      setAppointments(userAppointments)
+      const response = await apiClient.post(`${apiBaseUrl}/users/bookings/cancel`, { bookingId: selectedAppointment.id })
+      console.log('Cancel booking response:', response)
+      
+      // Show success state in modal
+      setCancelSuccess(true)
+      
+      // After showing success, reload appointments
+      setTimeout(async () => {
+        // Reload appointments using the same method as initial load
+        const profile = await userService.getProfile()
+        if (profile.user && profile.user.id) {
+          // Use the same API endpoint that was used to load appointments initially
+          const bookingsResponse = await apiClient.get(`${apiBaseUrl}/users/bookings`)
+          const bookings = bookingsResponse.bookings || []
+          
+          // Transform backend booking format to appointment format
+          const userAppointments = bookings.map(booking => ({
+            id: booking.id,
+            providerId: booking.providerId,
+            providerName: booking.providerName || 'Provider',
+            providerInitials: booking.providerName ? 
+              booking.providerName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'PR',
+            dateTime: booking.appointmentDate,
+            sessionType: booking.sessionType || 'Video Consultation',
+            notes: booking.notes,
+            status: booking.status || 'scheduled',
+            createdAt: booking.createdAt
+          }))
+          
+          // Filter to only show upcoming appointments
+          const now = new Date()
+          const upcoming = userAppointments.filter(apt => {
+            const aptDate = new Date(apt.dateTime)
+            return aptDate > now && apt.status !== 'cancelled'
+          })
+          
+          // Sort by date
+          upcoming.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+          setAppointments(upcoming)
+        }
+        
+        // Close modal after reload
+        setShowCancelModal(false)
+        setSelectedAppointment(null)
+        setCancelSuccess(false)
+      }, 2000) // Show success message for 2 seconds
+      
     } catch (error) {
       console.error('Error cancelling appointment:', error)
-      alert('Failed to cancel appointment. Please try again.')
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        data: error.data
+      })
+      
+      // Show detailed error message
+      let errorMessage = 'Failed to cancel appointment. Please try again.'
+      if (error.status === 403) {
+        errorMessage = 'You do not have permission to cancel this appointment.'
+      } else if (error.status === 404) {
+        errorMessage = 'Appointment not found. It may have already been cancelled.'
+      } else if (error.data?.error?.message) {
+        errorMessage = error.data.error.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      alert(`Cancel Error: ${errorMessage}`)
+      setShowCancelModal(false)
+      setSelectedAppointment(null)
+    }
+  }
+
+  const handleCancelModalClose = () => {
+    setShowCancelModal(false)
+    setSelectedAppointment(null)
+    setCancelSuccess(false)
+  }
+
+  const handleJoinSession = (appointment) => {
+    if (onJoinSession) {
+      onJoinSession(appointment)
     }
   }
 
@@ -178,12 +287,17 @@ const MyAppointments = () => {
                     </div>
                   </div>
                   <div className="appointment-actions">
-                    <button className="join-session-btn">Join Session</button>
+                    <button 
+                      className="join-session-btn"
+                      onClick={() => handleJoinSession(appointment)}
+                    >
+                      Join Session
+                    </button>
                     <button 
                       className="cancel-session-btn"
                       onClick={() => handleCancelSession(appointment.id, appointment.dateTime)}
                     >
-                      {isWithinTwoHours(appointment.dateTime) ? 'Cancel: -10AAH' : 'Cancel Session'}
+                      {isWithinTwoHours(appointment.dateTime) ? 'Cancel: -10AAH' : 'Cancel Session (Free)'}
                     </button>
                   </div>
                 </div>
@@ -192,6 +306,15 @@ const MyAppointments = () => {
           )}
         </div>
       </div>
+
+      {showCancelModal && (
+        <CancelBookingModal
+          appointment={selectedAppointment}
+          onConfirm={handleConfirmCancel}
+          onCancel={handleCancelModalClose}
+          showSuccess={cancelSuccess}
+        />
+      )}
     </div>
   )
 }

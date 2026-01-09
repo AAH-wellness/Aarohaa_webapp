@@ -148,8 +148,12 @@ async function startServer() {
     // Initialize tables
     console.log('🔧 Initializing database tables...');
     const User = require('./models/User');
+    const Provider = require('./models/Provider');
+    const Booking = require('./models/Booking');
     const UserLoginEvent = require('./models/UserLoginEvent');
     await User.createTable();
+    await Provider.createTable();
+    await Booking.createTable(); // user_bookings and provider_bookings already exist
     await UserLoginEvent.createTable();
     console.log('✅ Database tables initialized');
     

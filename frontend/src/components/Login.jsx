@@ -171,12 +171,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
       // Save last login time
       localStorage.setItem('lastLoginTime', new Date().toLocaleString())
       
-      // Show success animation - for all modes (user, provider, admin)
-      // The animation is now handled at App level
-      // Role is already saved to localStorage above, so animation will navigate correctly
-      if (onLogin) {
-        onLogin()
-      }
+      // Show success animation for all modes (user, provider, admin)
+      setShowSuccessAnimation(true)
     } catch (error) {
       console.error('Login error:', error)
       
@@ -322,10 +318,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
 
       setIsGoogleLoading(false)
 
-      // Show success animation - handled at App level
-      if (onLogin) {
-        onLogin()
-      }
+      // Show success animation for all modes
+      setShowSuccessAnimation(true)
     } catch (error) {
       console.error('Google login callback error:', error)
       setIsGoogleLoading(false)
@@ -529,10 +523,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
       setShowWalletModal(false)
       setIsConnecting(false)
       
-      // Show success animation - handled at App level
-      if (onLogin) {
-        onLogin()
-      }
+      // Show success animation for all modes
+      setShowSuccessAnimation(true)
     } catch (error) {
       console.error('Error connecting wallet:', error)
       setIsConnecting(false)
@@ -1009,8 +1001,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         </div>
       )}
 
-      {/* Success Animation - Note: This is now handled at App level for providers */}
-      {showSuccessAnimation && !isProviderMode && (
+      {/* Success Animation - Shows for all login modes (user, provider, admin) */}
+      {showSuccessAnimation && (
         <LoginSuccess 
           onAnimationComplete={() => {
             setShowSuccessAnimation(false)

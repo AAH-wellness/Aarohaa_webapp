@@ -1,10 +1,10 @@
-.success-modal-overlay {
+.cancel-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(14, 72, 38, 0.85) 0%, rgba(0, 0, 0, 0.75) 100%);
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.85) 0%, rgba(0, 0, 0, 0.75) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,45 +14,11 @@
   backdrop-filter: blur(8px);
 }
 
-.success-modal-overlay.visible {
+.cancel-modal-overlay.visible {
   opacity: 1;
 }
 
-.confetti-container {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.confetti {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: #FFD700;
-  top: -10px;
-  animation: confettiFall linear infinite;
-}
-
-.confetti-0 { background: #FFD700; }
-.confetti-1 { background: #FF6B6B; }
-.confetti-2 { background: #4ECDC4; }
-.confetti-3 { background: #45B7D1; }
-.confetti-4 { background: #FFA07A; }
-
-@keyframes confettiFall {
-  0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(100vh) rotate(720deg);
-    opacity: 0;
-  }
-}
-
-.success-modal-content {
+.cancel-modal-content {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border-radius: 24px;
   padding: 48px 40px;
@@ -60,19 +26,19 @@
   width: 90%;
   box-shadow: 
     0 25px 80px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 215, 0, 0.3),
-    0 0 40px rgba(14, 72, 38, 0.3),
+    0 0 0 1px rgba(220, 53, 69, 0.3),
+    0 0 40px rgba(220, 53, 69, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   text-align: center;
   transform: scale(0.7) translateY(-50px) rotateX(15deg);
   opacity: 0;
   transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border: 2px solid rgba(14, 72, 38, 0.2);
+  border: 2px solid rgba(220, 53, 69, 0.2);
   position: relative;
   overflow: visible;
 }
 
-.success-modal-content::before {
+.cancel-modal-content::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -82,7 +48,7 @@
   background: linear-gradient(
     45deg,
     transparent 30%,
-    rgba(255, 215, 0, 0.1) 50%,
+    rgba(220, 53, 69, 0.1) 50%,
     transparent 70%
   );
   transform: rotate(45deg);
@@ -90,10 +56,19 @@
   pointer-events: none;
 }
 
-.success-modal-content.visible {
+.cancel-modal-content.visible {
   opacity: 1;
   transform: scale(1) translateY(0) rotateX(0deg);
   animation: modalEntrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cancel-modal-content.success {
+  border-color: rgba(40, 167, 69, 0.3);
+  box-shadow: 
+    0 25px 80px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(40, 167, 69, 0.3),
+    0 0 40px rgba(40, 167, 69, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 @keyframes modalEntrance {
@@ -119,7 +94,7 @@
   }
 }
 
-.success-icon-wrapper {
+.cancel-icon-wrapper {
   margin-bottom: 32px;
   display: flex;
   justify-content: center;
@@ -128,27 +103,35 @@
   height: 140px;
 }
 
-.success-icon {
+.cancel-icon {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.checkmark-circle {
+.cancel-circle {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0e4826 0%, #1a6b3a 50%, #0e4826 100%);
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 50%, #dc3545 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   box-shadow: 
-    0 10px 30px rgba(14, 72, 38, 0.4),
+    0 10px 30px rgba(220, 53, 69, 0.4),
     inset 0 2px 10px rgba(255, 255, 255, 0.2),
-    0 0 0 8px rgba(14, 72, 38, 0.1);
+    0 0 0 8px rgba(220, 53, 69, 0.1);
   animation: circleScaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cancel-icon.success .cancel-circle {
+  background: linear-gradient(135deg, #28a745 0%, #218838 50%, #28a745 100%);
+  box-shadow: 
+    0 10px 30px rgba(40, 167, 69, 0.4),
+    inset 0 2px 10px rgba(255, 255, 255, 0.2),
+    0 0 0 8px rgba(40, 167, 69, 0.1);
 }
 
 @keyframes circleScaleIn {
@@ -168,14 +151,14 @@
   }
 }
 
-.checkmark-svg {
+.cancel-svg {
   width: 70px;
   height: 70px;
   transform: scale(0);
-  animation: checkmarkDraw 0.6s ease-out 0.3s forwards;
+  animation: cancelDraw 0.6s ease-out 0.3s forwards;
 }
 
-.checkmark-circle-bg {
+.cancel-circle-bg {
   stroke: rgba(255, 255, 255, 0.3);
   stroke-width: 2;
   fill: none;
@@ -184,14 +167,24 @@
   animation: circleDraw 0.6s ease-out 0.2s forwards;
 }
 
-.checkmark-check {
+.cancel-x {
+  stroke: #ffffff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 56;
+  stroke-dashoffset: 56;
+  animation: cancelDraw 0.5s ease-out 0.5s forwards;
+}
+
+.cancel-check {
   stroke: #ffffff;
   stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 50;
   stroke-dashoffset: 50;
-  animation: checkmarkDraw 0.5s ease-out 0.5s forwards;
+  animation: cancelDraw 0.5s ease-out 0.5s forwards;
 }
 
 @keyframes circleDraw {
@@ -200,10 +193,10 @@
   }
 }
 
-@keyframes checkmarkDraw {
+@keyframes cancelDraw {
   0% {
     transform: scale(0);
-    stroke-dashoffset: 50;
+    stroke-dashoffset: 56;
   }
   50% {
     transform: scale(1.2);
@@ -214,7 +207,7 @@
   }
 }
 
-.success-rings {
+.cancel-rings {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -224,12 +217,16 @@
 
 .ring {
   position: absolute;
-  border: 3px solid rgba(14, 72, 38, 0.3);
+  border: 3px solid rgba(220, 53, 69, 0.3);
   border-radius: 50%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   animation: ringPulse 2s ease-out infinite;
+}
+
+.cancel-icon.success .ring {
+  border-color: rgba(40, 167, 69, 0.3);
 }
 
 .ring-1 {
@@ -261,17 +258,17 @@
   }
 }
 
-.success-modal-title {
+.cancel-modal-title {
   font-size: 32px;
   font-weight: 800;
-  color: #0e4826;
+  color: #dc3545;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, #0e4826 0%, #1a6b3a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
   letter-spacing: -0.5px;
   animation: titleFadeIn 0.6s ease-out 0.4s both;
+}
+
+.cancel-modal-content.success .cancel-modal-title {
+  color: #28a745;
 }
 
 @keyframes titleFadeIn {
@@ -285,7 +282,7 @@
   }
 }
 
-.success-modal-message {
+.cancel-modal-message {
   font-size: 17px;
   color: #555;
   line-height: 1.7;
@@ -304,13 +301,13 @@
   }
 }
 
-.success-modal-message strong {
-  color: #0e4826;
+.cancel-modal-message strong {
+  color: #dc3545;
   font-weight: 700;
   font-size: 18px;
 }
 
-.success-sub-message {
+.cancel-sub-message {
   display: block;
   margin-top: 8px;
   font-size: 15px;
@@ -318,12 +315,12 @@
   font-style: italic;
 }
 
-.success-details {
-  background: linear-gradient(135deg, rgba(14, 72, 38, 0.05) 0%, rgba(14, 72, 38, 0.02) 100%);
+.cancel-appointment-details {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.02) 100%);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 32px;
-  border: 1px solid rgba(14, 72, 38, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.1);
   animation: detailsFadeIn 0.6s ease-out 0.6s both;
 }
 
@@ -338,11 +335,16 @@
   }
 }
 
-.success-detail-item {
+.detail-item {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  margin-bottom: 8px;
+}
+
+.detail-item:last-child {
+  margin-bottom: 0;
 }
 
 .detail-icon {
@@ -365,7 +367,7 @@
   font-weight: 500;
 }
 
-.success-modal-buttons {
+.cancel-modal-buttons {
   display: flex;
   gap: 16px;
   justify-content: center;
@@ -383,7 +385,7 @@
   }
 }
 
-.success-modal-btn {
+.cancel-modal-btn {
   padding: 14px 36px;
   border-radius: 12px;
   font-size: 16px;
@@ -397,7 +399,7 @@
   letter-spacing: 0.3px;
 }
 
-.success-modal-btn::before {
+.cancel-modal-btn::before {
   content: '';
   position: absolute;
   top: 50%;
@@ -410,66 +412,84 @@
   transition: width 0.6s, height 0.6s;
 }
 
-.success-modal-btn:hover::before {
+.cancel-modal-btn:hover::before {
   width: 300px;
   height: 300px;
 }
 
-.success-modal-btn.primary {
-  background: linear-gradient(135deg, #0e4826 0%, #1a6b3a 100%);
+.cancel-modal-btn.danger {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   color: white;
   box-shadow: 
-    0 6px 20px rgba(14, 72, 38, 0.4),
-    0 0 0 0 rgba(14, 72, 38, 0.5);
-  position: relative;
+    0 6px 20px rgba(220, 53, 69, 0.4),
+    0 0 0 0 rgba(220, 53, 69, 0.5);
 }
 
-.success-modal-btn.primary:hover {
+.cancel-modal-btn.danger:hover {
   transform: translateY(-3px) scale(1.02);
   box-shadow: 
-    0 10px 30px rgba(14, 72, 38, 0.5),
-    0 0 0 4px rgba(14, 72, 38, 0.2);
+    0 10px 30px rgba(220, 53, 69, 0.5),
+    0 0 0 4px rgba(220, 53, 69, 0.2);
 }
 
-.success-modal-btn.primary:active {
+.cancel-modal-btn.danger:active {
   transform: translateY(-1px) scale(1);
 }
 
-.success-modal-btn.secondary {
+.cancel-modal-btn.secondary {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   color: #555;
-  border: 2px solid rgba(14, 72, 38, 0.2);
+  border: 2px solid rgba(220, 53, 69, 0.2);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.success-modal-btn.secondary:hover {
+.cancel-modal-btn.secondary:hover {
   background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-  border-color: rgba(14, 72, 38, 0.3);
+  border-color: rgba(220, 53, 69, 0.3);
 }
 
-.success-modal-btn.secondary:active {
+.cancel-modal-btn.secondary:active {
   transform: translateY(0);
 }
 
+.cancel-modal-btn.primary {
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+  color: white;
+  box-shadow: 
+    0 6px 20px rgba(40, 167, 69, 0.4),
+    0 0 0 0 rgba(40, 167, 69, 0.5);
+}
+
+.cancel-modal-btn.primary:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    0 10px 30px rgba(40, 167, 69, 0.5),
+    0 0 0 4px rgba(40, 167, 69, 0.2);
+}
+
+.cancel-modal-btn.primary:active {
+  transform: translateY(-1px) scale(1);
+}
+
 @media (max-width: 768px) {
-  .success-modal-content {
+  .cancel-modal-content {
     padding: 36px 28px;
     max-width: 95%;
     border-radius: 20px;
   }
 
-  .success-modal-title {
+  .cancel-modal-title {
     font-size: 26px;
   }
 
-  .checkmark-circle {
+  .cancel-circle {
     width: 100px;
     height: 100px;
   }
 
-  .checkmark-svg {
+  .cancel-svg {
     width: 60px;
     height: 60px;
   }
@@ -489,11 +509,11 @@
     height: 180px;
   }
 
-  .success-modal-buttons {
+  .cancel-modal-buttons {
     flex-direction: column;
   }
 
-  .success-modal-btn {
+  .cancel-modal-btn {
     width: 100%;
     min-width: auto;
   }

@@ -3,41 +3,18 @@ const { pool } = require('../config/database');
 class Booking {
   /**
    * Create bookings table if it doesn't exist
+   * Note: Tables user_bookings and provider_bookings already exist in database
    */
   static async createTable() {
-    const query = `
-      CREATE TABLE IF NOT EXISTS bookings (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        provider_id INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
-        appointment_date TIMESTAMP NOT NULL,
-        session_type VARCHAR(100) DEFAULT 'Video Consultation',
-        notes TEXT,
-        status VARCHAR(50) DEFAULT 'scheduled',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id);
-      CREATE INDEX IF NOT EXISTS idx_bookings_provider_id ON bookings(provider_id);
-      CREATE INDEX IF NOT EXISTS idx_bookings_appointment_date ON bookings(appointment_date);
-      CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
-    `;
-    
-    try {
-      await pool.query(query);
-      console.log('✅ Bookings table created/verified');
-    } catch (error) {
-      console.error('❌ Error creating bookings table:', error);
-      throw error;
-    }
+    // Tables already exist, no need to create
+    console.log('✅ Bookings tables (user_bookings, provider_bookings) already exist');
   }
 
   /**
    * Create a new booking
    */
   static async create(bookingData) {
-    const { userId, providerId, appointmentDate, sessionType, notes } = bookingData;
+    const { userId, providerId, appointmentDate, sessionType, notes, userName, providerName } = bookingData;
     
     console.log('Booking.create - Input data:', {
       userId,
@@ -45,6 +22,8 @@ class Booking {
       appointmentDate,
       sessionType,
       notes,
+      userName,
+      providerName,
       userIdType: typeof userId,
       providerIdType: typeof providerId
     });
@@ -58,9 +37,10 @@ class Booking {
       throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
     
+    // Insert booking with user_name and provider_name
     const query = `
-      INSERT INTO bookings (user_id, provider_id, appointment_date, session_type, notes, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO user_bookings (user_id, provider_id, appointment_date, session_type, notes, status, user_name, provider_name, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *
     `;
     
@@ -70,15 +50,44 @@ class Booking {
         parseInt(providerId), // Ensure it's an integer
         appointmentDate,
         sessionType || 'Video Consultation',
-        notes || null
+        notes || null,
+        'scheduled', // Default status
+        userName || null, // User name
+        providerName || null // Provider name
       ]);
       
       if (!result.rows || result.rows.length === 0) {
         throw new Error('Booking creation returned no rows');
       }
       
-      console.log('Booking.create - Successfully created booking:', result.rows[0]);
-      return result.rows[0];
+      const createdBooking = result.rows[0];
+      
+      // Also insert into provider_bookings table if it exists (with same data)
+      // This ensures both tables stay in sync
+      try {
+        const providerBookingQuery = `
+          INSERT INTO provider_bookings (user_id, provider_id, appointment_date, session_type, notes, status, user_name, provider_name, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          RETURNING id
+        `;
+        await pool.query(providerBookingQuery, [
+          parseInt(userId),
+          parseInt(providerId),
+          appointmentDate,
+          sessionType || 'Video Consultation',
+          notes || null,
+          'scheduled',
+          userName || null,
+          providerName || null
+        ]);
+        console.log('Booking.create - Also created entry in provider_bookings table');
+      } catch (providerBookingError) {
+        // If provider_bookings table doesn't exist or insert fails, log but don't fail the main booking
+        console.warn('Booking.create - Could not insert into provider_bookings (this is okay if table doesn\'t exist):', providerBookingError.message);
+      }
+      
+      console.log('Booking.create - Successfully created booking:', createdBooking);
+      return createdBooking;
     } catch (error) {
       console.error('Booking.create - Error creating booking:', error);
       console.error('Booking.create - Error code:', error.code);
@@ -99,7 +108,7 @@ class Booking {
         u.email as user_email,
         p.name as provider_name,
         p.email as provider_email
-      FROM bookings b
+      FROM user_bookings b
       JOIN users u ON b.user_id = u.id
       JOIN providers p ON b.provider_id = p.id
       WHERE b.id = $1
@@ -124,7 +133,7 @@ class Booking {
         p.email as provider_email,
         p.title as provider_title,
         p.specialty as provider_specialty
-      FROM bookings b
+      FROM user_bookings b
       JOIN providers p ON b.provider_id = p.id
       WHERE b.user_id = $1
       ORDER BY b.appointment_date DESC
@@ -148,7 +157,7 @@ class Booking {
         u.name as user_name,
         u.email as user_email,
         u.phone as user_phone
-      FROM bookings b
+      FROM provider_bookings b
       JOIN users u ON b.user_id = u.id
       WHERE b.provider_id = $1
       ORDER BY b.appointment_date DESC
@@ -173,7 +182,7 @@ class Booking {
         p.email as provider_email,
         p.title as provider_title,
         p.specialty as provider_specialty
-      FROM bookings b
+      FROM user_bookings b
       JOIN providers p ON b.provider_id = p.id
       WHERE b.user_id = $1 
         AND b.appointment_date > CURRENT_TIMESTAMP
@@ -194,13 +203,28 @@ class Booking {
    */
   static async updateStatus(id, status) {
     const query = `
-      UPDATE bookings 
+      UPDATE user_bookings 
       SET status = $1, updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
       RETURNING *
     `;
     try {
       const result = await pool.query(query, [status, id]);
+      
+      // Also update provider_bookings if it exists
+      try {
+        const providerBookingQuery = `
+          UPDATE provider_bookings 
+          SET status = $1, updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+        `;
+        await pool.query(providerBookingQuery, [status, id]);
+        console.log('Booking.updateStatus - Also updated provider_bookings table');
+      } catch (providerBookingError) {
+        // If provider_bookings table doesn't exist or update fails, log but don't fail
+        console.warn('Booking.updateStatus - Could not update provider_bookings (this is okay if table doesn\'t exist):', providerBookingError.message);
+      }
+      
       return result.rows[0];
     } catch (error) {
       console.error('Error updating booking status:', error);

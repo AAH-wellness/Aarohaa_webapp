@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const Provider = require('../models/Provider');
+const Booking = require('../models/Booking');
 const UserLoginEvent = require('../models/UserLoginEvent');
 const { pool } = require('../config/database');
 const JWT_CONFIG = require('../config/jwt');
@@ -751,6 +752,57 @@ async function updateProviderAvailability(req, res, next) {
 }
 
 /**
+ * Get provider availability by provider ID (public endpoint for booking page)
+ */
+async function getProviderAvailabilityById(req, res, next) {
+  try {
+    const { providerId } = req.params;
+    
+    if (!providerId) {
+      return res.status(400).json({
+        error: {
+          message: 'Provider ID is required',
+          code: 'MISSING_PROVIDER_ID',
+          status: 400
+        }
+      });
+    }
+
+    const providerIdNum = parseInt(providerId);
+    if (isNaN(providerIdNum)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid provider ID',
+          code: 'INVALID_PROVIDER_ID',
+          status: 400
+        }
+      });
+    }
+
+    const provider = await Provider.findById(providerIdNum);
+    if (!provider) {
+      return res.status(404).json({
+        error: {
+          message: 'Provider not found',
+          code: 'PROVIDER_NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+
+    const availability = provider.availability || {};
+    
+    res.json({
+      providerId: provider.id,
+      providerName: provider.name,
+      availability: availability
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Get all providers (for user dashboard)
  * Only shows providers with status='ready' (have set availability)
  */
@@ -882,11 +934,12 @@ async function createBooking(req, res, next) {
       status: provider.status
     });
 
-    if (provider.status !== 'ready') {
+    // Check provider status - allow bookings if status is 'ready' or 'active' or null
+    if (provider.status && provider.status !== 'ready' && provider.status !== 'active') {
       console.log('createBooking: Provider not ready:', provider.status);
       return res.status(400).json({
         error: {
-          message: 'Provider is not ready to accept bookings',
+          message: `Provider is not ready to accept bookings. Current status: ${provider.status}`,
           code: 'PROVIDER_NOT_READY',
           status: 400
         }
@@ -895,10 +948,11 @@ async function createBooking(req, res, next) {
 
     // Validate and format appointment date
     let formattedDate = appointmentDate;
+    let appointmentDateTime;
     if (typeof appointmentDate === 'string') {
       // Try to parse and validate the date
-      const dateObj = new Date(appointmentDate);
-      if (isNaN(dateObj.getTime())) {
+      appointmentDateTime = new Date(appointmentDate);
+      if (isNaN(appointmentDateTime.getTime())) {
         console.log('createBooking: Invalid appointment date:', appointmentDate);
         return res.status(400).json({
           error: {
@@ -908,15 +962,81 @@ async function createBooking(req, res, next) {
           }
         });
       }
-      formattedDate = dateObj.toISOString();
+      formattedDate = appointmentDateTime.toISOString();
+    } else {
+      appointmentDateTime = new Date(appointmentDate);
     }
 
+    // Validate booking time is within provider's availability
+    if (provider.availability && typeof provider.availability === 'object') {
+      const availability = typeof provider.availability === 'string' 
+        ? JSON.parse(provider.availability) 
+        : provider.availability;
+      
+      // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+      const dayOfWeek = appointmentDateTime.getDay();
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayName = dayNames[dayOfWeek];
+      
+      const dayAvailability = availability[dayName];
+      
+      if (!dayAvailability || !dayAvailability.enabled) {
+        console.log(`createBooking: Provider not available on ${dayName}`);
+        const dayDisplay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+        return res.status(400).json({
+          error: {
+            message: `Provider is not available on ${dayDisplay}. Please select a different day.`,
+            code: 'OUTSIDE_AVAILABILITY',
+            status: 400
+          }
+        });
+      }
+      
+      // Extract time from appointment (HH:mm format) - use local time, not UTC
+      // Get hours and minutes from the appointment date in local timezone
+      const appointmentHours = appointmentDateTime.getHours();
+      const appointmentMinutes = appointmentDateTime.getMinutes();
+      const appointmentTimeMinutes = appointmentHours * 60 + appointmentMinutes;
+      
+      // Parse provider's availability times
+      const [startHours, startMinutes] = dayAvailability.start.split(':').map(Number);
+      const [endHours, endMinutes] = dayAvailability.end.split(':').map(Number);
+      const startTimeMinutes = startHours * 60 + startMinutes;
+      const endTimeMinutes = endHours * 60 + endMinutes;
+      
+      console.log(`createBooking: Time validation - Appointment: ${appointmentHours}:${String(appointmentMinutes).padStart(2, '0')} (${appointmentTimeMinutes} min), Availability: ${dayAvailability.start}-${dayAvailability.end} (${startTimeMinutes}-${endTimeMinutes} min)`);
+      
+      // Check if appointment time is within availability window
+      // Allow booking if time is >= start and <= end (end time is inclusive)
+      if (appointmentTimeMinutes < startTimeMinutes || appointmentTimeMinutes > endTimeMinutes) {
+        console.log(`createBooking: Appointment time ${appointmentHours}:${String(appointmentMinutes).padStart(2, '0')} is outside availability ${dayAvailability.start}-${dayAvailability.end}`);
+        return res.status(400).json({
+          error: {
+            message: `Provider is only available between ${dayAvailability.start} and ${dayAvailability.end} on ${dayName.charAt(0).toUpperCase() + dayName.slice(1)}. Please select a time within this range.`,
+            code: 'OUTSIDE_AVAILABILITY',
+            status: 400
+          }
+        });
+      }
+      
+      const appointmentTimeStr = `${String(appointmentHours).padStart(2, '0')}:${String(appointmentMinutes).padStart(2, '0')}`;
+      console.log(`createBooking: Appointment time validated - ${appointmentTimeStr} is within ${dayAvailability.start}-${dayAvailability.end} on ${dayName}`);
+    } else {
+      console.log('createBooking: No availability data found for provider, allowing booking');
+    }
+
+    // Get user name for the booking
+    const user = await User.findById(userId);
+    const userName = user?.name || null;
+    
     console.log('createBooking: Creating booking with:', {
       userId,
       providerId: providerIdNum,
       appointmentDate: formattedDate,
       sessionType,
-      notes
+      notes,
+      userName,
+      providerName: provider.name
     });
 
     const booking = await Booking.create({
@@ -924,7 +1044,9 @@ async function createBooking(req, res, next) {
       providerId: providerIdNum,
       appointmentDate: formattedDate,
       sessionType,
-      notes
+      notes,
+      userName: userName,
+      providerName: provider.name
     });
     
     console.log('createBooking: Booking created successfully:', booking);
@@ -1027,13 +1149,18 @@ async function createBooking(req, res, next) {
       });
     }
     
-    // Generic error response
+    // Generic error response - include more details for debugging
     return res.status(500).json({
       error: {
         message: error.message || 'Failed to create booking',
         code: 'INTERNAL_SERVER_ERROR',
         status: 500,
-        detail: error.stack
+        detail: process.env.NODE_ENV === 'development' ? error.stack : error.message,
+        // Include database error details if available
+        ...(error.code && { databaseErrorCode: error.code }),
+        ...(error.detail && { databaseErrorDetail: error.detail }),
+        ...(error.table && { databaseTable: error.table }),
+        ...(error.column && { databaseColumn: error.column })
       }
     });
   }
@@ -1491,10 +1618,18 @@ async function completeGoogleProfile(req, res, next) {
  */
 async function cancelBooking(req, res, next) {
   try {
-    const userId = req.user?.userId || req.body.userId;
+    const userId = req.user?.userId || req.user?.id || req.body.userId;
     const { bookingId } = req.body;
     
+    console.log('cancelBooking called with:', {
+      userId,
+      bookingId,
+      userFromToken: req.user,
+      body: req.body
+    });
+    
     if (!userId || !bookingId) {
+      console.log('cancelBooking: Missing required fields');
       return res.status(400).json({
         error: {
           message: 'User ID and booking ID are required',
@@ -1504,19 +1639,54 @@ async function cancelBooking(req, res, next) {
       });
     }
 
+    // Ensure userId and bookingId are integers for comparison
+    const userIdNum = parseInt(userId);
+    const bookingIdNum = parseInt(bookingId);
+    
+    if (isNaN(userIdNum) || isNaN(bookingIdNum)) {
+      console.log('cancelBooking: Invalid ID format');
+      return res.status(400).json({
+        error: {
+          message: 'Invalid user ID or booking ID',
+          code: 'INVALID_ID',
+          status: 400
+        }
+      });
+    }
+
     // Verify booking belongs to user
-    const booking = await Booking.findById(bookingId);
-    if (!booking || booking.user_id !== userId) {
+    const booking = await Booking.findById(bookingIdNum);
+    console.log('cancelBooking: Found booking:', {
+      bookingId: booking?.id,
+      bookingUserId: booking?.user_id,
+      requestUserId: userIdNum,
+      match: booking?.user_id === userIdNum
+    });
+    
+    if (!booking) {
+      console.log('cancelBooking: Booking not found');
       return res.status(404).json({
         error: {
-          message: 'Booking not found or access denied',
+          message: 'Booking not found',
           code: 'BOOKING_NOT_FOUND',
           status: 404
         }
       });
     }
+    
+    if (parseInt(booking.user_id) !== userIdNum) {
+      console.log('cancelBooking: Access denied - booking does not belong to user');
+      return res.status(403).json({
+        error: {
+          message: 'Access denied. This booking does not belong to you.',
+          code: 'ACCESS_DENIED',
+          status: 403
+        }
+      });
+    }
 
-    const cancelledBooking = await Booking.cancel(bookingId);
+    const cancelledBooking = await Booking.cancel(bookingIdNum);
+    console.log('cancelBooking: Booking cancelled successfully:', cancelledBooking);
     
     res.json({
       booking: {
@@ -1526,6 +1696,8 @@ async function cancelBooking(req, res, next) {
       message: 'Booking cancelled successfully'
     });
   } catch (error) {
+    console.error('cancelBooking error:', error);
+    console.error('Error stack:', error.stack);
     next(error);
   }
 }
@@ -1545,6 +1717,7 @@ module.exports = {
   getProviderAvailability,
   updateProviderAvailability,
   getAllProviders,
+  getProviderAvailabilityById,
   createBooking,
   getUserBookings,
   getUpcomingBookings,

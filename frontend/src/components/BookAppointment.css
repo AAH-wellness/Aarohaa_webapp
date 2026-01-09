@@ -72,6 +72,81 @@
   color: #333;
 }
 
+.form-group label .required {
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.form-input.error,
+.form-textarea.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 4px;
+  display: block;
+}
+
+.form-input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.confirm-booking-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.confirm-booking-btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 15px rgba(14, 72, 38, 0.3);
+}
+
+.availability-info {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(14, 72, 38, 0.05) 0%, rgba(14, 72, 38, 0.02) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(14, 72, 38, 0.1);
+}
+
+.availability-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0e4826;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.availability-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.availability-day {
+  font-size: 12px;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.availability-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  display: block;
+  font-style: italic;
+}
+
 .input-wrapper {
   position: relative;
   display: flex;

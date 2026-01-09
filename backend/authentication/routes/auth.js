@@ -15,6 +15,7 @@ const {
   getProviderAvailability,
   updateProviderAvailability,
   getAllProviders,
+  getProviderAvailabilityById,
   createBooking,
   getUserBookings,
   getUpcomingBookings,
@@ -53,6 +54,9 @@ router.patch('/profile', authenticateToken, updateProfile);
 // Provider routes
 // Get all providers (public endpoint for user dashboard)
 router.get('/providers', getAllProviders);
+
+// Get provider availability by ID (public endpoint for booking page)
+router.get('/providers/:providerId/availability', getProviderAvailabilityById);
 
 // Get provider profile (requires authentication)
 router.get('/provider/profile', authenticateToken, getProviderProfile);
