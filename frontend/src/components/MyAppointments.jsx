@@ -52,11 +52,24 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
           createdAt: booking.createdAt
         }))
         
-        // Filter to only show upcoming appointments
+        // Filter to show appointments that are not cancelled or completed
+        // Show appointments until they are cancelled or the session has started (within 30 min window for active sessions)
         const now = new Date()
         const upcoming = userAppointments.filter(apt => {
           const aptDate = new Date(apt.dateTime)
-          return aptDate > now && apt.status !== 'cancelled'
+          const status = apt.status?.toLowerCase() || ''
+          const isCancelled = status === 'cancelled'
+          const isCompleted = status === 'completed'
+          
+          // Don't show cancelled or completed appointments
+          if (isCancelled || isCompleted) {
+            return false
+          }
+          
+          // Show appointments that haven't started yet, or are within 30 minutes of start time (active session window)
+          const diffInMinutes = (aptDate - now) / (1000 * 60)
+          // Show if appointment is in the future OR within 30 minutes after start (active session)
+          return diffInMinutes >= -30
         })
         
         // Sort by date
@@ -195,11 +208,24 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
             createdAt: booking.createdAt
           }))
           
-          // Filter to only show upcoming appointments
+          // Filter to show appointments that are not cancelled or completed
+          // Show appointments until they are cancelled or the session has started (within 30 min window for active sessions)
           const now = new Date()
           const upcoming = userAppointments.filter(apt => {
             const aptDate = new Date(apt.dateTime)
-            return aptDate > now && apt.status !== 'cancelled'
+            const status = apt.status?.toLowerCase() || ''
+            const isCancelled = status === 'cancelled'
+            const isCompleted = status === 'completed'
+            
+            // Don't show cancelled or completed appointments
+            if (isCancelled || isCompleted) {
+              return false
+            }
+            
+            // Show appointments that haven't started yet, or are within 30 minutes of start time (active session window)
+            const diffInMinutes = (aptDate - now) / (1000 * 60)
+            // Show if appointment is in the future OR within 30 minutes after start (active session)
+            return diffInMinutes >= -30
           })
           
           // Sort by date
