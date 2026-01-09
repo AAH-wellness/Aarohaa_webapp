@@ -217,59 +217,84 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         await new Promise(resolve => setTimeout(resolve, 300))
       }
 
-      // Initialize Google Identity Services with credential flow
-      // This is the most reliable method for getting ID tokens
+      // Initialize Google Identity Services with FedCM support
+      // This replaces the deprecated prompt() method
       window.google.accounts.id.initialize({
         client_id: API_CONFIG.GOOGLE_CLIENT_ID,
         callback: handleGoogleCallback,
         auto_select: false,
         cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: true, // Opt into FedCM for better compatibility
       })
 
-      // Trigger the credential flow - this shows a popup
-      window.google.accounts.id.prompt((notification) => {
-        console.log('Google prompt notification:', notification)
-        
-        if (notification.isNotDisplayed()) {
-          const reason = notification.getNotDisplayedReason()
-          console.log('One Tap not displayed. Reason:', reason)
-          setIsGoogleLoading(false)
-          
-          // Provide helpful error message based on reason
-          let errorMsg = 'Google sign-in is not available. '
-          if (reason === 'browser_not_supported') {
-            errorMsg += 'Your browser is not supported. Please try Chrome, Firefox, or Safari.'
-          } else if (reason === 'invalid_client') {
-            errorMsg += 'Invalid OAuth client configuration. Please check your Google Cloud Console settings.'
-          } else if (reason === 'missing_client_id') {
-            errorMsg += 'Google Client ID is missing. Please check your configuration.'
-          } else if (reason === 'opt_out_or_no_session') {
-            // User opted out or no session - try again
-            errorMsg = 'Please try clicking the button again.'
-          } else if (reason === 'suppressed_by_user') {
-            errorMsg = 'Google sign-in was blocked. Please allow popups and try again.'
-          } else if (reason === 'unregistered_origin') {
-            errorMsg = 'This origin is not registered. Please add http://localhost:5173 to authorized JavaScript origins in Google Cloud Console.'
-          } else if (reason === 'unknown_reason') {
-            errorMsg = 'Unknown error. Please ensure your OAuth app is PUBLISHED (not in Testing mode) in Google Cloud Console.'
-          } else {
-            errorMsg += `Reason: ${reason}. Please ensure your OAuth app is PUBLISHED in Google Cloud Console.`
-          }
-          
-          setErrorMessage(errorMsg)
-          setShowErrorModal(true)
-        } else if (notification.isSkippedMoment()) {
-          const reason = notification.getSkippedReason()
-          console.log('One Tap skipped. Reason:', reason)
-          setIsGoogleLoading(false)
-          // User can try again - don't show error, just let them retry
-        } else if (notification.isDismissedMoment()) {
-          const reason = notification.getDismissedReason()
-          console.log('One Tap dismissed. Reason:', reason)
-          setIsGoogleLoading(false)
-          // User dismissed - they can try again
-        }
+      // Create a hidden container for the Google button
+      const buttonContainer = document.createElement('div')
+      buttonContainer.style.position = 'fixed'
+      buttonContainer.style.left = '-9999px'
+      buttonContainer.style.top = '-9999px'
+      document.body.appendChild(buttonContainer)
+
+      // Render Google's official button (FedCM-compatible)
+      window.google.accounts.id.renderButton(buttonContainer, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
       })
+
+      // Wait for button to render, then programmatically click it
+      setTimeout(() => {
+        const googleButton = buttonContainer.querySelector('div[role="button"]')
+        if (googleButton) {
+          // Trigger the button click
+          googleButton.click()
+          
+          // Clean up container after a delay
+          setTimeout(() => {
+            if (document.body.contains(buttonContainer)) {
+              document.body.removeChild(buttonContainer)
+            }
+          }, 2000)
+        } else {
+          // Button didn't render - try alternative approach
+          setIsGoogleLoading(false)
+          
+          // Fallback: Use the credential flow directly
+          // This is a workaround if renderButton fails
+          const fallbackContainer = document.createElement('div')
+          fallbackContainer.style.display = 'none'
+          document.body.appendChild(fallbackContainer)
+          
+          window.google.accounts.id.renderButton(fallbackContainer, {
+            type: 'standard',
+            theme: 'filled_blue',
+            size: 'large',
+            text: 'signin_with',
+          })
+          
+          setTimeout(() => {
+            const btn = fallbackContainer.querySelector('div[role="button"]')
+            if (btn) {
+              btn.click()
+              setTimeout(() => {
+                if (document.body.contains(fallbackContainer)) {
+                  document.body.removeChild(fallbackContainer)
+                }
+              }, 2000)
+            } else {
+              setErrorMessage('Failed to initialize Google sign-in. Please refresh the page and try again.')
+              setShowErrorModal(true)
+              if (document.body.contains(fallbackContainer)) {
+                document.body.removeChild(fallbackContainer)
+              }
+            }
+          }, 200)
+          
+          if (document.body.contains(buttonContainer)) {
+            document.body.removeChild(buttonContainer)
+          }
+        }
+      }, 100)
     } catch (error) {
       console.error('Google login error:', error)
       setIsGoogleLoading(false)
@@ -344,22 +369,12 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
   }
 
 
-  // Load Google script on component mount and initialize
+  // Load Google script on component mount
+  // Note: We don't initialize here anymore to avoid conflicts
+  // Initialization happens in handleGoogleLogin when the button is clicked
   useEffect(() => {
     if (API_CONFIG.GOOGLE_CLIENT_ID) {
       loadGoogleScript()
-        .then(() => {
-          // Initialize Google Identity Services for One Tap
-          if (window.google && window.google.accounts) {
-            window.google.accounts.id.initialize({
-              client_id: API_CONFIG.GOOGLE_CLIENT_ID,
-              callback: handleGoogleCallback,
-            })
-            
-            // Optionally show One Tap automatically (can be disabled if not desired)
-            // window.google.accounts.id.prompt()
-          }
-        })
         .catch(err => {
           console.error('Failed to load Google script:', err)
         })
