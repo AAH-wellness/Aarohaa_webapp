@@ -85,9 +85,28 @@ const ProviderAppointments = ({ onJoinSession }) => {
   }
 
   const getTimeUntil = (dateTimeString) => {
-    const date = new Date(dateTimeString)
+    // Parse date correctly - handle dates without timezone indicator
+    let date
+    if (typeof dateTimeString === 'string') {
+      // Check if it looks like an ISO string but doesn't have timezone indicator
+      const isISOFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(dateTimeString)
+      // Check for timezone: 'Z' at end, or '+HH:MM' or '-HH:MM' pattern at end
+      const hasTimezone = /[Zz]$/.test(dateTimeString) || /[+-]\d{2}:\d{2}$/.test(dateTimeString)
+      
+      if (isISOFormat && !hasTimezone) {
+        // This is likely a PostgreSQL timestamp without timezone - treat as UTC
+        // Add 'Z' to indicate UTC
+        date = new Date(dateTimeString + 'Z')
+      } else {
+        // Has timezone info or is not ISO format - parse normally
+        date = new Date(dateTimeString)
+      }
+    } else {
+      date = new Date(dateTimeString)
+    }
+    
     const now = new Date()
-    const diff = date - now
+    const diff = date.getTime() - now.getTime()
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))

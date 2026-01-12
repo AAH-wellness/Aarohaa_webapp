@@ -1179,11 +1179,23 @@ async function createBooking(req, res, next) {
       userId,
       providerId: providerIdNum,
       appointmentDate: formattedDate,
+      appointmentDateType: typeof formattedDate,
       sessionType,
       notes,
       userName,
       providerName: provider.name
     });
+    
+    // Verify the date format before sending to database
+    if (formattedDate && typeof formattedDate === 'string') {
+      const verifyDate = new Date(formattedDate);
+      console.log('createBooking: Date format verification before storage:', {
+        sendingToDB: formattedDate,
+        parsedBack: verifyDate.toISOString(),
+        matches: formattedDate === verifyDate.toISOString(),
+        utcTime: verifyDate.getTime()
+      });
+    }
 
     const booking = await Booking.create({
       userId,
@@ -1427,6 +1439,23 @@ async function getUpcomingBookings(req, res, next) {
 
     const bookings = await Booking.getUpcomingByUserId(userId);
     
+    // Helper function to convert date to ISO string (same as in getUserBookings)
+    const toISOString = (dateValue) => {
+      if (!dateValue) return null
+      if (dateValue instanceof Date) {
+        return dateValue.toISOString()
+      }
+      if (typeof dateValue === 'string') {
+        if (dateValue.includes('Z') || dateValue.includes('+') || dateValue.match(/-\d{2}:\d{2}$/)) {
+          return dateValue
+        }
+        // PostgreSQL timestamp format without timezone - treat as UTC
+        const parsed = new Date(dateValue + 'Z')
+        return isNaN(parsed.getTime()) ? dateValue : parsed.toISOString()
+      }
+      return new Date(dateValue).toISOString()
+    }
+    
     res.json({
       bookings: bookings.map(booking => ({
         id: booking.id,
@@ -1434,7 +1463,7 @@ async function getUpcomingBookings(req, res, next) {
         providerName: booking.provider_name,
         providerTitle: booking.provider_title,
         providerSpecialty: booking.provider_specialty,
-        appointmentDate: booking.appointment_date,
+        appointmentDate: toISOString(booking.appointment_date),
         sessionType: booking.session_type,
         notes: booking.notes,
         status: booking.status,
@@ -1493,6 +1522,23 @@ async function getProviderBookings(req, res, next) {
 
     console.log('getProviderBookings: Returning', activeBookings.length, 'active bookings');
 
+    // Helper function to convert date to ISO string (same as in getUserBookings)
+    const toISOString = (dateValue) => {
+      if (!dateValue) return null
+      if (dateValue instanceof Date) {
+        return dateValue.toISOString()
+      }
+      if (typeof dateValue === 'string') {
+        if (dateValue.includes('Z') || dateValue.includes('+') || dateValue.match(/-\d{2}:\d{2}$/)) {
+          return dateValue
+        }
+        // PostgreSQL timestamp format without timezone - treat as UTC
+        const parsed = new Date(dateValue + 'Z')
+        return isNaN(parsed.getTime()) ? dateValue : parsed.toISOString()
+      }
+      return new Date(dateValue).toISOString()
+    }
+
     res.json({
       bookings: activeBookings.map(booking => ({
         id: booking.id,
@@ -1500,7 +1546,7 @@ async function getProviderBookings(req, res, next) {
         userName: booking.user_name || booking.userName || 'Patient',
         userEmail: booking.user_email || booking.userEmail,
         userPhone: booking.user_phone || booking.userPhone,
-        appointmentDate: booking.appointment_date || booking.appointmentDate,
+        appointmentDate: toISOString(booking.appointment_date || booking.appointmentDate),
         sessionType: booking.session_type || booking.sessionType || 'Video Consultation',
         notes: booking.notes,
         status: booking.status || 'confirmed',
