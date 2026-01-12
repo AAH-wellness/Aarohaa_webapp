@@ -156,12 +156,12 @@
   box-sizing: border-box;
   background-color: #ffffff;
   border-radius: 16px;
-  padding: 16px;
+  padding: 12px;
   box-shadow: 0 4px 20px rgba(14, 72, 38, 0.08), 0 0 0 1px rgba(255, 215, 0, 0.3), 0 0 15px rgba(255, 215, 0, 0.1);
   transition: all 0.4s ease;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   border: 1px solid #FFD700;
   position: relative;
   overflow: hidden;
@@ -218,7 +218,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 2px;
+  margin-bottom: 0;
   position: relative;
   z-index: 2;
   background: transparent;
@@ -253,7 +253,7 @@
   font-size: 14px;
   font-weight: 700;
   color: #d0b6a8;
-  margin-bottom: 1px;
+  margin-bottom: 0;
   position: relative;
   z-index: 1;
   background: transparent;
@@ -285,33 +285,43 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 2px;
+  margin-top: 8px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
 }
 
 .rating-star {
   color: #FFD700;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .rating-value {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #333;
 }
 
 .rating-reviews {
-  font-size: 10px;
+  font-size: 11px;
   color: #666;
 }
 
-.provider-description {
+.bio-header {
   font-size: 11px;
+  font-weight: 700;
+  color: #0e4826;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+.provider-description {
+  font-size: 12px;
   color: #666;
   line-height: 1.4;
-  margin: 2px 0;
+  margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   flex: 1;
@@ -321,16 +331,20 @@
   background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 14px 24px;
+  min-height: 52px;
   border-radius: 8px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   margin-top: auto;
   box-shadow: 0 4px 15px rgba(14, 72, 38, 0.3);
   letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .provider-button:hover {

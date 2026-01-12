@@ -195,10 +195,16 @@ const FindProviders = ({ onBookSession }) => {
               <span className="rating-reviews">({provider.reviewsCount || 0} reviews)</span>
             </div>
             {provider.bio && (
-              <p className="provider-description">{provider.bio}</p>
+              <>
+                <div className="bio-header">Bio:</div>
+                <p className="provider-description">{provider.bio}</p>
+              </>
             )}
             {provider.specialty && !provider.bio && (
-              <p className="provider-description">Specializes in {provider.specialty}</p>
+              <>
+                <div className="bio-header">Bio:</div>
+                <p className="provider-description">Specializes in {provider.specialty}</p>
+              </>
             )}
             <button 
               className="provider-button"
