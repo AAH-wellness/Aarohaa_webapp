@@ -177,6 +177,7 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
     const now = new Date()
     
     // Calculate difference in milliseconds using getTime() for accuracy
+    // CRITICAL: Both dates must be in the same timezone reference (UTC milliseconds)
     const diff = date.getTime() - now.getTime()
     
     // Debug logging (can be removed later)
@@ -184,12 +185,16 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
       console.log('Time calculation:', {
         dateTimeString,
         parsedDateISO: date.toISOString(),
+        parsedDateUTC: date.getTime(),
         parsedDateLocal: date.toLocaleString(),
         nowISO: now.toISOString(),
+        nowUTC: now.getTime(),
         nowLocal: now.toLocaleString(),
         diffMs: diff,
         diffMinutes: Math.floor(diff / (1000 * 60)),
-        diffHours: Math.floor(diff / (1000 * 60 * 60))
+        diffHours: Math.floor(diff / (1000 * 60 * 60)),
+        timezoneOffset: date.getTimezoneOffset(),
+        nowTimezoneOffset: now.getTimezoneOffset()
       })
     }
     
