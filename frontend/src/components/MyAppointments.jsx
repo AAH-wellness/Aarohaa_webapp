@@ -48,7 +48,8 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
           dateTime: booking.appointmentDate,
           sessionType: booking.sessionType || 'Video Consultation',
           notes: booking.notes,
-          status: booking.status || 'scheduled',
+          status: booking.status || 'confirmed',
+          reason: booking.reason || null,
           createdAt: booking.createdAt
         }))
         
@@ -56,7 +57,23 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         // Show appointments until they are cancelled or the session has started (within 30 min window for active sessions)
         const now = new Date()
         const upcoming = userAppointments.filter(apt => {
-          const aptDate = new Date(apt.dateTime)
+          // Parse date correctly - treat ISO strings without timezone as UTC
+          let aptDate
+          if (typeof apt.dateTime === 'string') {
+            const isISOFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(apt.dateTime)
+            // Check for timezone: 'Z' at end, or '+HH:MM' or '-HH:MM' pattern at end
+            const hasTimezone = /[Zz]$/.test(apt.dateTime) || /[+-]\d{2}:\d{2}$/.test(apt.dateTime)
+            
+            if (isISOFormat && !hasTimezone) {
+              // Treat as UTC
+              aptDate = new Date(apt.dateTime + 'Z')
+            } else {
+              aptDate = new Date(apt.dateTime)
+            }
+          } else {
+            aptDate = new Date(apt.dateTime)
+          }
+          
           const status = apt.status?.toLowerCase() || ''
           const isCancelled = status === 'cancelled'
           const isCompleted = status === 'completed'
@@ -67,7 +84,23 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
           }
           
           // Show appointments that haven't started yet, or are within 30 minutes of start time (active session window)
-          const diffInMinutes = (aptDate - now) / (1000 * 60)
+          const diffInMinutes = (aptDate.getTime() - now.getTime()) / (1000 * 60)
+          
+          // Debug logging for recent appointments (within 6 hours)
+          if (Math.abs(diffInMinutes) < 360) {
+            console.log('MyAppointments - Appointment date debug:', {
+              bookingId: apt.id,
+              appointmentDateRaw: apt.dateTime,
+              parsedDateISO: aptDate.toISOString(),
+              parsedDateLocal: aptDate.toLocaleString(),
+              nowISO: now.toISOString(),
+              nowLocal: now.toLocaleString(),
+              diffMs: aptDate.getTime() - now.getTime(),
+              diffMinutes: diffInMinutes,
+              diffHours: diffInMinutes / 60
+            })
+          }
+          
           // Show if appointment is in the future OR within 30 minutes after start (active session)
           return diffInMinutes >= -30
         })
@@ -92,9 +125,88 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
   }, [])
 
   const formatDateTime = (dateTimeString) => {
-    const date = new Date(dateTimeString)
+    // Parse the date string - handle both ISO strings and other formats
+    // CRITICAL: Dates from backend are stored in UTC (ISO format)
+    // We need to parse them as UTC to get the correct time
+    let date
+    if (!dateTimeString) {
+      return 'Invalid date'
+    }
+    
+    // If the string is an ISO-like format but missing 'Z', treat it as UTC
+    // PostgreSQL timestamps are typically in format: "2026-01-12T06:12:00.000" (no Z)
+    // JavaScript will parse this as LOCAL time, which is wrong - it should be UTC
+    if (typeof dateTimeString === 'string') {
+      // Check if it looks like an ISO string but doesn't have timezone indicator
+      const isISOFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(dateTimeString)
+      // Check for timezone: 'Z' at end, or '+HH:MM' or '-HH:MM' pattern at end
+      const hasTimezone = /[Zz]$/.test(dateTimeString) || /[+-]\d{2}:\d{2}$/.test(dateTimeString)
+      
+      if (isISOFormat && !hasTimezone) {
+        // This is likely a PostgreSQL timestamp without timezone - treat as UTC
+        // Add 'Z' to indicate UTC
+        date = new Date(dateTimeString + 'Z')
+        console.log('🔧 Parsing date as UTC (added Z):', {
+          original: dateTimeString,
+          withZ: dateTimeString + 'Z',
+          parsedISO: date.toISOString(),
+          parsedLocal: date.toLocaleString(),
+          timezoneOffset: date.getTimezoneOffset()
+        })
+      } else {
+        // Has timezone info or is not ISO format - parse normally
+        date = new Date(dateTimeString)
+        if (hasTimezone) {
+          console.log('✅ Date has timezone info, parsing normally:', {
+            original: dateTimeString,
+            parsedISO: date.toISOString(),
+            parsedLocal: date.toLocaleString()
+          })
+        }
+      }
+    } else {
+      date = new Date(dateTimeString)
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date string:', dateTimeString)
+      return 'Invalid date'
+    }
+    
     const now = new Date()
-    const diff = date - now
+    
+    // Calculate difference in milliseconds using getTime() for accuracy
+    const diff = date.getTime() - now.getTime()
+    
+    // Debug logging (can be removed later)
+    if (Math.abs(diff) < 1000 * 60 * 60 * 6) { // Log if within 6 hours
+      console.log('Time calculation:', {
+        dateTimeString,
+        parsedDateISO: date.toISOString(),
+        parsedDateLocal: date.toLocaleString(),
+        nowISO: now.toISOString(),
+        nowLocal: now.toLocaleString(),
+        diffMs: diff,
+        diffMinutes: Math.floor(diff / (1000 * 60)),
+        diffHours: Math.floor(diff / (1000 * 60 * 60))
+      })
+    }
+    
+    // If the date is in the past, show appropriate message
+    if (diff < 0) {
+      const absDiff = Math.abs(diff)
+      const minutesAgo = Math.floor(absDiff / (1000 * 60))
+      const hoursAgo = Math.floor(minutesAgo / 60)
+      if (hoursAgo > 0) {
+        return `${hoursAgo} hour${hoursAgo > 1 ? 's' : ''} ago`
+      } else if (minutesAgo > 0) {
+        return `${minutesAgo} minute${minutesAgo > 1 ? 's' : ''} ago`
+      } else {
+        return 'Just now'
+      }
+    }
+    
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
@@ -104,16 +216,32 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
     } else if (days === 1) {
       return `Tomorrow, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
     } else if (hours > 0) {
-      return `In ${hours} hours, ${minutes} minutes`
+      return `In ${hours} hour${hours > 1 ? 's' : ''}${minutes > 0 ? `, ${minutes} minute${minutes > 1 ? 's' : ''}` : ''}`
     } else if (minutes > 0) {
-      return `In ${minutes} minutes`
+      return `In ${minutes} minute${minutes > 1 ? 's' : ''}`
     } else {
       return 'Starting soon'
     }
   }
 
   const formatDate = (dateTimeString) => {
-    const date = new Date(dateTimeString)
+    // Parse date as UTC if it's an ISO string without timezone
+    let date
+    if (typeof dateTimeString === 'string') {
+      const isISOFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(dateTimeString)
+      // Check for timezone: 'Z' at end, or '+HH:MM' or '-HH:MM' pattern at end
+      const hasTimezone = /[Zz]$/.test(dateTimeString) || /[+-]\d{2}:\d{2}$/.test(dateTimeString)
+      
+      if (isISOFormat && !hasTimezone) {
+        // Treat as UTC
+        date = new Date(dateTimeString + 'Z')
+      } else {
+        date = new Date(dateTimeString)
+      }
+    } else {
+      date = new Date(dateTimeString)
+    }
+    
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -160,8 +288,13 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
     }
   }
 
-  const handleConfirmCancel = async () => {
+  const handleConfirmCancel = async (cancelReason) => {
     if (!selectedAppointment) return
+    
+    if (!cancelReason || !cancelReason.trim()) {
+      console.error('Cancel reason is required')
+      return
+    }
 
     const withinTwoHours = isWithinTwoHours(selectedAppointment.dateTime)
     
@@ -172,20 +305,23 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
     }
     
     try {
-      // Cancel booking via API
+      // Cancel booking via API with reason
       const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
-      console.log('Cancelling booking:', selectedAppointment.id)
+      console.log('Cancelling booking:', selectedAppointment.id, 'Reason:', cancelReason)
       
-      const response = await apiClient.post(`${apiBaseUrl}/users/bookings/cancel`, { bookingId: selectedAppointment.id })
+      const response = await apiClient.post(`${apiBaseUrl}/users/bookings/cancel`, { 
+        bookingId: selectedAppointment.id,
+        reason: cancelReason.trim()
+      })
       console.log('Cancel booking response:', response)
       
       // Store the cancelled booking ID before clearing
       const cancelledBookingId = selectedAppointment.id
       
-      // Show success state in modal
+      // Show success state in modal immediately (don't close and reopen)
       setCancelSuccess(true)
       
-      // After showing success, reload appointments
+      // After showing success for 2 seconds, reload appointments and close modal
       setTimeout(async () => {
         // Reload appointments using the same method as initial load
         const profile = await userService.getProfile()
@@ -204,7 +340,8 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
             dateTime: booking.appointmentDate,
             sessionType: booking.sessionType || 'Video Consultation',
             notes: booking.notes,
-            status: booking.status || 'scheduled',
+            status: booking.status || 'confirmed',
+            reason: booking.reason || null,
             createdAt: booking.createdAt
           }))
           
@@ -317,6 +454,12 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
                       <p className="appointment-full-time">{formatDate(appointment.dateTime)}</p>
                       {appointment.sessionType && (
                         <p className="appointment-type">{appointment.sessionType}</p>
+                      )}
+                      {appointment.status === 'cancelled' && appointment.reason && (
+                        <div className="appointment-cancellation-reason">
+                          <span className="cancellation-label">Cancellation Reason:</span>
+                          <span className="cancellation-text">{appointment.reason}</span>
+                        </div>
                       )}
                     </div>
                   </div>

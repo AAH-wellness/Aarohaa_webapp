@@ -8,10 +8,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 100000 !important;
   opacity: 0;
   transition: opacity 0.4s ease;
   backdrop-filter: blur(8px);
+  isolation: isolate;
 }
 
 .cancel-modal-overlay.visible {
@@ -21,9 +22,11 @@
 .cancel-modal-content {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border-radius: 24px;
-  padding: 48px 40px;
-  max-width: 520px;
+  padding: 36px 50px;
+  max-width: 750px;
   width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
   box-shadow: 
     0 25px 80px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(220, 53, 69, 0.3),
@@ -36,6 +39,9 @@
   border: 2px solid rgba(220, 53, 69, 0.2);
   position: relative;
   overflow: visible;
+  display: flex;
+  flex-direction: column;
+  z-index: 100001 !important;
 }
 
 .cancel-modal-content::before {
@@ -95,12 +101,13 @@
 }
 
 .cancel-icon-wrapper {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-  height: 140px;
+  height: 100px;
+  flex-shrink: 0;
 }
 
 .cancel-icon {
@@ -108,11 +115,12 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  animation: discomfortShake 0.5s ease-in-out 0.8s;
 }
 
 .cancel-circle {
-  width: 120px;
-  height: 120px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   background: linear-gradient(135deg, #dc3545 0%, #c82333 50%, #dc3545 100%);
   display: flex;
@@ -152,8 +160,8 @@
 }
 
 .cancel-svg {
-  width: 70px;
-  height: 70px;
+  width: 50px;
+  height: 50px;
   transform: scale(0);
   animation: cancelDraw 0.6s ease-out 0.3s forwards;
 }
@@ -213,6 +221,7 @@
   height: 100%;
   top: 0;
   left: 0;
+  display: none; /* Ripple effect removed */
 }
 
 .ring {
@@ -258,13 +267,26 @@
   }
 }
 
+@keyframes discomfortShake {
+  0%, 100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px) rotate(-2deg);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px) rotate(2deg);
+  }
+}
+
 .cancel-modal-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   color: #dc3545;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   letter-spacing: -0.5px;
   animation: titleFadeIn 0.6s ease-out 0.4s both;
+  flex-shrink: 0;
 }
 
 .cancel-modal-content.success .cancel-modal-title {
@@ -283,11 +305,12 @@
 }
 
 .cancel-modal-message {
-  font-size: 17px;
+  font-size: 16px;
   color: #555;
-  line-height: 1.7;
-  margin-bottom: 24px;
+  line-height: 1.6;
+  margin-bottom: 20px;
   animation: messageFadeIn 0.6s ease-out 0.5s both;
+  flex-shrink: 0;
 }
 
 @keyframes messageFadeIn {
@@ -318,10 +341,16 @@
 .cancel-appointment-details {
   background: linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.02) 100%);
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 32px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
   border: 1px solid rgba(220, 53, 69, 0.1);
   animation: detailsFadeIn 0.6s ease-out 0.6s both;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 @keyframes detailsFadeIn {
@@ -339,11 +368,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.detail-item:last-child {
+  gap: 8px;
   margin-bottom: 0;
 }
 
@@ -367,11 +392,77 @@
   font-weight: 500;
 }
 
+.cancel-reason-section {
+  margin: 20px 0;
+  text-align: left;
+  animation: detailsFadeIn 0.6s ease-out 0.6s both;
+  flex: 1;
+  min-height: 0;
+}
+
+.cancel-reason-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0e4826;
+  margin-bottom: 8px;
+}
+
+.cancel-reason-label .required {
+  color: #dc3545;
+  margin-left: 2px;
+}
+
+.cancel-reason-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  max-height: 150px;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.cancel-reason-input:focus {
+  outline: none;
+  border-color: #FFD700;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+}
+
+.cancel-reason-input.error {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.cancel-reason-error {
+  display: block;
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.cancel-reason-hint {
+  display: block;
+  color: #666;
+  font-size: 12px;
+  margin-top: 6px;
+  font-style: italic;
+}
+
 .cancel-modal-buttons {
   display: flex;
   gap: 16px;
   justify-content: center;
   animation: buttonsFadeIn 0.6s ease-out 0.7s both;
+  flex-shrink: 0;
+  margin-top: 8px;
 }
 
 @keyframes buttonsFadeIn {
@@ -475,38 +566,44 @@
 
 @media (max-width: 768px) {
   .cancel-modal-content {
-    padding: 36px 28px;
+    padding: 32px 24px;
     max-width: 95%;
     border-radius: 20px;
+    max-height: 90vh;
   }
 
   .cancel-modal-title {
-    font-size: 26px;
+    font-size: 24px;
   }
 
   .cancel-circle {
+    width: 80px;
+    height: 80px;
+  }
+
+  .cancel-svg {
+    width: 45px;
+    height: 45px;
+  }
+
+  .ring-1 {
     width: 100px;
     height: 100px;
   }
 
-  .cancel-svg {
-    width: 60px;
-    height: 60px;
-  }
-
-  .ring-1 {
-    width: 120px;
-    height: 120px;
-  }
-
   .ring-2 {
-    width: 150px;
-    height: 150px;
+    width: 130px;
+    height: 130px;
   }
 
   .ring-3 {
-    width: 180px;
-    height: 180px;
+    width: 160px;
+    height: 160px;
+  }
+
+  .cancel-appointment-details {
+    flex-direction: column;
+    gap: 12px;
   }
 
   .cancel-modal-buttons {

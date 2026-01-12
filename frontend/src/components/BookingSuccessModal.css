@@ -8,10 +8,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 100000 !important;
   opacity: 0;
   transition: opacity 0.4s ease;
   backdrop-filter: blur(8px);
+  isolation: isolate;
 }
 
 .success-modal-overlay.visible {
@@ -70,6 +71,7 @@
   border: 2px solid rgba(14, 72, 38, 0.2);
   position: relative;
   overflow: visible;
+  z-index: 100001 !important;
 }
 
 .success-modal-content::before {

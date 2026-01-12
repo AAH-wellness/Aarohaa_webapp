@@ -38,6 +38,7 @@ class Booking {
     }
     
     // Insert booking with user_name and provider_name
+    // Status defaults to 'confirmed' (changed from 'scheduled')
     const query = `
       INSERT INTO user_bookings (user_id, provider_id, appointment_date, session_type, notes, status, user_name, provider_name, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -51,7 +52,7 @@ class Booking {
         appointmentDate,
         sessionType || 'Video Consultation',
         notes || null,
-        'scheduled', // Default status
+        'confirmed', // Default status (changed from 'scheduled')
         userName || null, // User name
         providerName || null // Provider name
       ]);
@@ -76,7 +77,7 @@ class Booking {
           appointmentDate,
           sessionType || 'Video Consultation',
           notes || null,
-          'scheduled',
+          'confirmed', // Default status (changed from 'scheduled')
           userName || null,
           providerName || null
         ]);
@@ -169,6 +170,8 @@ class Booking {
       FROM provider_bookings b
       LEFT JOIN users u ON b.user_id = u.id
       WHERE b.provider_id = $1
+        AND b.status != 'cancelled'
+        AND b.status != 'completed'
       ORDER BY b.appointment_date ASC
     `;
     try {
@@ -197,7 +200,7 @@ class Booking {
       JOIN providers p ON b.provider_id = p.id
       WHERE b.user_id = $1 
         AND b.appointment_date > CURRENT_TIMESTAMP
-        AND b.status = 'scheduled'
+        AND b.status = 'confirmed'
       ORDER BY b.appointment_date ASC
     `;
     try {
@@ -212,24 +215,50 @@ class Booking {
   /**
    * Update booking status
    */
-  static async updateStatus(id, status) {
-    const query = `
-      UPDATE user_bookings 
-      SET status = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-      RETURNING *
-    `;
+  static async updateStatus(id, status, reason = null) {
+    // Build query dynamically based on whether reason is provided
+    let query;
+    let params;
+    
+    if (reason !== null) {
+      query = `
+        UPDATE user_bookings 
+        SET status = $1, reason = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING *
+      `;
+      params = [status, reason, id];
+    } else {
+      query = `
+        UPDATE user_bookings 
+        SET status = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING *
+      `;
+      params = [status, id];
+    }
+    
     try {
-      const result = await pool.query(query, [status, id]);
+      const result = await pool.query(query, params);
       
       // Also update provider_bookings if it exists
       try {
-        const providerBookingQuery = `
-          UPDATE provider_bookings 
-          SET status = $1, updated_at = CURRENT_TIMESTAMP
-          WHERE id = $2
-        `;
-        await pool.query(providerBookingQuery, [status, id]);
+        let providerBookingQuery;
+        if (reason !== null) {
+          providerBookingQuery = `
+            UPDATE provider_bookings 
+            SET status = $1, reason = $2, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3
+          `;
+          await pool.query(providerBookingQuery, [status, reason, id]);
+        } else {
+          providerBookingQuery = `
+            UPDATE provider_bookings 
+            SET status = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2
+          `;
+          await pool.query(providerBookingQuery, [status, id]);
+        }
         console.log('Booking.updateStatus - Also updated provider_bookings table');
       } catch (providerBookingError) {
         // If provider_bookings table doesn't exist or update fails, log but don't fail
@@ -244,10 +273,13 @@ class Booking {
   }
 
   /**
-   * Cancel booking
+   * Cancel booking with reason
    */
-  static async cancel(id) {
-    return await this.updateStatus(id, 'cancelled');
+  static async cancel(id, reason) {
+    if (!reason || !reason.trim()) {
+      throw new Error('Cancellation reason is required');
+    }
+    return await this.updateStatus(id, 'cancelled', reason.trim());
   }
 }
 

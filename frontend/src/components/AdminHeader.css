@@ -12,6 +12,11 @@
   overflow: hidden;
 }
 
+/* Lower header z-index when modals are open */
+body.modal-open .admin-header {
+  z-index: 1 !important;
+}
+
 .admin-header > * {
   position: relative;
   z-index: 1;

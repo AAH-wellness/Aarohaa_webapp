@@ -12,6 +12,11 @@
   overflow: visible;
 }
 
+/* Lower header z-index when modals are open - modals have z-index 100000 */
+body.modal-open .header {
+  z-index: 1 !important;
+}
+
 .header-left {
   flex: 1;
 }

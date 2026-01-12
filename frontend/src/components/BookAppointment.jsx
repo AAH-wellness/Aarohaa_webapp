@@ -213,9 +213,38 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
       }
 
       // Prepare booking data
+      // datetime-local input gives us "YYYY-MM-DDTHH:mm" in local time (no timezone)
+      // When we create a Date object, JavaScript treats it as local time
+      // When we convert to ISO string, it converts to UTC
+      // This is correct behavior - the ISO string represents the same moment in time
+      const localDate = new Date(formData.dateTime)
+      
+      // Verify the date is correct
+      const now = new Date()
+      const diffMs = localDate.getTime() - now.getTime()
+      const diffMinutes = Math.floor(diffMs / (1000 * 60))
+      
+      console.log('Booking date conversion:', {
+        input: formData.dateTime,
+        localDateString: localDate.toString(),
+        localDateISO: localDate.toISOString(),
+        localTime: localDate.toLocaleString(),
+        now: now.toLocaleString(),
+        diffMs: diffMs,
+        diffMinutes: diffMinutes,
+        expectedDiff: 'Should be 1 minute if booking for next minute'
+      })
+      
+      // Ensure the date is in the future
+      if (diffMs <= 0) {
+        setErrors({ dateTime: 'Please select a future date and time' })
+        setLoading(false)
+        return
+      }
+      
       const bookingData = {
         providerId: providerId,
-        appointmentDate: new Date(formData.dateTime).toISOString(),
+        appointmentDate: localDate.toISOString(),
         sessionType: formData.sessionType,
         notes: formData.notes || null,
       }

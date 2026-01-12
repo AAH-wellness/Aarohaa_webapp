@@ -9,21 +9,57 @@ const CancelBookingModal = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [showSadAnimation, setShowSadAnimation] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [reasonError, setReasonError] = useState('')
 
   useEffect(() => {
-    setTimeout(() => setIsVisible(true), 10)
+    // Always show modal when it's mounted (parent controls visibility via showCancelModal)
+    setIsVisible(true)
+    
+    // Add class to body when modal is visible to lower header z-index
+    document.body.classList.add('modal-open')
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('modal-open')
+    }
+  }, [])
+  
+  useEffect(() => {
+    // When showSuccess changes to true, trigger the sad animation
     if (showSuccess) {
       setTimeout(() => setShowSadAnimation(true), 300)
+    } else {
+      // Reset animation when going back to confirmation state
+      setShowSadAnimation(false)
     }
   }, [showSuccess])
 
   const handleConfirm = () => {
-    setIsVisible(false)
-    setTimeout(() => {
-      if (onConfirm) {
-        onConfirm()
-      }
-    }, 300)
+    // Validate reason is provided
+    if (!cancelReason.trim()) {
+      setReasonError('Please provide a reason for cancellation')
+      return
+    }
+    
+    if (cancelReason.trim().length < 10) {
+      setReasonError('Reason must be at least 10 characters long')
+      return
+    }
+    
+    // Don't close the modal - let the parent handle the state change
+    // The parent will set showSuccess=true which will change the modal content
+    if (onConfirm) {
+      onConfirm(cancelReason.trim())
+    }
+  }
+  
+  const handleReasonChange = (e) => {
+    const value = e.target.value
+    setCancelReason(value)
+    if (value.trim() && reasonError) {
+      setReasonError('')
+    }
   }
 
   const handleCancel = () => {
@@ -118,6 +154,22 @@ const CancelBookingModal = ({
             )}
           </div>
         )}
+        <div className="cancel-reason-section">
+          <label htmlFor="cancelReason" className="cancel-reason-label">
+            Reason for Cancellation <span className="required">*</span>
+          </label>
+          <textarea
+            id="cancelReason"
+            className={`cancel-reason-input ${reasonError ? 'error' : ''}`}
+            value={cancelReason}
+            onChange={handleReasonChange}
+            placeholder="Please provide a reason for cancelling this appointment (minimum 10 characters)..."
+            rows="4"
+            required
+          />
+          {reasonError && <span className="cancel-reason-error">{reasonError}</span>}
+          <span className="cancel-reason-hint">This information helps us improve our services.</span>
+        </div>
         <div className="cancel-modal-buttons">
           <button className="cancel-modal-btn secondary" onClick={handleCancel}>
             Keep Appointment

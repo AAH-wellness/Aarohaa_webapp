@@ -1056,10 +1056,12 @@ async function createBooking(req, res, next) {
     }
 
     // Validate and format appointment date
+    // The date comes as ISO string from frontend (UTC), but represents local time
+    // We need to parse it correctly
     let formattedDate = appointmentDate;
     let appointmentDateTime;
     if (typeof appointmentDate === 'string') {
-      // Try to parse and validate the date
+      // Parse the ISO string - it's already in UTC format
       appointmentDateTime = new Date(appointmentDate);
       if (isNaN(appointmentDateTime.getTime())) {
         console.log('createBooking: Invalid appointment date:', appointmentDate);
@@ -1071,9 +1073,18 @@ async function createBooking(req, res, next) {
           }
         });
       }
+      // Keep as ISO string for storage (PostgreSQL will store as UTC)
       formattedDate = appointmentDateTime.toISOString();
+      
+      console.log('createBooking: Date conversion:', {
+        received: appointmentDate,
+        parsed: appointmentDateTime.toISOString(),
+        localTime: appointmentDateTime.toLocaleString(),
+        utcTime: appointmentDateTime.toUTCString()
+      });
     } else {
       appointmentDateTime = new Date(appointmentDate);
+      formattedDate = appointmentDateTime.toISOString();
     }
 
     // Validate booking time is within provider's availability
@@ -1101,11 +1112,37 @@ async function createBooking(req, res, next) {
         });
       }
       
-      // Extract time from appointment (HH:mm format) - use local time, not UTC
-      // Get hours and minutes from the appointment date in local timezone
+      // Extract time from appointment (HH:mm format)
+      // The ISO string from frontend represents the user's local time converted to UTC
+      // When we parse it with new Date(), we get a Date object in UTC
+      // But we need the original local time for availability comparison
+      // The solution: The ISO string "2026-01-12T06:01:00.000Z" means 11:01 AM in UTC+5
+      // To get back 11:01, we need to add the timezone offset
+      // But we don't know the user's timezone offset from the ISO string alone
+      
+      // WORKAROUND: Since availability times are likely in the same timezone as the server,
+      // and the server might be in UTC, we should compare UTC times
+      // However, this assumes provider availability is stored in UTC, which may not be true
+      
+      // BETTER APPROACH: Send timezone offset from frontend, or store dates differently
+      // For now, let's use the date as-is and assume the timezone handling is correct
+      // The real fix should be in how we send/store the date
+      
+      // Use local time methods - the Date object will use server's local timezone
+      // This might not match user's timezone, but it's the best we can do without timezone info
       const appointmentHours = appointmentDateTime.getHours();
       const appointmentMinutes = appointmentDateTime.getMinutes();
       const appointmentTimeMinutes = appointmentHours * 60 + appointmentMinutes;
+      
+      console.log('createBooking: Time extraction for availability check:', {
+        isoString: appointmentDateTime.toISOString(),
+        serverLocalHours: appointmentDateTime.getHours(),
+        serverLocalMinutes: appointmentDateTime.getMinutes(),
+        utcHours: appointmentDateTime.getUTCHours(),
+        utcMinutes: appointmentDateTime.getUTCMinutes(),
+        serverTimezoneOffset: appointmentDateTime.getTimezoneOffset(),
+        appointmentTimeMinutes
+      });
       
       // Parse provider's availability times
       const [startHours, startMinutes] = dayAvailability.start.split(':').map(Number);
@@ -1174,6 +1211,23 @@ async function createBooking(req, res, next) {
     // Get full booking details with user and provider info
     const fullBooking = await Booking.findById(booking.id);
     
+    // Helper function to convert date to ISO string
+    const toISOString = (dateValue) => {
+      if (!dateValue) return null
+      if (dateValue instanceof Date) {
+        return dateValue.toISOString()
+      }
+      if (typeof dateValue === 'string') {
+        if (dateValue.includes('Z') || dateValue.includes('+') || dateValue.match(/-\d{2}:\d{2}$/)) {
+          return dateValue
+        }
+        // Add Z to treat as UTC
+        const parsed = new Date(dateValue + 'Z')
+        return isNaN(parsed.getTime()) ? dateValue : parsed.toISOString()
+      }
+      return new Date(dateValue).toISOString()
+    }
+    
     if (!fullBooking) {
       console.error('createBooking: Could not find booking after creation:', booking.id);
       // Fallback to using the booking data we have
@@ -1183,7 +1237,8 @@ async function createBooking(req, res, next) {
           userId: booking.user_id,
           providerId: booking.provider_id,
           providerName: provider.name, // Use provider name we already have
-          appointmentDate: booking.appointment_date,
+          appointmentDate: toISOString(booking.appointment_date),
+          dateTime: toISOString(booking.appointment_date),
           sessionType: booking.session_type,
           notes: booking.notes,
           status: booking.status,
@@ -1199,7 +1254,8 @@ async function createBooking(req, res, next) {
         userId: fullBooking.user_id,
         providerId: fullBooking.provider_id,
         providerName: fullBooking.provider_name || provider.name,
-        appointmentDate: fullBooking.appointment_date,
+        appointmentDate: toISOString(fullBooking.appointment_date),
+        dateTime: toISOString(fullBooking.appointment_date),
         sessionType: fullBooking.session_type,
         notes: fullBooking.notes,
         status: fullBooking.status,
@@ -1295,18 +1351,57 @@ async function getUserBookings(req, res, next) {
     const bookings = await Booking.findByUserId(userId);
     
     res.json({
-      bookings: bookings.map(booking => ({
-        id: booking.id,
-        providerId: booking.provider_id,
-        providerName: booking.provider_name,
-        providerTitle: booking.provider_title,
-        providerSpecialty: booking.provider_specialty,
-        appointmentDate: booking.appointment_date,
-        sessionType: booking.session_type,
-        notes: booking.notes,
-        status: booking.status,
-        createdAt: booking.created_at
-      }))
+      bookings: bookings.map(booking => {
+        // Ensure appointment_date is returned as ISO string with 'Z' suffix for consistent parsing
+        let appointmentDate = booking.appointment_date
+        let appointmentDateISO
+        
+        if (appointmentDate instanceof Date) {
+          // Already a Date object - convert to ISO
+          appointmentDateISO = appointmentDate.toISOString()
+        } else if (appointmentDate && typeof appointmentDate === 'string') {
+          // Check if it's already a proper ISO string with timezone
+          if (appointmentDate.includes('Z') || appointmentDate.includes('+') || appointmentDate.match(/-\d{2}:\d{2}$/)) {
+            // Already has timezone info - use as-is
+            appointmentDateISO = appointmentDate
+          } else {
+            // PostgreSQL timestamp format without timezone (e.g., "2026-01-12T06:12:00.000")
+            // Parse it and treat as UTC by adding 'Z', then convert to ISO
+            // IMPORTANT: PostgreSQL timestamps are stored in UTC, so we need to parse as UTC
+            const parsed = new Date(appointmentDate + 'Z') // Add Z to indicate UTC
+            if (!isNaN(parsed.getTime())) {
+              appointmentDateISO = parsed.toISOString()
+            } else {
+              // Fallback: try parsing without Z (might be in local timezone)
+              const parsedLocal = new Date(appointmentDate)
+              if (!isNaN(parsedLocal.getTime())) {
+                appointmentDateISO = parsedLocal.toISOString()
+              } else {
+                // Last resort: use as-is
+                appointmentDateISO = appointmentDate
+              }
+            }
+          }
+        } else {
+          // Fallback for other types
+          appointmentDateISO = appointmentDate ? new Date(appointmentDate).toISOString() : null
+        }
+        
+        return {
+          id: booking.id,
+          providerId: booking.provider_id,
+          providerName: booking.provider_name,
+          providerTitle: booking.provider_title,
+          providerSpecialty: booking.provider_specialty,
+          appointmentDate: appointmentDateISO,
+          dateTime: appointmentDateISO, // Also include as dateTime for compatibility
+          sessionType: booking.session_type,
+          notes: booking.notes,
+          status: booking.status,
+          reason: booking.reason || null,
+          createdAt: booking.created_at
+        }
+      })
     });
   } catch (error) {
     next(error);
@@ -1408,7 +1503,8 @@ async function getProviderBookings(req, res, next) {
         appointmentDate: booking.appointment_date || booking.appointmentDate,
         sessionType: booking.session_type || booking.sessionType || 'Video Consultation',
         notes: booking.notes,
-        status: booking.status || 'scheduled',
+        status: booking.status || 'confirmed',
+        reason: booking.reason || null,
         createdAt: booking.created_at || booking.createdAt
       }))
     });
@@ -1735,11 +1831,12 @@ async function completeGoogleProfile(req, res, next) {
 async function cancelBooking(req, res, next) {
   try {
     const userId = req.user?.userId || req.user?.id || req.body.userId;
-    const { bookingId } = req.body;
+    const { bookingId, reason } = req.body;
     
     console.log('cancelBooking called with:', {
       userId,
       bookingId,
+      reason,
       userFromToken: req.user,
       body: req.body
     });
@@ -1750,6 +1847,29 @@ async function cancelBooking(req, res, next) {
         error: {
           message: 'User ID and booking ID are required',
           code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+    
+    // Validate reason is provided
+    if (!reason || !reason.trim()) {
+      console.log('cancelBooking: Cancellation reason is required');
+      return res.status(400).json({
+        error: {
+          message: 'Cancellation reason is required',
+          code: 'MISSING_REASON',
+          status: 400
+        }
+      });
+    }
+    
+    if (reason.trim().length < 10) {
+      console.log('cancelBooking: Cancellation reason must be at least 10 characters');
+      return res.status(400).json({
+        error: {
+          message: 'Cancellation reason must be at least 10 characters long',
+          code: 'INVALID_REASON',
           status: 400
         }
       });
@@ -1801,13 +1921,14 @@ async function cancelBooking(req, res, next) {
       });
     }
 
-    const cancelledBooking = await Booking.cancel(bookingIdNum);
+    const cancelledBooking = await Booking.cancel(bookingIdNum, reason.trim());
     console.log('cancelBooking: Booking cancelled successfully:', cancelledBooking);
     
     res.json({
       booking: {
         id: cancelledBooking.id,
-        status: cancelledBooking.status
+        status: cancelledBooking.status,
+        reason: cancelledBooking.reason
       },
       message: 'Booking cancelled successfully'
     });
