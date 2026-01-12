@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import WalletConnect from './WalletConnect'
 import { userService } from '../services'
+import PasswordResetSuccessModal from './PasswordResetSuccessModal'
 import './Profile.css'
 
 const Profile = () => {
@@ -164,6 +165,7 @@ const Profile = () => {
   })
 
   const [showPasswordReset, setShowPasswordReset] = useState(false)
+  const [showPasswordResetSuccess, setShowPasswordResetSuccess] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handlePasswordChange = (e) => {
@@ -203,13 +205,17 @@ const Profile = () => {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     setIsSubmitting(false)
-    alert('Password reset successfully!')
+    
+    // Show premium success modal instead of alert
+    setShowPasswordReset(false)
+    setShowPasswordResetSuccess(true)
+    
+    // Reset form
     setPasswordForm({
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
     })
-    setShowPasswordReset(false)
   }
 
   const copyToClipboard = (text) => {
@@ -592,6 +598,13 @@ const Profile = () => {
           </div>
         )}
       </div>
+
+      {/* Password Reset Success Modal */}
+      {showPasswordResetSuccess && (
+        <PasswordResetSuccessModal
+          onClose={() => setShowPasswordResetSuccess(false)}
+        />
+      )}
     </div>
   )
 }

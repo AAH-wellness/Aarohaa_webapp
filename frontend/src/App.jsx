@@ -36,6 +36,8 @@ import AdminSettings from './components/AdminSettings'
 import AdminAuditLog from './components/AdminAuditLog'
 import AdminProfile from './components/AdminProfile'
 import MaintenanceMode from './components/MaintenanceMode'
+import ForgotPasswordModal from './components/ForgotPasswordModal'
+import ResetPassword from './components/ResetPassword'
 import { authService } from './services'
 import './App.css'
 
@@ -56,6 +58,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false)
   const [isProviderSidebarOpen, setIsProviderSidebarOpen] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
 
   useEffect(() => {
     // Check maintenance mode status
@@ -284,7 +287,7 @@ function App() {
   }
 
   const handleForgotPassword = () => {
-    alert('Forgot password functionality will be implemented. Please contact support.')
+    setShowForgotPassword(true)
   }
 
   const disconnectWallet = async () => {
@@ -423,6 +426,30 @@ function App() {
     return <MaintenanceMode />
   }
 
+  // Check if user is on reset password page (has token in URL)
+  const urlParams = new URLSearchParams(window.location.search)
+  const resetToken = urlParams.get('token')
+
+  // Show reset password page if token is in URL
+  if (resetToken && !isLoggedIn) {
+    return (
+      <ResetPassword
+        token={resetToken}
+        onSuccess={() => {
+          // Clear token from URL - this will cause the component to re-render and show login page
+          window.history.replaceState({}, document.title, window.location.pathname)
+          // Force a re-render by updating state (App will show login page since resetToken will be null)
+          window.location.reload()
+        }}
+        onClose={() => {
+          // Clear token and navigate to login
+          window.history.replaceState({}, document.title, window.location.pathname)
+          window.location.reload()
+        }}
+      />
+    )
+  }
+
   // Show login/register page if not logged in
   if (!isLoggedIn) {
     return (
@@ -434,6 +461,11 @@ function App() {
           loginMode={loginMode}
           onToggleMode={(mode) => setLoginMode(mode)}
         />
+        {showForgotPassword && (
+          <ForgotPasswordModal
+            onClose={() => setShowForgotPassword(false)}
+          />
+        )}
         {showRegister && (
           <div className="register-modal-overlay" onClick={handleNavigateToLogin}>
             <div className="register-modal-content" onClick={(e) => e.stopPropagation()}>

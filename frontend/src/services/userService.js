@@ -245,7 +245,7 @@ class UserService {
     }
 
     try {
-      return await apiClient.post(`${this.baseUrl}/forgot-password`, { email })
+      return await apiClient.post(`${this.baseUrl}/password/reset-request`, { email })
     } catch (error) {
       console.error('Forgot password error:', error)
       throw error
@@ -263,9 +263,27 @@ class UserService {
     }
 
     try {
-      return await apiClient.post(`${this.baseUrl}/reset-password`, resetData)
+      return await apiClient.post(`${this.baseUrl}/password/reset`, resetData)
     } catch (error) {
       console.error('Reset password error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Submit support ticket
+   * @param {Object} supportData - { name, email, subject, messageType, message }
+   * @returns {Promise<Object>} Success message with ticket ID
+   */
+  async submitSupportTicket(supportData) {
+    if (this.useMock) {
+      return this.mockSubmitSupportTicket(supportData)
+    }
+
+    try {
+      return await apiClient.post(`${this.baseUrl}/support/submit`, supportData)
+    } catch (error) {
+      console.error('Submit support ticket error:', error)
       throw error
     }
   }
@@ -490,6 +508,14 @@ class UserService {
   async mockResetPassword(resetData) {
     await new Promise(resolve => setTimeout(resolve, 500))
     return { message: 'Password reset successful' }
+  }
+
+  async mockSubmitSupportTicket(supportData) {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    return { 
+      message: 'Support ticket submitted successfully',
+      ticketId: Date.now()
+    }
   }
 
   async mockGoogleLogin(googleData) {

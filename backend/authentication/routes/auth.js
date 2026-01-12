@@ -21,7 +21,10 @@ const {
   getUserBookings,
   getUpcomingBookings,
   getProviderBookings,
-  cancelBooking
+  cancelBooking,
+  requestPasswordReset,
+  resetPassword,
+  submitSupportTicket
 } = require('../controllers/authController');
 const { validateRegister, validateLogin } = require('../validators/authValidator');
 const { authenticateToken } = require('../middleware/auth');
@@ -92,6 +95,13 @@ router.get('/provider/bookings', authenticateToken, getProviderBookings);
 
 // Cancel booking (requires authentication)
 router.post('/bookings/cancel', authenticateToken, cancelBooking);
+
+// Password reset routes (public - no authentication required)
+router.post('/password/reset-request', requestPasswordReset);
+router.post('/password/reset', resetPassword);
+
+// Support ticket submission (public - authentication optional)
+router.post('/support/submit', submitSupportTicket);
 
 // Delete user permanently (WARNING: This permanently deletes the user)
 router.delete('/delete', deleteUser);

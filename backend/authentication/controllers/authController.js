@@ -5,8 +5,10 @@ const User = require('../models/User');
 const Provider = require('../models/Provider');
 const Booking = require('../models/Booking');
 const UserLoginEvent = require('../models/UserLoginEvent');
+const Support = require('../models/Support');
 const { pool } = require('../config/database');
 const JWT_CONFIG = require('../config/jwt');
+const emailService = require('../services/emailService');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
@@ -74,6 +76,20 @@ async function register(req, res, next) {
       JWT_CONFIG.SECRET,
       { expiresIn: JWT_CONFIG.EXPIRES_IN }
     );
+
+    // Send welcome email (non-blocking - don't wait for it)
+    emailService.sendWelcomeEmail(user.name || 'User', user.email, 'user')
+      .then(result => {
+        if (result.success) {
+          console.log('✅ Welcome email sent to:', user.email);
+        } else {
+          console.warn('⚠️  Failed to send welcome email:', result.error);
+        }
+      })
+      .catch(err => {
+        console.error('❌ Error sending welcome email:', err);
+        // Don't fail registration if email fails
+      });
 
     // Return user (without password hash) and token
     res.status(201).json({
@@ -154,6 +170,20 @@ async function registerProvider(req, res, next) {
     });
 
     console.log(`✅ Provider registered: ${provider.email} (ID: ${provider.id})`);
+
+    // Send welcome email to provider (non-blocking - don't wait for it)
+    emailService.sendWelcomeEmail(provider.name || 'Provider', provider.email, 'provider')
+      .then(result => {
+        if (result.success) {
+          console.log('✅ Welcome email sent to provider:', provider.email);
+        } else {
+          console.warn('⚠️  Failed to send welcome email to provider:', result.error);
+        }
+      })
+      .catch(err => {
+        console.error('❌ Error sending welcome email to provider:', err);
+        // Don't fail registration if email fails
+      });
 
     // Generate JWT token (use provider.id and role='provider')
     const token = jwt.sign(
@@ -1260,6 +1290,43 @@ async function createBooking(req, res, next) {
       });
     }
 
+    // Send booking confirmation emails (non-blocking)
+    // Email to user
+    emailService.sendBookingConfirmationEmail(
+      user.email,
+      userName || user.name || 'User',
+      provider.name,
+      fullBooking.appointment_date,
+      sessionType,
+      notes
+    ).then(result => {
+      if (result.success) {
+        console.log('✅ Booking confirmation email sent to user:', user.email);
+      } else {
+        console.warn('⚠️  Failed to send booking confirmation email to user:', result.error);
+      }
+    }).catch(err => {
+      console.error('❌ Error sending booking confirmation email to user:', err);
+    });
+
+    // Email to provider
+    emailService.sendProviderBookingNotificationEmail(
+      provider.email,
+      provider.name,
+      userName || user.name || 'User',
+      fullBooking.appointment_date,
+      sessionType,
+      notes
+    ).then(result => {
+      if (result.success) {
+        console.log('✅ Booking notification email sent to provider:', provider.email);
+      } else {
+        console.warn('⚠️  Failed to send booking notification email to provider:', result.error);
+      }
+    }).catch(err => {
+      console.error('❌ Error sending booking notification email to provider:', err);
+    });
+
     res.status(201).json({
       booking: {
         id: fullBooking.id,
@@ -1967,8 +2034,53 @@ async function cancelBooking(req, res, next) {
       });
     }
 
+    // Get user and provider details for email notifications
+    const user = await User.findById(userIdNum);
+    const provider = await Provider.findById(booking.provider_id);
+    
     const cancelledBooking = await Booking.cancel(bookingIdNum, reason.trim());
     console.log('cancelBooking: Booking cancelled successfully:', cancelledBooking);
+    
+    // Send cancellation emails (non-blocking)
+    // Email to user
+    if (user && user.email) {
+      emailService.sendBookingCancellationEmail(
+        user.email,
+        user.name || booking.user_name || 'User',
+        booking.provider_name || provider?.name || 'Provider',
+        booking.appointment_date,
+        booking.session_type,
+        reason.trim()
+      ).then(result => {
+        if (result.success) {
+          console.log('✅ Cancellation email sent to user:', user.email);
+        } else {
+          console.warn('⚠️  Failed to send cancellation email to user:', result.error);
+        }
+      }).catch(err => {
+        console.error('❌ Error sending cancellation email to user:', err);
+      });
+    }
+    
+    // Email to provider
+    if (provider && provider.email) {
+      emailService.sendProviderCancellationNotificationEmail(
+        provider.email,
+        provider.name || 'Provider',
+        user?.name || booking.user_name || 'User',
+        booking.appointment_date,
+        booking.session_type,
+        reason.trim()
+      ).then(result => {
+        if (result.success) {
+          console.log('✅ Cancellation notification email sent to provider:', provider.email);
+        } else {
+          console.warn('⚠️  Failed to send cancellation notification email to provider:', result.error);
+        }
+      }).catch(err => {
+        console.error('❌ Error sending cancellation notification email to provider:', err);
+      });
+    }
     
     res.json({
       booking: {
@@ -1981,6 +2093,289 @@ async function cancelBooking(req, res, next) {
   } catch (error) {
     console.error('cancelBooking error:', error);
     console.error('Error stack:', error.stack);
+    next(error);
+  }
+}
+
+/**
+ * Request password reset
+ */
+async function requestPasswordReset(req, res, next) {
+  try {
+    const { email, role = 'user' } = req.body; // role: 'user' or 'provider'
+    
+    if (!email) {
+      return res.status(400).json({
+        error: {
+          message: 'Email is required',
+          code: 'MISSING_EMAIL',
+          status: 400
+        }
+      });
+    }
+    
+    let user = null;
+    let resetToken = null;
+    
+    if (role === 'provider') {
+      user = await Provider.findByEmail(email);
+    } else {
+      user = await User.findByEmail(email);
+    }
+    
+    // Don't reveal if email exists or not (security best practice)
+    // But still send email if user exists
+    if (user) {
+      // Generate reset token (JWT with short expiration)
+      resetToken = jwt.sign(
+        { userId: user.id, email: user.email, role: role, type: 'password-reset' },
+        JWT_CONFIG.SECRET,
+        { expiresIn: '1h' } // Token expires in 1 hour
+      );
+      
+      // Send password reset email (non-blocking)
+      emailService.sendPasswordResetEmail(
+        user.name || 'User',
+        user.email,
+        resetToken
+      ).then(result => {
+        if (result.success) {
+          console.log('✅ Password reset email sent successfully to:', user.email);
+          console.log('   Message ID:', result.messageId);
+        } else {
+          console.error('⚠️  Failed to send password reset email to:', user.email);
+          console.error('   Error:', result.error || result.message);
+          console.error('   Please check email service configuration in .env file');
+        }
+      }).catch(err => {
+        console.error('❌ Error sending password reset email to:', user.email);
+        console.error('   Error details:', err.message);
+        console.error('   Stack:', err.stack);
+      });
+    } else {
+      // Still return success to prevent email enumeration
+      console.log('Password reset requested for non-existent email:', email);
+    }
+    
+    // Always return success message (don't reveal if email exists)
+    res.json({
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    });
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    next(error);
+  }
+}
+
+/**
+ * Reset password with token
+ */
+async function resetPassword(req, res, next) {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        error: {
+          message: 'Token and new password are required',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        error: {
+          message: 'Password must be at least 6 characters long',
+          code: 'INVALID_PASSWORD',
+          status: 400
+        }
+      });
+    }
+    
+    // Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_CONFIG.SECRET);
+      
+      // Check if token is for password reset
+      if (decoded.type !== 'password-reset') {
+        return res.status(400).json({
+          error: {
+            message: 'Invalid reset token',
+            code: 'INVALID_TOKEN',
+            status: 400
+          }
+        });
+      }
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        return res.status(400).json({
+          error: {
+            message: 'Reset token has expired. Please request a new one.',
+            code: 'TOKEN_EXPIRED',
+            status: 400
+          }
+        });
+      }
+      return res.status(400).json({
+        error: {
+          message: 'Invalid reset token',
+          code: 'INVALID_TOKEN',
+          status: 400
+        }
+      });
+    }
+    
+    // Hash new password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+    
+    // Update password based on role
+    if (decoded.role === 'provider') {
+      const updateQuery = `
+        UPDATE providers 
+        SET password = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING id, email, name
+      `;
+      const result = await pool.query(updateQuery, [passwordHash, decoded.userId]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: {
+            message: 'Provider not found',
+            code: 'USER_NOT_FOUND',
+            status: 404
+          }
+        });
+      }
+    } else {
+      const updateQuery = `
+        UPDATE users 
+        SET password = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING id, email, name
+      `;
+      const result = await pool.query(updateQuery, [passwordHash, decoded.userId]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          error: {
+            message: 'User not found',
+            code: 'USER_NOT_FOUND',
+            status: 404
+          }
+        });
+      }
+    }
+    
+    res.json({
+      message: 'Password reset successfully. You can now login with your new password.'
+    });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    next(error);
+  }
+}
+
+/**
+ * Submit support ticket
+ */
+async function submitSupportTicket(req, res, next) {
+  try {
+    const { name, email, subject, messageType, message } = req.body;
+    
+    // Validation
+    if (!name || !email || !subject || !messageType || !message) {
+      return res.status(400).json({
+        error: {
+          message: 'All fields are required',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid email address',
+          code: 'INVALID_EMAIL',
+          status: 400
+        }
+      });
+    }
+
+    // Get user ID if authenticated (optional)
+    let userId = null;
+    if (req.user && req.user.userId) {
+      userId = req.user.userId;
+    } else {
+      // Try to find user by email
+      try {
+        const user = await User.findByEmail(email);
+        if (user) {
+          userId = user.id;
+        }
+      } catch (err) {
+        // User not found, continue without userId
+        console.log('Support ticket from non-registered user:', email);
+      }
+    }
+
+    // Create support ticket in database
+    const supportTicket = await Support.create({
+      userId: userId,
+      userName: name,
+      userEmail: email,
+      subject: subject,
+      messageType: messageType,
+      message: message
+    });
+
+    console.log('✅ Support ticket created:', {
+      id: supportTicket.id,
+      email: email,
+      subject: subject,
+      type: messageType
+    });
+
+    // Send email notification to support team (non-blocking)
+    emailService.sendSupportTicketEmail(
+      name,
+      email,
+      subject,
+      messageType,
+      message,
+      supportTicket.id
+    ).then(result => {
+      if (result.success) {
+        console.log('✅ Support ticket email sent to support team');
+      } else {
+        console.warn('⚠️  Failed to send support ticket email:', result.error);
+      }
+    }).catch(err => {
+      console.error('❌ Error sending support ticket email:', err);
+    });
+
+    // Return success response
+    res.status(201).json({
+      message: 'Support ticket submitted successfully',
+      ticketId: supportTicket.id,
+      ticket: {
+        id: supportTicket.id,
+        subject: supportTicket.subject,
+        messageType: supportTicket.messageType,
+        status: supportTicket.status,
+        createdAt: supportTicket.created_at
+      }
+    });
+  } catch (error) {
+    console.error('Support ticket submission error:', error);
     next(error);
   }
 }
@@ -2006,6 +2401,9 @@ module.exports = {
   getUserBookings,
   getUpcomingBookings,
   getProviderBookings,
-  cancelBooking
+  cancelBooking,
+  requestPasswordReset,
+  resetPassword,
+  submitSupportTicket
 };
 
