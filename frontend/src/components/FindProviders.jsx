@@ -1,6 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { userService } from '../services'
-import './FindProviders.css'
+import SearchBar from './SearchBar'
+import FiltersBar from './FiltersBar'
+import ProviderCard from './ProviderCard'
+import ProviderCardSkeletonList from './ProviderCardSkeleton'
+import EmptyState from './EmptyState'
+// CSS file no longer needed - using Tailwind
 
 const FindProviders = ({ onBookSession }) => {
   const [providers, setProviders] = useState([])
@@ -8,23 +13,23 @@ const FindProviders = ({ onBookSession }) => {
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const searchInputRef = useRef(null)
-  const hasLoadedOnce = useRef(false)
+  const [selectedSpecialty, setSelectedSpecialty] = useState(null)
+  const [minRating, setMinRating] = useState(null)
+  const [availableToday, setAvailableToday] = useState(false)
+  const hasLoadedOnce = React.useRef(false)
 
-  // Debounced search effect
+  // Fetch providers from API
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        // Only show full loading on initial load, use searching state for subsequent searches
         if (!hasLoadedOnce.current) {
           setLoading(true)
         } else {
           setSearching(true)
         }
         setError(null)
-        // Fetch providers from backend database with optional search parameter
-        const filters = searchQuery.trim() ? { search: searchQuery.trim() } : {}
-        const providersList = await userService.getAllProviders(filters)
+        // Fetch all providers (client-side filtering)
+        const providersList = await userService.getAllProviders({})
         setProviders(providersList)
         hasLoadedOnce.current = true
       } catch (err) {
@@ -37,13 +42,62 @@ const FindProviders = ({ onBookSession }) => {
       }
     }
 
-    // Debounce search: wait 500ms after user stops typing
-    const timeoutId = setTimeout(() => {
-      fetchProviders()
-    }, 500)
+    fetchProviders()
+  }, [])
 
-    return () => clearTimeout(timeoutId)
-  }, [searchQuery])
+  // Extract unique specialties from providers
+  const specialties = useMemo(() => {
+    const specialtySet = new Set()
+    providers.forEach(provider => {
+      if (provider.specialty) {
+        // Split by comma or semicolon and add each
+        provider.specialty.split(/[,;]/).forEach(s => {
+          const trimmed = s.trim()
+          if (trimmed) specialtySet.add(trimmed)
+        })
+      }
+    })
+    return Array.from(specialtySet).sort()
+  }, [providers])
+
+  // Client-side filtering logic
+  const filteredProviders = useMemo(() => {
+    return providers.filter(provider => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase()
+        const matchesSearch = 
+          provider.name?.toLowerCase().includes(query) ||
+          provider.title?.toLowerCase().includes(query) ||
+          provider.specialty?.toLowerCase().includes(query) ||
+          provider.bio?.toLowerCase().includes(query)
+        if (!matchesSearch) return false
+      }
+
+      // Specialty filter
+      if (selectedSpecialty) {
+        if (!provider.specialty) return false
+        const providerSpecialties = provider.specialty.split(/[,;]/).map(s => s.trim().toLowerCase())
+        if (!providerSpecialties.includes(selectedSpecialty.toLowerCase())) return false
+      }
+
+      // Min rating filter
+      if (minRating !== null) {
+        if (!provider.rating || provider.rating < minRating) return false
+      }
+
+      // Available today filter (UI-only for now)
+      if (availableToday) {
+        // If provider has availability field, check it
+        // For now, this is UI-only so we'll skip filtering
+        // if (provider.availability) {
+        //   // Check if available today logic here
+        // }
+      }
+
+      return true
+    })
+  }, [providers, searchQuery, selectedSpecialty, minRating, availableToday])
 
   const handleBookSession = (providerId) => {
     if (onBookSession) {
@@ -51,18 +105,19 @@ const FindProviders = ({ onBookSession }) => {
     }
   }
 
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value)
+  const handleSearchChange = (value) => {
+    setSearchQuery(value)
   }
 
-  const handleClearSearch = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleClearSearch = () => {
     setSearchQuery('')
-    // Maintain focus on search input after clearing
-    if (searchInputRef.current) {
-      searchInputRef.current.focus()
-    }
+  }
+
+  const handleClearFilters = () => {
+    setSearchQuery('')
+    setSelectedSpecialty(null)
+    setMinRating(null)
+    setAvailableToday(false)
   }
 
   // Helper function to get initials from name
@@ -75,137 +130,107 @@ const FindProviders = ({ onBookSession }) => {
     return name.substring(0, 2).toUpperCase()
   }
 
-  // Helper function to calculate price per minute from hourly rate
-  const getPricePerMinute = (hourlyRate) => {
-    if (!hourlyRate || hourlyRate === 0) return 0
-    return (hourlyRate / 60).toFixed(2)
-  }
-
-  // Show loading only on initial page load
+  // Show loading state
   if (loading && providers.length === 0) {
     return (
-      <div className="find-providers">
-        <h1 className="providers-title">Find Wellness Professionals</h1>
-        <div className="loading-message">Loading providers...</div>
+      <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-green-900 mb-2">
+              Find Wellness Professionals
+            </h1>
+            <p className="text-gray-600">
+              Search by name, specialty, or condition and book a session.
+            </p>
+          </div>
+          <ProviderCardSkeletonList count={6} />
+        </div>
       </div>
     )
   }
 
+  // Show error state
   if (error) {
     return (
-      <div className="find-providers">
-        <h1 className="providers-title">Find Wellness Professionals</h1>
-        <div className="error-message">{error}</div>
-      </div>
-    )
-  }
-
-  const hasSearchQuery = searchQuery.trim().length > 0
-  const showNoResults = !loading && providers.length === 0 && hasSearchQuery
-
-  if (providers.length === 0 && !hasSearchQuery) {
-    return (
-      <div className="find-providers">
-        <h1 className="providers-title">Find Wellness Professionals</h1>
-      <div className="search-container">
-        <div className="search-box">
-          <span className="search-icon">🔍</span>
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="search-input"
-            placeholder="Search by name, title, specialty, or bio..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-              }
-            }}
-            autoFocus={false}
-          />
-          {searching && (
-            <span className="search-loading">⏳</span>
-          )}
-          {hasSearchQuery && !searching && (
-            <button 
-              type="button"
-              className="search-clear" 
-              onClick={handleClearSearch} 
-              aria-label="Clear search"
-            >
-              ×
-            </button>
-          )}
-        </div>
-      </div>
-        <div className="no-providers-message">
-          No providers available at the moment. Please check back later.
+      <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-4xl font-bold text-green-900 mb-8">
+            Find Wellness Professionals
+          </h1>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <p className="text-red-800">{error}</p>
+          </div>
         </div>
       </div>
     )
   }
+
+  const hasActiveFilters = searchQuery.trim() || selectedSpecialty || minRating !== null || availableToday
+  const showEmptyState = !loading && filteredProviders.length === 0 && hasActiveFilters
 
   return (
-    <div className="find-providers">
-      <h1 className="providers-title">Find Wellness Professionals</h1>
-      <div className="search-container">
-        <div className="search-box">
-          <span className="search-icon">🔍</span>
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search by name, title, specialty, or bio..."
+    <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-green-900 mb-2">
+            Find Wellness Professionals
+          </h1>
+          <p className="text-gray-600">
+            Search by name, specialty, or condition and book a session.
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <SearchBar
             value={searchQuery}
             onChange={handleSearchChange}
+            onClear={handleClearSearch}
+            searching={searching}
           />
-          {hasSearchQuery && (
-            <button className="search-clear" onClick={handleClearSearch} aria-label="Clear search">
-              ×
-            </button>
+        </div>
+
+        {/* Filters Bar */}
+        {providers.length > 0 && (
+          <FiltersBar
+            selectedSpecialty={selectedSpecialty}
+            onSpecialtyChange={setSelectedSpecialty}
+            minRating={minRating}
+            onMinRatingChange={setMinRating}
+            availableToday={availableToday}
+            onAvailableTodayChange={setAvailableToday}
+            onClear={handleClearFilters}
+            specialties={specialties}
+          />
+        )}
+
+        {/* Provider List */}
+        <div className="mt-6">
+          {loading && providers.length === 0 ? (
+            <ProviderCardSkeletonList count={6} />
+          ) : showEmptyState ? (
+            <EmptyState onClearFilters={handleClearFilters} />
+          ) : filteredProviders.length === 0 && !hasActiveFilters ? (
+            <div className="text-center py-16">
+              <p className="text-gray-600">
+                No providers available at the moment. Please check back later.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredProviders.map((provider) => (
+                <ProviderCard
+                  key={provider.id}
+                  provider={provider}
+                  onBookSession={handleBookSession}
+                  getInitials={getInitials}
+                />
+              ))}
+            </div>
           )}
         </div>
       </div>
-      {showNoResults && (
-        <div className="no-results-message">
-          No providers found matching "{searchQuery}". Try a different search term.
-        </div>
-      )}
-      {!showNoResults && (
-        <div className="providers-grid">
-        {providers.map((provider) => (
-          <div key={provider.id} className="provider-card">
-            <div className="provider-header">
-              <div className="provider-avatar">{getInitials(provider.name)}</div>
-              <div className="provider-info">
-                <h3 className="provider-name">{provider.name}</h3>
-                <p className="provider-title">{provider.title || provider.specialty || 'Wellness Professional'}</p>
-              </div>
-              {provider.hourlyRate > 0 && (
-                <div className="provider-price">${getPricePerMinute(provider.hourlyRate)}/min</div>
-              )}
-            </div>
-            <div className="provider-rating">
-              <span className="rating-star">★</span>
-              <span className="rating-value">{provider.rating > 0 ? provider.rating.toFixed(1) : 'N/A'}</span>
-              <span className="rating-reviews">({provider.reviewsCount || 0} reviews)</span>
-            </div>
-            {provider.bio && (
-              <p className="provider-description">{provider.bio}</p>
-            )}
-            {provider.specialty && !provider.bio && (
-              <p className="provider-description">Specializes in {provider.specialty}</p>
-            )}
-            <button 
-              className="provider-button"
-              onClick={() => handleBookSession(provider.id)}
-            >
-              Book Session
-            </button>
-          </div>
-        ))}
-        </div>
-      )}
     </div>
   )
 }
