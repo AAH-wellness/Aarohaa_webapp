@@ -1,7 +1,7 @@
 import React from 'react'
 import './Sidebar.css'
 
-const Sidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSidebar }) => {
+const Sidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSidebar, hasActiveSession }) => {
   const menuItems = [
     { icon: '👥', label: 'Find Providers' },
     { icon: '📅', label: 'My Appointments' },

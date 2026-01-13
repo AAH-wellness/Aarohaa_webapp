@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { userService } from '../services'
 import './Messages.css'
 import ContactFormSuccessModal from './ContactFormSuccessModal'
 
@@ -12,6 +13,7 @@ const Messages = () => {
   })
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -19,68 +21,71 @@ const Messages = () => {
       ...prev,
       [name]: value,
     }))
+    setError('') // Clear error when user types
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
     
     // Validate form
     if (!formData.name.trim()) {
-      alert('Please enter your name')
+      setError('Please enter your name')
       return
     }
     
     if (!formData.email.trim()) {
-      alert('Please enter your email')
+      setError('Please enter your email')
       return
     }
     
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
-      alert('Please enter a valid email address')
+      setError('Please enter a valid email address')
       return
     }
     
     if (!formData.subject.trim()) {
-      alert('Please enter a subject')
+      setError('Please enter a subject')
       return
     }
     
     if (!formData.message.trim()) {
-      alert('Please enter your message')
+      setError('Please enter your message')
       return
     }
 
     setIsSubmitting(true)
 
-    // Store message in localStorage
-    const message = {
-      id: Date.now(),
-      ...formData,
-      submittedAt: new Date().toISOString(),
-      status: 'pending',
+    try {
+      // Submit support ticket to backend
+      const response = await userService.submitSupportTicket({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        subject: formData.subject.trim(),
+        messageType: formData.messageType,
+        message: formData.message.trim()
+      })
+
+      console.log('Support ticket submitted:', response)
+      
+      setIsSubmitting(false)
+      setShowSuccessModal(true)
+
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        messageType: 'Feedback',
+        message: '',
+      })
+    } catch (err) {
+      console.error('Support ticket submission error:', err)
+      setError(err.message || 'Failed to submit support ticket. Please try again.')
+      setIsSubmitting(false)
     }
-
-    // Get existing messages
-    const existingMessages = JSON.parse(localStorage.getItem('messages') || '[]')
-    existingMessages.push(message)
-    localStorage.setItem('messages', JSON.stringify(existingMessages))
-
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    setIsSubmitting(false)
-    setShowSuccessModal(true)
-
-    // Reset form
-    setFormData({
-      name: '',
-      email: '',
-      subject: '',
-      messageType: 'Feedback',
-      message: '',
-    })
   }
 
   const handleSuccessModalClose = () => {
@@ -96,6 +101,23 @@ const Messages = () => {
         </p>
 
         <div className="contact-form-container">
+          {error && (
+            <div className="contact-form-error" style={{
+              background: 'linear-gradient(135deg, rgba(255, 59, 48, 0.1) 0%, rgba(255, 59, 48, 0.05) 100%)',
+              border: '1px solid rgba(255, 59, 48, 0.3)',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              color: '#d32f2f',
+              fontSize: '14px'
+            }}>
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="contact-form">
             <div className="form-row">
               <div className="form-group">

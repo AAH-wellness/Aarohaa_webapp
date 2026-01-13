@@ -146,11 +146,18 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
 
     try {
       // Call backend API to login
-      const response = await userService.login({
-        email: formData.email,
-        password: formData.password,
-        loginMethod: 'email'
-      })
+      // If provider mode, use provider login endpoint (ONLY checks providers table)
+      // Otherwise, use user login endpoint (ONLY checks users table)
+      const response = isProviderMode 
+        ? await userService.loginProvider({
+            email: formData.email,
+            password: formData.password
+          })
+        : await userService.login({
+            email: formData.email,
+            password: formData.password,
+            loginMethod: 'email'
+          })
 
       // Save remember password preference
       if (formData.rememberPassword) {
@@ -171,12 +178,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
       // Save last login time
       localStorage.setItem('lastLoginTime', new Date().toLocaleString())
       
-      // Show success animation - for all modes (user, provider, admin)
-      // The animation is now handled at App level
-      // Role is already saved to localStorage above, so animation will navigate correctly
-      if (onLogin) {
-        onLogin()
-      }
+      // Show success animation for all modes (user, provider, admin)
+      setShowSuccessAnimation(true)
     } catch (error) {
       console.error('Login error:', error)
       
@@ -214,59 +217,84 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         await new Promise(resolve => setTimeout(resolve, 300))
       }
 
-      // Initialize Google Identity Services with credential flow
-      // This is the most reliable method for getting ID tokens
+      // Initialize Google Identity Services with FedCM support
+      // This replaces the deprecated prompt() method
       window.google.accounts.id.initialize({
         client_id: API_CONFIG.GOOGLE_CLIENT_ID,
         callback: handleGoogleCallback,
         auto_select: false,
         cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: true, // Opt into FedCM for better compatibility
       })
 
-      // Trigger the credential flow - this shows a popup
-      window.google.accounts.id.prompt((notification) => {
-        console.log('Google prompt notification:', notification)
-        
-        if (notification.isNotDisplayed()) {
-          const reason = notification.getNotDisplayedReason()
-          console.log('One Tap not displayed. Reason:', reason)
-          setIsGoogleLoading(false)
-          
-          // Provide helpful error message based on reason
-          let errorMsg = 'Google sign-in is not available. '
-          if (reason === 'browser_not_supported') {
-            errorMsg += 'Your browser is not supported. Please try Chrome, Firefox, or Safari.'
-          } else if (reason === 'invalid_client') {
-            errorMsg += 'Invalid OAuth client configuration. Please check your Google Cloud Console settings.'
-          } else if (reason === 'missing_client_id') {
-            errorMsg += 'Google Client ID is missing. Please check your configuration.'
-          } else if (reason === 'opt_out_or_no_session') {
-            // User opted out or no session - try again
-            errorMsg = 'Please try clicking the button again.'
-          } else if (reason === 'suppressed_by_user') {
-            errorMsg = 'Google sign-in was blocked. Please allow popups and try again.'
-          } else if (reason === 'unregistered_origin') {
-            errorMsg = 'This origin is not registered. Please add http://localhost:5173 to authorized JavaScript origins in Google Cloud Console.'
-          } else if (reason === 'unknown_reason') {
-            errorMsg = 'Unknown error. Please ensure your OAuth app is PUBLISHED (not in Testing mode) in Google Cloud Console.'
-          } else {
-            errorMsg += `Reason: ${reason}. Please ensure your OAuth app is PUBLISHED in Google Cloud Console.`
-          }
-          
-          setErrorMessage(errorMsg)
-          setShowErrorModal(true)
-        } else if (notification.isSkippedMoment()) {
-          const reason = notification.getSkippedReason()
-          console.log('One Tap skipped. Reason:', reason)
-          setIsGoogleLoading(false)
-          // User can try again - don't show error, just let them retry
-        } else if (notification.isDismissedMoment()) {
-          const reason = notification.getDismissedReason()
-          console.log('One Tap dismissed. Reason:', reason)
-          setIsGoogleLoading(false)
-          // User dismissed - they can try again
-        }
+      // Create a hidden container for the Google button
+      const buttonContainer = document.createElement('div')
+      buttonContainer.style.position = 'fixed'
+      buttonContainer.style.left = '-9999px'
+      buttonContainer.style.top = '-9999px'
+      document.body.appendChild(buttonContainer)
+
+      // Render Google's official button (FedCM-compatible)
+      window.google.accounts.id.renderButton(buttonContainer, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
       })
+
+      // Wait for button to render, then programmatically click it
+      setTimeout(() => {
+        const googleButton = buttonContainer.querySelector('div[role="button"]')
+        if (googleButton) {
+          // Trigger the button click
+          googleButton.click()
+          
+          // Clean up container after a delay
+          setTimeout(() => {
+            if (document.body.contains(buttonContainer)) {
+              document.body.removeChild(buttonContainer)
+            }
+          }, 2000)
+        } else {
+          // Button didn't render - try alternative approach
+          setIsGoogleLoading(false)
+          
+          // Fallback: Use the credential flow directly
+          // This is a workaround if renderButton fails
+          const fallbackContainer = document.createElement('div')
+          fallbackContainer.style.display = 'none'
+          document.body.appendChild(fallbackContainer)
+          
+          window.google.accounts.id.renderButton(fallbackContainer, {
+            type: 'standard',
+            theme: 'filled_blue',
+            size: 'large',
+            text: 'signin_with',
+          })
+          
+          setTimeout(() => {
+            const btn = fallbackContainer.querySelector('div[role="button"]')
+            if (btn) {
+              btn.click()
+              setTimeout(() => {
+                if (document.body.contains(fallbackContainer)) {
+                  document.body.removeChild(fallbackContainer)
+                }
+              }, 2000)
+            } else {
+              setErrorMessage('Failed to initialize Google sign-in. Please refresh the page and try again.')
+              setShowErrorModal(true)
+              if (document.body.contains(fallbackContainer)) {
+                document.body.removeChild(fallbackContainer)
+              }
+            }
+          }, 200)
+          
+          if (document.body.contains(buttonContainer)) {
+            document.body.removeChild(buttonContainer)
+          }
+        }
+      }, 100)
     } catch (error) {
       console.error('Google login error:', error)
       setIsGoogleLoading(false)
@@ -322,10 +350,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
 
       setIsGoogleLoading(false)
 
-      // Show success animation - handled at App level
-      if (onLogin) {
-        onLogin()
-      }
+      // Show success animation for all modes
+      setShowSuccessAnimation(true)
     } catch (error) {
       console.error('Google login callback error:', error)
       setIsGoogleLoading(false)
@@ -343,22 +369,12 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
   }
 
 
-  // Load Google script on component mount and initialize
+  // Load Google script on component mount
+  // Note: We don't initialize here anymore to avoid conflicts
+  // Initialization happens in handleGoogleLogin when the button is clicked
   useEffect(() => {
     if (API_CONFIG.GOOGLE_CLIENT_ID) {
       loadGoogleScript()
-        .then(() => {
-          // Initialize Google Identity Services for One Tap
-          if (window.google && window.google.accounts) {
-            window.google.accounts.id.initialize({
-              client_id: API_CONFIG.GOOGLE_CLIENT_ID,
-              callback: handleGoogleCallback,
-            })
-            
-            // Optionally show One Tap automatically (can be disabled if not desired)
-            // window.google.accounts.id.prompt()
-          }
-        })
         .catch(err => {
           console.error('Failed to load Google script:', err)
         })
@@ -529,10 +545,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
       setShowWalletModal(false)
       setIsConnecting(false)
       
-      // Show success animation - handled at App level
-      if (onLogin) {
-        onLogin()
-      }
+      // Show success animation for all modes
+      setShowSuccessAnimation(true)
     } catch (error) {
       console.error('Error connecting wallet:', error)
       setIsConnecting(false)
@@ -596,11 +610,19 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
               <>
                 <form className="provider-login-form" onSubmit={handleSubmit}>
                   <div className="form-group">
-                    <div className="input-container">
+                    <div className="input-field-wrapper">
+                      <div className={`email-icon-wrapper ${formData.email || focused.email ? 'hidden' : ''}`}>
+                        <svg className="email-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                          <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                      </div>
+                      <label className={`floating-label ${formData.email || focused.email ? 'active' : ''}`}>
+                        Email
+                      </label>
                       <input
                         type="email"
                         name="email"
-                        placeholder=""
                         value={formData.email}
                         onChange={handleInputChange}
                         onBlur={(e) => {
@@ -611,18 +633,9 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                           setTouched({ ...touched, email: true })
                           setFocused({ ...focused, email: true })
                         }}
-                        className={`form-input ${touched.email && errors.email ? 'error' : ''}`}
+                        className={`form-input email-input ${touched.email && errors.email ? 'error' : ''} ${formData.email || focused.email ? 'has-value' : ''}`}
                         required
                       />
-                      <div className={`input-icon-wrapper ${formData.email || focused.email ? 'focused' : ''}`}>
-                        <span className="input-icon">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                            <polyline points="22,6 12,13 2,6"></polyline>
-                          </svg>
-                        </span>
-                        <span className="floating-label">Email</span>
-                      </div>
                     </div>
                     {touched.email && errors.email && (
                       <p className="error-message">{errors.email}</p>
@@ -630,54 +643,51 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                   </div>
 
                   <div className="form-group">
-                    <div className="input-container">
-                      <div className="input-wrapper">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          name="password"
-                          placeholder=""
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          onBlur={(e) => {
-                            handleBlur(e)
-                            setFocused({ ...focused, password: false })
-                          }}
-                          onFocus={() => {
-                            setTouched({ ...touched, password: true })
-                            setFocused({ ...focused, password: true })
-                          }}
-                          className={`form-input ${touched.password && errors.password ? 'error' : ''}`}
-                          required
-                        />
-                        <div className={`input-icon-wrapper password-icon-wrapper ${formData.password || focused.password ? 'focused' : ''}`}>
-                          <span className="input-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
-                          </span>
-                          <span className="floating-label">Password</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="password-toggle"
-                          onClick={() => setShowPassword(!showPassword)}
-                          aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        >
-                          {showPassword ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                              <circle cx="12" cy="12" r="3"></circle>
-                              <line x1="1" y1="1" x2="23" y2="23"></line>
-                            </svg>
-                          ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                              <line x1="1" y1="1" x2="23" y2="23"></line>
-                            </svg>
-                          )}
-                        </button>
+                    <div className="input-field-wrapper">
+                      <div className={`password-icon-wrapper ${formData.password || focused.password ? 'hidden' : ''}`}>
+                        <svg className="password-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
                       </div>
+                      <label className={`floating-label ${formData.password || focused.password ? 'active' : ''}`}>
+                        Password
+                      </label>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        onBlur={(e) => {
+                          handleBlur(e)
+                          setFocused({ ...focused, password: false })
+                        }}
+                        onFocus={() => {
+                          setTouched({ ...touched, password: true })
+                          setFocused({ ...focused, password: true })
+                        }}
+                        className={`form-input password-input ${touched.password && errors.password ? 'error' : ''} ${formData.password || focused.password ? 'has-value' : ''}`}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        )}
+                      </button>
                     </div>
                     {touched.password && errors.password && (
                       <p className="error-message">{errors.password}</p>
@@ -717,8 +727,11 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                   >
                     {isGoogleLoading ? (
                       <>
-                        <span className="loading-spinner">⏳</span>
-                        Signing in...
+                        <svg className="provider-social-icon loading-spinner-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" opacity="0.3"/>
+                          <path d="M12 2a10 10 0 0 1 10 10" strokeDasharray="15.7 15.7"/>
+                        </svg>
+                        <span>Signing in...</span>
                       </>
                     ) : (
                       <>
@@ -740,7 +753,7 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                           />
                         </svg>
-                        Sign in with Google
+                        <span>Sign in with Google</span>
                       </>
                     )}
                   </button>
@@ -749,13 +762,13 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                     type="button"
                     className="provider-social-button provider-wallet-button"
                     onClick={handleWalletLogin}
+                    disabled={isLoading}
                   >
-                    <svg className="provider-social-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
-                      <path d="M2 17L12 22L22 17"/>
-                      <path d="M2 12L12 17L22 12"/>
+                    <svg className="provider-social-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="6" width="20" height="12" rx="2" ry="2"/>
+                      <path d="M6 10h12M6 14h8"/>
                     </svg>
-                    Connect Wallet
+                    <span>Connect Wallet</span>
                   </button>
                 </div>
 
@@ -1010,8 +1023,8 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         </div>
       )}
 
-      {/* Success Animation - Note: This is now handled at App level for providers */}
-      {showSuccessAnimation && !isProviderMode && (
+      {/* Success Animation - Shows for all login modes (user, provider, admin) */}
+      {showSuccessAnimation && (
         <LoginSuccess 
           onAnimationComplete={() => {
             setShowSuccessAnimation(false)

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import './BookingSuccessModal.css'
+import './PasswordResetSuccessModal.css'
 
-const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }) => {
+const PasswordResetSuccessModal = ({ onClose }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
 
@@ -23,18 +23,8 @@ const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }
     setTimeout(() => onClose(), 300)
   }
 
-  const handleViewAppointments = () => {
-    setIsVisible(false)
-    setTimeout(() => {
-      onClose()
-      if (onNavigateToAppointments) {
-        onNavigateToAppointments()
-      }
-    }, 300)
-  }
-
   return (
-    <div className={`success-modal-overlay ${isVisible ? 'visible' : ''}`} onClick={handleClose}>
+    <div className={`password-reset-success-overlay ${isVisible ? 'visible' : ''}`} onClick={handleClose}>
       {showConfetti && (
         <div className="confetti-container">
           {[...Array(50)].map((_, i) => (
@@ -46,9 +36,9 @@ const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }
           ))}
         </div>
       )}
-      <div className={`success-modal-content ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
-        <div className="success-icon-wrapper">
-          <div className="success-icon">
+      <div className={`password-reset-success-content ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
+        <div className="password-reset-success-icon-wrapper">
+          <div className="password-reset-success-icon">
             <div className="checkmark-circle">
               <svg className="checkmark-svg" viewBox="0 0 52 52">
                 <circle className="checkmark-circle-bg" cx="26" cy="26" r="25" fill="none" />
@@ -62,24 +52,25 @@ const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }
             </div>
           </div>
         </div>
-        <h2 className="success-modal-title">Booking Confirmed! 🎉</h2>
-        <p className="success-modal-message">
-          Your appointment with <strong>{providerName}</strong> has been successfully booked.
+        <h2 className="password-reset-success-title">Password Reset Successful! </h2>
+        <p className="password-reset-success-message">
+          Your password has been successfully updated.
           <br />
-          <span className="success-sub-message">You'll receive a confirmation email shortly.</span>
+          <span className="password-reset-sub-message">You will be redirected to the login page to sign in with your new password.</span>
         </p>
-        <div className="success-details">
-          <div className="success-detail-item">
-            <span className="detail-icon">📅</span>
-            <span className="detail-text">Check your appointments section for details</span>
+        <div className="password-reset-success-details">
+          <div className="password-reset-detail-item">
+            <span className="detail-icon">✅</span>
+            <span className="detail-text">Your account is secure</span>
+          </div>
+          <div className="password-reset-detail-item">
+            <span className="detail-icon">🔒</span>
+            <span className="detail-text">New password is active</span>
           </div>
         </div>
-        <div className="success-modal-buttons">
-          <button className="success-modal-btn secondary" onClick={handleClose}>
-            Close
-          </button>
-          <button className="success-modal-btn primary" onClick={handleViewAppointments}>
-            View Appointments
+        <div className="password-reset-success-buttons">
+          <button className="password-reset-success-btn primary" onClick={handleClose}>
+            Go to Login
           </button>
         </div>
       </div>
@@ -87,4 +78,4 @@ const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }
   )
 }
 
-export default BookingSuccessModal
+export default PasswordResetSuccessModal

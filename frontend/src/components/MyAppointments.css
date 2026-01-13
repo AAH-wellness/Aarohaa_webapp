@@ -260,6 +260,26 @@
   flex: 1;
 }
 
+.appointment-cancellation-reason {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fff3cd;
+  border-left: 3px solid #ffc107;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.cancellation-label {
+  font-weight: 600;
+  color: #856404;
+  margin-right: 6px;
+}
+
+.cancellation-text {
+  color: #856404;
+  font-style: italic;
+}
+
 .appointment-provider-name {
   font-size: 20px;
   font-weight: 700;

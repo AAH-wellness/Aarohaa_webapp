@@ -1,12 +1,42 @@
 .sidebar {
   width: 280px;
-  background: linear-gradient(180deg, #0e4826 0%, #0a3620 100%);
+  background: #0a3620 !important;
   padding: 32px 20px;
   box-shadow: 4px 0 20px rgba(14, 72, 38, 0.3);
-  height: calc(100vh - 84px);
-  overflow-y: auto;
+  min-height: calc(100vh - 84px);
+  height: 100%;
+  overflow: visible;
   border-right: 2px solid #FFD700;
   box-shadow: 4px 0 20px rgba(14, 72, 38, 0.3), 0 0 0 1px rgba(255, 215, 0, 0.3), 0 0 15px rgba(255, 215, 0, 0.1);
+  position: relative;
+  align-self: stretch;
+}
+
+.sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #0a3620;
+  z-index: -2;
+  min-height: 100%;
+  width: 100%;
+}
+
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, #0e4826 0%, #0a3620 100%);
+  background-size: 100% 100%;
+  z-index: -1;
+  width: 100%;
+  min-height: 100%;
 }
 
 .sidebar-title {
@@ -24,6 +54,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .nav-item {
@@ -100,6 +133,11 @@
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
     padding-top: 60px;
+    background: linear-gradient(180deg, #0e4826 0%, #0a3620 100%) !important;
+  }
+  
+  .sidebar::before {
+    height: 100vh;
   }
 
   .sidebar.mobile-open {

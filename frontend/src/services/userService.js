@@ -17,6 +17,7 @@
 
 import apiClient from './apiClient.js'
 import API_CONFIG from './config.js'
+import { clearAuthData } from './authService.js'
 
 class UserService {
   constructor() {
@@ -50,7 +51,32 @@ class UserService {
   }
 
   /**
-   * Login user
+   * Register a new provider
+   * @param {Object} providerData - { email, password, name, phone, specialty, title, bio, hourlyRate }
+   * @returns {Promise<Object>} Provider object with token
+   */
+  async registerProvider(providerData) {
+    if (this.useMock) {
+      return this.mockRegisterProvider(providerData)
+    }
+
+    try {
+      const response = await apiClient.post(`${this.baseUrl}/register/provider`, providerData)
+      // Store token if provided
+      if (response.token) {
+        localStorage.setItem('authToken', response.token)
+        localStorage.setItem('isLoggedIn', 'true')
+        localStorage.setItem('userRole', response.user.role || 'provider')
+      }
+      return response
+    } catch (error) {
+      console.error('Provider registration error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Login user (ONLY checks users table)
    * @param {Object} credentials - { email, password, loginMethod }
    * @returns {Promise<Object>} User object with token
    */
@@ -60,6 +86,8 @@ class UserService {
     }
 
     try {
+      // Use /api/users/login endpoint (user login only)
+      // Routes are mounted at /api/users, so login is at /api/users/login
       const response = await apiClient.post(`${this.baseUrl}/login`, credentials)
       if (response.token) {
         localStorage.setItem('authToken', response.token)
@@ -70,6 +98,33 @@ class UserService {
       return response
     } catch (error) {
       console.error('Login error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Login provider (ONLY checks providers table)
+   * @param {Object} credentials - { email, password }
+   * @returns {Promise<Object>} Provider object with token
+   */
+  async loginProvider(credentials) {
+    if (this.useMock) {
+      return this.mockLogin(credentials)
+    }
+
+    try {
+      // Use /api/users/login/provider endpoint (provider login only)
+      // Routes are mounted at /api/users, so provider login is at /api/users/login/provider
+      const response = await apiClient.post(`${this.baseUrl}/login/provider`, credentials)
+      if (response.token) {
+        localStorage.setItem('authToken', response.token)
+        localStorage.setItem('isLoggedIn', 'true')
+        localStorage.setItem('userRole', response.user.role || 'provider')
+        localStorage.setItem('loginMethod', 'email')
+      }
+      return response
+    } catch (error) {
+      console.error('Provider login error:', error)
       throw error
     }
   }
@@ -139,11 +194,8 @@ class UserService {
     try {
       await apiClient.post(`${this.baseUrl}/logout`)
     } finally {
-      // Clear local storage
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('isLoggedIn')
-      localStorage.removeItem('userRole')
-      localStorage.removeItem('loginMethod')
+      // Clear auth data using centralized service
+      clearAuthData()
     }
   }
 
@@ -193,7 +245,7 @@ class UserService {
     }
 
     try {
-      return await apiClient.post(`${this.baseUrl}/forgot-password`, { email })
+      return await apiClient.post(`${this.baseUrl}/password/reset-request`, { email })
     } catch (error) {
       console.error('Forgot password error:', error)
       throw error
@@ -211,9 +263,27 @@ class UserService {
     }
 
     try {
-      return await apiClient.post(`${this.baseUrl}/reset-password`, resetData)
+      return await apiClient.post(`${this.baseUrl}/password/reset`, resetData)
     } catch (error) {
       console.error('Reset password error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Submit support ticket
+   * @param {Object} supportData - { name, email, subject, messageType, message }
+   * @returns {Promise<Object>} Success message with ticket ID
+   */
+  async submitSupportTicket(supportData) {
+    if (this.useMock) {
+      return this.mockSubmitSupportTicket(supportData)
+    }
+
+    try {
+      return await apiClient.post(`${this.baseUrl}/support/submit`, supportData)
+    } catch (error) {
+      console.error('Submit support ticket error:', error)
       throw error
     }
   }
@@ -250,6 +320,76 @@ class UserService {
     }
   }
 
+  /**
+   * Get provider profile (for logged-in provider)
+   * @returns {Promise<Object>} Provider profile object
+   */
+  async getProviderProfile() {
+    if (this.useMock) {
+      return this.mockGetProviderProfile()
+    }
+
+    try {
+      return await apiClient.get(`${this.baseUrl}/provider/profile`)
+    } catch (error) {
+      console.error('Get provider profile error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Update provider profile
+   * @param {Object} profileData - Profile data to update
+   * @returns {Promise<Object>} Updated provider profile
+   */
+  async updateProviderProfile(profileData) {
+    if (this.useMock) {
+      return this.mockUpdateProviderProfile(profileData)
+    }
+
+    try {
+      return await apiClient.put(`${this.baseUrl}/provider/profile`, profileData)
+    } catch (error) {
+      console.error('Update provider profile error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get provider availability
+   * @returns {Promise<Object>} Provider availability object
+   */
+  async getProviderAvailability() {
+    if (this.useMock) {
+      return this.mockGetProviderAvailability()
+    }
+
+    try {
+      return await apiClient.get(`${this.baseUrl}/provider/availability`)
+    } catch (error) {
+      console.error('Get provider availability error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Update provider availability
+   * @param {Object} availability - Availability data
+   * @returns {Promise<Object>} Updated provider with availability
+   */
+  async updateProviderAvailability(availability) {
+    if (this.useMock) {
+      return this.mockUpdateProviderAvailability(availability)
+    }
+
+    try {
+      return await apiClient.put(`${this.baseUrl}/provider/availability`, { availability })
+    } catch (error) {
+      console.error('Update provider availability error:', error)
+      throw error
+    }
+  }
+
   // ========== MOCK IMPLEMENTATIONS (Current localStorage-based) ==========
 
   async mockRegister(userData) {
@@ -273,6 +413,35 @@ class UserService {
       user,
       token: 'mock-token-' + Date.now(),
       message: 'Registration successful',
+    }
+  }
+
+  async mockRegisterProvider(providerData) {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    const provider = {
+      id: Date.now(),
+      email: providerData.email,
+      name: providerData.name || providerData.email.split('@')[0],
+      role: 'provider',
+      phone: providerData.phone || null,
+      specialty: providerData.specialty || null,
+      title: providerData.title || null,
+      bio: providerData.bio || null,
+      hourlyRate: providerData.hourlyRate || 0,
+      createdAt: new Date().toISOString(),
+    }
+
+    // Store in localStorage
+    localStorage.setItem('isLoggedIn', 'true')
+    localStorage.setItem('userRole', 'provider')
+    localStorage.setItem('currentUser', JSON.stringify(provider))
+
+    return {
+      user: provider,
+      token: 'mock-token-' + Date.now(),
+      message: 'Provider registration successful',
     }
   }
 
@@ -304,11 +473,8 @@ class UserService {
 
   async mockLogout() {
     await new Promise(resolve => setTimeout(resolve, 200))
-    localStorage.removeItem('isLoggedIn')
-    localStorage.removeItem('userRole')
-    localStorage.removeItem('loginMethod')
-    localStorage.removeItem('currentUser')
-    localStorage.removeItem('authToken')
+    // Clear auth data using centralized service
+    clearAuthData()
     return { message: 'Logout successful' }
   }
 
@@ -342,6 +508,14 @@ class UserService {
   async mockResetPassword(resetData) {
     await new Promise(resolve => setTimeout(resolve, 500))
     return { message: 'Password reset successful' }
+  }
+
+  async mockSubmitSupportTicket(supportData) {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    return { 
+      message: 'Support ticket submitted successfully',
+      ticketId: Date.now()
+    }
   }
 
   async mockGoogleLogin(googleData) {
@@ -382,6 +556,90 @@ class UserService {
     localStorage.setItem('currentUser', JSON.stringify(updated))
     localStorage.removeItem('profileIncomplete')
     return { user: updated, message: 'Profile completed successfully' }
+  }
+
+  async mockGetProviderProfile() {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const stored = localStorage.getItem('currentUser')
+    if (stored) {
+      const user = JSON.parse(stored)
+      return {
+        provider: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone || '',
+          specialty: user.specialty || '',
+          title: user.title || '',
+          bio: user.bio || '',
+          hourlyRate: user.hourlyRate || 0,
+          rating: user.rating || 0,
+          sessionsCompleted: user.sessionsCompleted || 0,
+          reviewsCount: user.reviewsCount || 0,
+          verified: user.verified || false,
+          status: user.status || 'pending',
+          availability: user.availability || {},
+        }
+      }
+    }
+    return {
+      provider: {
+        id: 1,
+        name: 'Provider',
+        email: 'provider@example.com',
+        phone: '',
+        specialty: '',
+        title: '',
+        bio: '',
+        hourlyRate: 0,
+        rating: 0,
+        sessionsCompleted: 0,
+        reviewsCount: 0,
+        verified: false,
+        status: 'pending',
+        availability: {},
+      }
+    }
+  }
+
+  async mockUpdateProviderProfile(profileData) {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    const current = await this.mockGetProviderProfile()
+    const updated = {
+      provider: {
+        ...current.provider,
+        ...profileData,
+        updatedAt: new Date().toISOString()
+      }
+    }
+    localStorage.setItem('currentUser', JSON.stringify(updated.provider))
+    return updated
+  }
+
+  async mockGetProviderAvailability() {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const stored = localStorage.getItem('providerAvailability')
+    if (stored) {
+      return { availability: JSON.parse(stored) }
+    }
+    return { availability: {} }
+  }
+
+  async mockUpdateProviderAvailability(availability) {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    localStorage.setItem('providerAvailability', JSON.stringify(availability))
+    const current = await this.mockGetProviderProfile()
+    const updated = {
+      provider: {
+        ...current.provider,
+        availability: availability,
+        status: 'ready',
+        verified: true
+      },
+      message: 'Availability updated successfully'
+    }
+    localStorage.setItem('currentUser', JSON.stringify(updated.provider))
+    return updated
   }
 
   async mockGetAllProviders(filters = {}) {

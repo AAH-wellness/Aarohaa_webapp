@@ -11,6 +11,11 @@
   z-index: 100;
 }
 
+/* Lower header z-index when modals are open */
+body.modal-open .provider-header {
+  z-index: 1 !important;
+}
+
 .provider-header-left {
   display: flex;
   align-items: center;

@@ -9,6 +9,7 @@ const express = require('express');
 const cors = require('cors');
 const routes = require('./routes/index');
 const { testConnection } = require('./config/database');
+const emailService = require('./services/emailService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -145,12 +146,26 @@ async function startServer() {
     
     console.log('✅ Database connection successful');
     
+    // Initialize email service
+    const emailTransporter = emailService.initializeTransporter();
+    if (emailTransporter) {
+      console.log('✅ Email service initialized successfully');
+    } else {
+      console.warn('⚠️  Email service not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env file to enable email notifications.');
+    }
+    
     // Initialize tables
     console.log('🔧 Initializing database tables...');
     const User = require('./models/User');
+    const Provider = require('./models/Provider');
+    const Booking = require('./models/Booking');
     const UserLoginEvent = require('./models/UserLoginEvent');
+    const Support = require('./models/Support');
     await User.createTable();
+    await Provider.createTable();
+    await Booking.createTable(); // user_bookings and provider_bookings already exist
     await UserLoginEvent.createTable();
+    await Support.createTable();
     console.log('✅ Database tables initialized');
     
     // Start listening

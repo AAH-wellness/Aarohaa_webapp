@@ -28,8 +28,10 @@ const FindProviders = ({ onBookSession }) => {
           setSearching(true)
         }
         setError(null)
-        // Fetch all providers (client-side filtering)
-        const providersList = await userService.getAllProviders({})
+        // Fetch providers from backend database
+        // Only show providers with status='ready' (have set their availability)
+        const filters = { status: 'ready' }
+        const providersList = await userService.getAllProviders(filters)
         setProviders(providersList)
         hasLoadedOnce.current = true
       } catch (err) {

@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { 
   register, 
+  registerProvider,
   login, 
+  loginProvider,
   loginWithGoogle,
   completeGoogleProfile,
   logout, 
@@ -14,20 +16,30 @@ const {
   getProviderAvailability,
   updateProviderAvailability,
   getAllProviders,
+  getProviderAvailabilityById,
   createBooking,
   getUserBookings,
   getUpcomingBookings,
   getProviderBookings,
-  cancelBooking
+  cancelBooking,
+  requestPasswordReset,
+  resetPassword,
+  submitSupportTicket
 } = require('../controllers/authController');
 const { validateRegister, validateLogin } = require('../validators/authValidator');
 const { authenticateToken } = require('../middleware/auth');
 
-// Register new user
+// Register new user (ALWAYS creates role='user', NO provider record)
 router.post('/register', validateRegister, register);
 
-// Login user
+// Register new provider (creates record ONLY in providers table, NOT in users table)
+router.post('/register/provider', validateRegister, registerProvider);
+
+// Login user (ONLY checks users table)
 router.post('/login', validateLogin, login);
+
+// Login provider (ONLY checks providers table)
+router.post('/login/provider', validateLogin, loginProvider);
 
 // Login with Google OAuth
 router.post('/login/google', loginWithGoogle);
@@ -49,6 +61,9 @@ router.patch('/profile', authenticateToken, updateProfile);
 // Provider routes
 // Get all providers (public endpoint for user dashboard)
 router.get('/providers', getAllProviders);
+
+// Get provider availability by ID (public endpoint for booking page)
+router.get('/providers/:providerId/availability', getProviderAvailabilityById);
 
 // Get provider profile (requires authentication)
 router.get('/provider/profile', authenticateToken, getProviderProfile);
@@ -80,6 +95,13 @@ router.get('/provider/bookings', authenticateToken, getProviderBookings);
 
 // Cancel booking (requires authentication)
 router.post('/bookings/cancel', authenticateToken, cancelBooking);
+
+// Password reset routes (public - no authentication required)
+router.post('/password/reset-request', requestPasswordReset);
+router.post('/password/reset', resetPassword);
+
+// Support ticket submission (public - authentication optional)
+router.post('/support/submit', submitSupportTicket);
 
 // Delete user permanently (WARNING: This permanently deletes the user)
 router.delete('/delete', deleteUser);

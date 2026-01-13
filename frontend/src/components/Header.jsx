@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { userService } from '../services'
 import './Header.css'
 
-const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, isSidebarOpen }) => {
+const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, isSidebarOpen, activeSession }) => {
   const [showDropdown, setShowDropdown] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
   const [userName, setUserName] = useState('User')
@@ -10,7 +10,27 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
   const dropdownRef = useRef(null)
   const profileRef = useRef(null)
 
+  // Determine if we should show provider name instead of user name
+  const shouldShowProviderName = activeView === 'Active Session' && activeSession && activeSession.providerName
+
   useEffect(() => {
+    // If we have an active session, use provider name instead
+    if (shouldShowProviderName) {
+      const providerName = activeSession.providerName
+      setUserName(providerName)
+      
+      // Generate initials from provider name
+      const nameParts = providerName.split(' ').filter(part => part.length > 0)
+      if (nameParts.length >= 2) {
+        setUserInitials((nameParts[0][0] + nameParts[1][0]).toUpperCase())
+      } else if (nameParts.length === 1 && nameParts[0].length >= 2) {
+        setUserInitials(nameParts[0].substring(0, 2).toUpperCase())
+      } else {
+        setUserInitials(providerName.substring(0, 2).toUpperCase())
+      }
+      return
+    }
+
     // Fetch user profile from backend
     const loadUserInfo = async () => {
       try {
@@ -66,7 +86,7 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
       const interval = setInterval(loadUserInfo, 2000) // Refresh every 2 seconds when on profile page
       return () => clearInterval(interval)
     }
-  }, [activeView])
+  }, [activeView, shouldShowProviderName, activeSession])
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -157,7 +177,7 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
           <span className="logo-text">Aarohaa Wellness</span>
         </div>
       </div>
-      {activeView !== 'Profile' && (
+      {activeView !== 'Profile' && activeView !== 'Active Session' && (
         <div className="header-center">
           <div className="coins-display">
             <span className="coins-icon">💰</span>
@@ -165,60 +185,77 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
           </div>
         </div>
       )}
-      <div className="header-right">
-        <div 
-          className="user-profile-container" 
-          ref={dropdownRef}
-          data-open={showDropdown}
-        >
-          <div 
-            ref={profileRef}
-            className="user-profile"
-            onClick={() => {
-              if (!showDropdown && profileRef.current) {
-                const rect = profileRef.current.getBoundingClientRect()
-                const dropdownHeight = 120
-                const spaceBelow = window.innerHeight - rect.bottom
-                const spaceAbove = rect.top
-                
-                let topPosition
-                if (spaceBelow < dropdownHeight + 12 && spaceAbove > dropdownHeight + 12) {
-                  topPosition = rect.top - dropdownHeight - 12
-                } else {
-                  topPosition = Math.min(rect.bottom + 12, window.innerHeight - dropdownHeight - 20)
-                }
-                
-                setDropdownPosition({
-                  top: topPosition,
-                  right: window.innerWidth - rect.right
-                })
-              }
-              setShowDropdown(!showDropdown)
-            }}
-          >
-            <div className="user-avatar">{userInitials}</div>
-            <span className="user-name">{userName}</span>
-            <span className="dropdown-arrow">▼</span>
+      {activeView === 'Active Session' && activeSession && (
+        <div className="header-center">
+          <div className="session-info-display">
+            <span className="session-icon">📹</span>
+            <span className="session-text">Active Session with {activeSession.providerName}</span>
           </div>
-          {showDropdown && (
+        </div>
+      )}
+      <div className="header-right">
+        {shouldShowProviderName ? (
+          // Show provider name only during active session (no dropdown)
+          <div className="provider-name-display">
+            <div className="provider-avatar">{userInitials}</div>
+            <span className="provider-name">{userName}</span>
+          </div>
+        ) : (
+          // Show user profile with dropdown when not in active session
+          <div 
+            className="user-profile-container" 
+            ref={dropdownRef}
+            data-open={showDropdown}
+          >
             <div 
-              className="profile-dropdown"
-              style={{
-                top: `${dropdownPosition.top}px`,
-                right: `${dropdownPosition.right}px`
+              ref={profileRef}
+              className="user-profile"
+              onClick={() => {
+                if (!showDropdown && profileRef.current) {
+                  const rect = profileRef.current.getBoundingClientRect()
+                  const dropdownHeight = 120
+                  const spaceBelow = window.innerHeight - rect.bottom
+                  const spaceAbove = rect.top
+                  
+                  let topPosition
+                  if (spaceBelow < dropdownHeight + 12 && spaceAbove > dropdownHeight + 12) {
+                    topPosition = rect.top - dropdownHeight - 12
+                  } else {
+                    topPosition = Math.min(rect.bottom + 12, window.innerHeight - dropdownHeight - 20)
+                  }
+                  
+                  setDropdownPosition({
+                    top: topPosition,
+                    right: window.innerWidth - rect.right
+                  })
+                }
+                setShowDropdown(!showDropdown)
               }}
             >
-              <div className="dropdown-item" onClick={handleProfileClick}>
-                <span className="dropdown-icon">👤</span>
-                <span>Profile</span>
-              </div>
-              <div className="dropdown-item" onClick={handleSignOut}>
-                <span className="dropdown-icon">🚪</span>
-                <span>Sign Out</span>
-              </div>
+              <div className="user-avatar">{userInitials}</div>
+              <span className="user-name">{userName}</span>
+              <span className="dropdown-arrow">▼</span>
             </div>
-          )}
-        </div>
+            {showDropdown && (
+              <div 
+                className="profile-dropdown"
+                style={{
+                  top: `${dropdownPosition.top}px`,
+                  right: `${dropdownPosition.right}px`
+                }}
+              >
+                <div className="dropdown-item" onClick={handleProfileClick}>
+                  <span className="dropdown-icon">👤</span>
+                  <span>Profile</span>
+                </div>
+                <div className="dropdown-item" onClick={handleSignOut}>
+                  <span className="dropdown-icon">🚪</span>
+                  <span>Sign Out</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </header>
   )

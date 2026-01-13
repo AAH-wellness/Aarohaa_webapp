@@ -14,6 +14,7 @@ export { default as notificationService } from './notificationService.js'
 export { default as analyticsService } from './analyticsService.js'
 export { default as apiClient } from './apiClient.js'
 export { default as API_CONFIG } from './config.js'
+export * as authService from './authService.js'
 
 
 

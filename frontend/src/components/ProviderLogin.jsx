@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import LoginSuccess from './LoginSuccess'
+import LoginErrorModal from './LoginErrorModal'
+import { userService } from '../services'
 import './ProviderLogin.css'
 
 const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
@@ -22,6 +24,9 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
     password: false,
   })
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const validateEmail = (email) => {
     if (!email) {
@@ -86,7 +91,7 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     
     setTouched({
@@ -106,18 +111,52 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
       return
     }
 
-    // Save remember password preference
-    if (formData.rememberPassword) {
-      localStorage.setItem('providerRememberEmail', formData.email)
-    } else {
-      localStorage.removeItem('providerRememberEmail')
-    }
+    setIsLoading(true)
 
-    // Save login status and role
-    localStorage.setItem('isLoggedIn', 'true')
-    localStorage.setItem('userRole', 'provider')
-    
-    setShowSuccessAnimation(true)
+    try {
+      // Call backend API to login as provider (ONLY checks providers table)
+      const response = await userService.loginProvider({
+        email: formData.email,
+        password: formData.password
+      })
+
+      // Save remember password preference
+      if (formData.rememberPassword) {
+        localStorage.setItem('providerRememberEmail', formData.email)
+      } else {
+        localStorage.removeItem('providerRememberEmail')
+      }
+
+      // Save user data from backend response
+      if (response.user) {
+        localStorage.setItem('currentUser', JSON.stringify(response.user))
+        localStorage.setItem('userRole', response.user.role || 'provider')
+        console.log('Provider login successful - Role saved:', response.user.role)
+      }
+
+      // Save last login time
+      localStorage.setItem('lastLoginTime', new Date().toLocaleString())
+      
+      // Show success animation
+      setShowSuccessAnimation(true)
+    } catch (error) {
+      console.error('Provider login error:', error)
+      
+      // Extract error message
+      let errorMsg = 'Invalid email or password. Please try again.'
+      
+      if (error.response?.data?.error?.message) {
+        errorMsg = error.response.data.error.message
+      } else if (error.message) {
+        errorMsg = error.message
+      }
+
+      // Show error modal
+      setErrorMessage(errorMsg)
+      setShowErrorModal(true)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Load remembered email on mount
@@ -236,8 +275,8 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
                 </div>
               </div>
 
-              <button type="submit" className="provider-login-button">
-                Sign In
+              <button type="submit" className="provider-login-button" disabled={isLoading}>
+                {isLoading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
 
@@ -270,6 +309,13 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
               onLogin()
             }
           }}
+        />
+      )}
+
+      {showErrorModal && (
+        <LoginErrorModal
+          message={errorMessage}
+          onClose={() => setShowErrorModal(false)}
         />
       )}
     </div>

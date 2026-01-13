@@ -7,6 +7,14 @@ const LoginErrorModal = ({ errorMessage, onClose }) => {
   useEffect(() => {
     // Trigger animation on mount
     setTimeout(() => setIsVisible(true), 10)
+    
+    // Add class to body when modal is visible to lower header z-index
+    document.body.classList.add('modal-open')
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('modal-open')
+    }
   }, [])
 
   const handleClose = () => {
