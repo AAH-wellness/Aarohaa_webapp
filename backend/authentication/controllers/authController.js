@@ -942,6 +942,268 @@ async function getProviderAvailabilityById(req, res, next) {
 }
 
 /**
+ * Helper function to generate available time slots
+ */
+function generateAvailableSlots({ availability, bookings, startDate, endDate, slotDuration = 30 }) {
+  const slots = [];
+  
+  // Validate inputs
+  if (!availability || typeof availability !== 'object') {
+    console.warn('Invalid availability object:', availability);
+    return [];
+  }
+  
+  if (!startDate || !endDate) {
+    console.warn('Missing date range:', { startDate, endDate });
+    return [];
+  }
+  
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Validate dates
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    console.warn('Invalid date range:', { startDate, endDate });
+    return [];
+  }
+  
+  // Group bookings by date for quick lookup
+  const bookingsByDate = {};
+  if (Array.isArray(bookings)) {
+    bookings.forEach(booking => {
+      if (!booking || !booking.appointment_date) return;
+      
+      try {
+        const bookingDate = new Date(booking.appointment_date);
+        if (isNaN(bookingDate.getTime())) return;
+        
+        const dateKey = bookingDate.toISOString().split('T')[0];
+        const timeKey = bookingDate.toTimeString().slice(0, 5); // HH:MM format
+        
+        if (!bookingsByDate[dateKey]) {
+          bookingsByDate[dateKey] = [];
+        }
+        bookingsByDate[dateKey].push(timeKey);
+      } catch (err) {
+        console.warn('Error processing booking:', err, booking);
+      }
+    });
+  }
+  
+  // Day name mapping
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  
+  // Iterate through each day in the range
+  for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+    const dayOfWeek = date.getDay();
+    const dayName = dayNames[dayOfWeek];
+    const dayAvailability = availability[dayName];
+    
+    // Skip if provider is not available on this day
+    if (!dayAvailability || typeof dayAvailability !== 'object' || !dayAvailability.enabled) {
+      continue;
+    }
+    
+    // Validate and parse start/end times
+    if (!dayAvailability.start || !dayAvailability.end) {
+      console.warn(`Missing start/end time for ${dayName}:`, dayAvailability);
+      continue;
+    }
+    
+    let startHour, startMin, endHour, endMin;
+    try {
+      const startParts = dayAvailability.start.split(':');
+      const endParts = dayAvailability.end.split(':');
+      
+      if (startParts.length < 2 || endParts.length < 2) {
+        console.warn(`Invalid time format for ${dayName}:`, dayAvailability);
+        continue;
+      }
+      
+      startHour = parseInt(startParts[0], 10);
+      startMin = parseInt(startParts[1], 10);
+      endHour = parseInt(endParts[0], 10);
+      endMin = parseInt(endParts[1], 10);
+      
+      if (isNaN(startHour) || isNaN(startMin) || isNaN(endHour) || isNaN(endMin)) {
+        console.warn(`Invalid time values for ${dayName}:`, dayAvailability);
+        continue;
+      }
+    } catch (err) {
+      console.warn(`Error parsing times for ${dayName}:`, err, dayAvailability);
+      continue;
+    }
+    
+    // Create date objects for start and end times
+    const dayStart = new Date(date);
+    dayStart.setHours(startHour, startMin, 0, 0);
+    
+    const dayEnd = new Date(date);
+    dayEnd.setHours(endHour, endMin, 0, 0);
+    
+    // Validate day times
+    if (dayStart >= dayEnd) {
+      console.warn(`Invalid time range for ${dayName}: start >= end`, dayAvailability);
+      continue;
+    }
+    
+    // Generate time slots for this day
+    let currentTime = new Date(dayStart);
+    const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour buffer
+    
+    while (currentTime < dayEnd) {
+      const dateKey = date.toISOString().split('T')[0];
+      const timeKey = currentTime.toTimeString().slice(0, 5);
+      
+      // Check if this slot is already booked
+      const isBooked = bookingsByDate[dateKey]?.some(bookedTime => bookedTime === timeKey);
+      
+      // Don't show past slots or slots less than 1 hour away
+      if (currentTime > oneHourFromNow && !isBooked) {
+        slots.push({
+          date: dateKey,
+          time: timeKey,
+          datetime: currentTime.toISOString(),
+          available: true
+        });
+      }
+      
+      // Move to next slot
+      currentTime.setMinutes(currentTime.getMinutes() + slotDuration);
+      
+      // Safety check to prevent infinite loop
+      if (slots.length > 10000) {
+        console.warn('Too many slots generated, stopping');
+        break;
+      }
+    }
+  }
+  
+  return slots;
+}
+
+/**
+ * Get available time slots for a provider
+ * GET /api/providers/:providerId/available-slots?startDate=2024-01-13&endDate=2024-01-24
+ */
+async function getProviderAvailableSlots(req, res, next) {
+  try {
+    const { providerId } = req.params;
+    const { startDate, endDate } = req.query;
+    
+    if (!providerId) {
+      return res.status(400).json({
+        error: {
+          message: 'Provider ID is required',
+          code: 'MISSING_PROVIDER_ID',
+          status: 400
+        }
+      });
+    }
+
+    const providerIdNum = parseInt(providerId);
+    if (isNaN(providerIdNum)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid provider ID',
+          code: 'INVALID_PROVIDER_ID',
+          status: 400
+        }
+      });
+    }
+
+    // Validate date range
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: {
+          message: 'startDate and endDate query parameters are required',
+          code: 'MISSING_DATE_RANGE',
+          status: 400
+        }
+      });
+    }
+
+    // Get provider
+    const provider = await Provider.findById(providerIdNum);
+    if (!provider) {
+      return res.status(404).json({
+        error: {
+          message: 'Provider not found',
+          code: 'PROVIDER_NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+
+    // Get provider's recurring availability
+    let availability = await Provider.getAvailability(providerIdNum);
+    
+    // Parse availability if it's a string (JSONB from database)
+    if (typeof availability === 'string') {
+      try {
+        availability = JSON.parse(availability);
+      } catch (parseError) {
+        console.error('Error parsing availability JSON:', parseError);
+        availability = {};
+      }
+    }
+    
+    if (!availability || Object.keys(availability).length === 0) {
+      return res.json({
+        providerId: providerIdNum,
+        slots: []
+      });
+    }
+
+    // Get existing bookings for the date range
+    let bookings = [];
+    try {
+      bookings = await Booking.getByProviderAndDateRange(
+        providerIdNum,
+        startDate,
+        endDate
+      );
+    } catch (bookingError) {
+      console.error('Error fetching bookings:', bookingError);
+      // Continue with empty bookings array if query fails
+      bookings = [];
+    }
+
+    // Generate available slots
+    let slots = [];
+    try {
+      slots = generateAvailableSlots({
+        availability,
+        bookings,
+        startDate,
+        endDate,
+        slotDuration: 30 // 30-minute slots
+      });
+    } catch (slotError) {
+      console.error('Error generating slots:', slotError);
+      // Return empty slots if generation fails
+      slots = [];
+    }
+
+    res.json({
+      providerId: providerIdNum,
+      slots: slots
+    });
+  } catch (error) {
+    console.error('Error getting provider available slots:', error);
+    console.error('Error stack:', error.stack);
+    return res.status(500).json({
+      error: {
+        message: 'Failed to load available slots',
+        code: 'SERVER_ERROR',
+        status: 500
+      }
+    });
+  }
+}
+
+/**
  * Get all providers (for user dashboard)
  * Only shows providers with status='ready' (have set availability)
  */
@@ -1199,6 +1461,40 @@ async function createBooking(req, res, next) {
       console.log(`createBooking: Appointment time validated - ${appointmentTimeStr} is within ${dayAvailability.start}-${dayAvailability.end} on ${dayName}`);
     } else {
       console.log('createBooking: No availability data found for provider, allowing booking');
+    }
+
+    // Check if slot is already booked (prevent double-booking)
+    const appointmentDateObj = new Date(formattedDate);
+    const dateKey = appointmentDateObj.toISOString().split('T')[0];
+    const timeKey = appointmentDateObj.toTimeString().slice(0, 5);
+    
+    // Get bookings for this provider on the same date
+    const existingBookings = await Booking.getByProviderAndDateRange(
+      providerIdNum,
+      dateKey,
+      dateKey
+    );
+    
+    // Check if there's a booking at the same time (within 30 minutes)
+    const slotConflict = existingBookings.find(booking => {
+      const bookingDate = new Date(booking.appointment_date);
+      const bookingTimeKey = bookingDate.toTimeString().slice(0, 5);
+      // Check if times match exactly or are within 30 minutes
+      return bookingTimeKey === timeKey;
+    });
+    
+    if (slotConflict) {
+      console.log('createBooking: Slot already booked:', {
+        requestedTime: timeKey,
+        conflictingBooking: slotConflict.id
+      });
+      return res.status(409).json({
+        error: {
+          message: 'This time slot is already booked. Please select another time.',
+          code: 'SLOT_ALREADY_BOOKED',
+          status: 409
+        }
+      });
     }
 
     // Get user name for the booking
@@ -2430,6 +2726,7 @@ module.exports = {
   updateProviderAvailability,
   getAllProviders,
   getProviderAvailabilityById,
+  getProviderAvailableSlots,
   createBooking,
   getUserBookings,
   getUpcomingBookings,

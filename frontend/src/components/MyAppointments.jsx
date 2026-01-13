@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import './MyAppointments.css'
 import AppointmentReminder from './AppointmentReminder'
 import CancelBookingModal from './CancelBookingModal'
@@ -10,119 +10,151 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [cancelSuccess, setCancelSuccess] = useState(false)
+  const cancelTimeoutRef = useRef(null)
+  const isMountedRef = useRef(true)
+  const intervalRef = useRef(null)
+  const modalManuallyClosedRef = useRef(false)
+  const isCancellingRef = useRef(false)
 
-  useEffect(() => {
-    // Load appointments using service layer
-    const loadAppointments = async () => {
-      try {
+  // Memoize loadAppointments to prevent infinite loops
+  const loadAppointments = useCallback(async () => {
+    // Check if component is still mounted before starting
+    if (!isMountedRef.current) {
+      return
+    }
+
+    try {
+      // Only set loading if component is still mounted
+      if (isMountedRef.current) {
         setLoading(true)
+      }
+      
+      // Get current user ID from backend profile
+      let userId = null
+      try {
+        const profile = await userService.getProfile()
+        if (!isMountedRef.current) return // Check after async call
         
-        // Get current user ID from backend profile
-        let userId = null
-        try {
-          const profile = await userService.getProfile()
-          if (profile.user && profile.user.id) {
-            userId = profile.user.id
-          }
-        } catch (error) {
-          console.error('Error fetching user profile:', error)
+        if (profile.user && profile.user.id) {
+          userId = profile.user.id
         }
-        
-        if (!userId) {
-          // If we can't get user ID, show empty appointments
+      } catch (error) {
+        console.error('Error fetching user profile:', error)
+      }
+      
+      if (!userId) {
+        // If we can't get user ID, show empty appointments
+        if (isMountedRef.current) {
           setAppointments([])
-          return
+          setLoading(false)
         }
-        
-        // Get user bookings from backend API
-        const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
-        const response = await apiClient.get(`${apiBaseUrl}/users/bookings`)
-        
-        // Transform backend booking format to appointment format
-        const userAppointments = (response.bookings || []).map(booking => ({
-          id: booking.id,
-          providerId: booking.providerId,
-          providerName: booking.providerName || 'Provider',
-          providerInitials: booking.providerName ? 
-            booking.providerName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'PR',
-          dateTime: booking.appointmentDate,
-          sessionType: booking.sessionType || 'Video Consultation',
-          notes: booking.notes,
-          status: booking.status || 'confirmed',
-          reason: booking.reason || null,
-          createdAt: booking.createdAt
-        }))
-        
-        // Filter to show appointments that are not cancelled or completed
-        // Show appointments until they are cancelled or the session has started (within 30 min window for active sessions)
-        const now = new Date()
-        const upcoming = userAppointments.filter(apt => {
-          // Parse date correctly - treat ISO strings without timezone as UTC
-          let aptDate
-          if (typeof apt.dateTime === 'string') {
-            const isISOFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(apt.dateTime)
-            // Check for timezone: 'Z' at end, or '+HH:MM' or '-HH:MM' pattern at end
-            const hasTimezone = /[Zz]$/.test(apt.dateTime) || /[+-]\d{2}:\d{2}$/.test(apt.dateTime)
-            
-            if (isISOFormat && !hasTimezone) {
-              // Treat as UTC
-              aptDate = new Date(apt.dateTime + 'Z')
-            } else {
-              aptDate = new Date(apt.dateTime)
-            }
+        return
+      }
+      
+      // Get user bookings from backend API
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      const response = await apiClient.get(`${apiBaseUrl}/users/bookings`)
+      
+      if (!isMountedRef.current) return // Check after async call
+      
+      // Transform backend booking format to appointment format
+      const userAppointments = (response.bookings || []).map(booking => ({
+        id: booking.id,
+        providerId: booking.providerId,
+        providerName: booking.providerName || 'Provider',
+        providerInitials: booking.providerName ? 
+          booking.providerName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'PR',
+        dateTime: booking.appointmentDate,
+        sessionType: booking.sessionType || 'Video Consultation',
+        notes: booking.notes,
+        status: booking.status || 'confirmed',
+        reason: booking.reason || null,
+        createdAt: booking.createdAt
+      }))
+      
+      // Filter to show appointments that are not cancelled or completed
+      // Show appointments until they are cancelled or the session has started (within 30 min window for active sessions)
+      const now = new Date()
+      const upcoming = userAppointments.filter(apt => {
+        // Parse date correctly - treat ISO strings without timezone as UTC
+        let aptDate
+        if (typeof apt.dateTime === 'string') {
+          const isISOFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(apt.dateTime)
+          // Check for timezone: 'Z' at end, or '+HH:MM' or '-HH:MM' pattern at end
+          const hasTimezone = /[Zz]$/.test(apt.dateTime) || /[+-]\d{2}:\d{2}$/.test(apt.dateTime)
+          
+          if (isISOFormat && !hasTimezone) {
+            // Treat as UTC
+            aptDate = new Date(apt.dateTime + 'Z')
           } else {
             aptDate = new Date(apt.dateTime)
           }
-          
-          const status = apt.status?.toLowerCase() || ''
-          const isCancelled = status === 'cancelled'
-          const isCompleted = status === 'completed'
-          
-          // Don't show cancelled or completed appointments
-          if (isCancelled || isCompleted) {
-            return false
-          }
-          
-          // Show appointments that haven't started yet, or are within 30 minutes of start time (active session window)
-          const diffInMinutes = (aptDate.getTime() - now.getTime()) / (1000 * 60)
-          
-          // Debug logging for recent appointments (within 6 hours)
-          if (Math.abs(diffInMinutes) < 360) {
-            console.log('MyAppointments - Appointment date debug:', {
-              bookingId: apt.id,
-              appointmentDateRaw: apt.dateTime,
-              parsedDateISO: aptDate.toISOString(),
-              parsedDateLocal: aptDate.toLocaleString(),
-              nowISO: now.toISOString(),
-              nowLocal: now.toLocaleString(),
-              diffMs: aptDate.getTime() - now.getTime(),
-              diffMinutes: diffInMinutes,
-              diffHours: diffInMinutes / 60
-            })
-          }
-          
-          // Show if appointment is in the future OR within 30 minutes after start (active session)
-          return diffInMinutes >= -30
-        })
+        } else {
+          aptDate = new Date(apt.dateTime)
+        }
         
-        // Sort by date
-        upcoming.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+        const status = apt.status?.toLowerCase() || ''
+        const isCancelled = status === 'cancelled'
+        const isCompleted = status === 'completed'
+        
+        // Don't show cancelled or completed appointments
+        if (isCancelled || isCompleted) {
+          return false
+        }
+        
+        // Show appointments that haven't started yet, or are within 30 minutes of start time (active session window)
+        const diffInMinutes = (aptDate.getTime() - now.getTime()) / (1000 * 60)
+        
+        // Show if appointment is in the future OR within 30 minutes after start (active session)
+        return diffInMinutes >= -30
+      })
+      
+      // Sort by date
+      upcoming.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
         setAppointments(upcoming)
-      } catch (error) {
-        console.error('Error loading appointments:', error)
-        // Fallback to empty array on error
+        setLoading(false)
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error)
+      // Fallback to empty array on error
+      if (isMountedRef.current) {
         setAppointments([])
-      } finally {
         setLoading(false)
       }
     }
-
-    loadAppointments()
-    // Refresh every minute
-    const interval = setInterval(loadAppointments, 60000)
-    
-    return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    // Set mounted flag
+    isMountedRef.current = true
+    
+    // Load appointments immediately
+    loadAppointments()
+    
+    // Refresh every minute
+    intervalRef.current = setInterval(() => {
+      if (isMountedRef.current) {
+        loadAppointments()
+      }
+    }, 60000)
+    
+    return () => {
+      // Clear interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      // Clear any pending cancel timeouts
+      if (cancelTimeoutRef.current) {
+        clearTimeout(cancelTimeoutRef.current)
+        cancelTimeoutRef.current = null
+      }
+      isMountedRef.current = false
+    }
+  }, [loadAppointments])
 
   const formatDateTime = (dateTimeString) => {
     // Parse the date string - handle both ISO strings and other formats
@@ -146,23 +178,9 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         // This is likely a PostgreSQL timestamp without timezone - treat as UTC
         // Add 'Z' to indicate UTC
         date = new Date(dateTimeString + 'Z')
-        console.log('🔧 Parsing date as UTC (added Z):', {
-          original: dateTimeString,
-          withZ: dateTimeString + 'Z',
-          parsedISO: date.toISOString(),
-          parsedLocal: date.toLocaleString(),
-          timezoneOffset: date.getTimezoneOffset()
-        })
       } else {
         // Has timezone info or is not ISO format - parse normally
         date = new Date(dateTimeString)
-        if (hasTimezone) {
-          console.log('✅ Date has timezone info, parsing normally:', {
-            original: dateTimeString,
-            parsedISO: date.toISOString(),
-            parsedLocal: date.toLocaleString()
-          })
-        }
       }
     } else {
       date = new Date(dateTimeString)
@@ -179,24 +197,6 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
     // Calculate difference in milliseconds using getTime() for accuracy
     // CRITICAL: Both dates must be in the same timezone reference (UTC milliseconds)
     const diff = date.getTime() - now.getTime()
-    
-    // Debug logging (can be removed later)
-    if (Math.abs(diff) < 1000 * 60 * 60 * 6) { // Log if within 6 hours
-      console.log('Time calculation:', {
-        dateTimeString,
-        parsedDateISO: date.toISOString(),
-        parsedDateUTC: date.getTime(),
-        parsedDateLocal: date.toLocaleString(),
-        nowISO: now.toISOString(),
-        nowUTC: now.getTime(),
-        nowLocal: now.toLocaleString(),
-        diffMs: diff,
-        diffMinutes: Math.floor(diff / (1000 * 60)),
-        diffHours: Math.floor(diff / (1000 * 60 * 60)),
-        timezoneOffset: date.getTimezoneOffset(),
-        nowTimezoneOffset: now.getTimezoneOffset()
-      })
-    }
     
     // If the date is in the past, show appropriate message
     if (diff < 0) {
@@ -287,19 +287,31 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
     // Find the appointment details
     const appointment = appointments.find(apt => apt.id === appointmentId)
     if (appointment) {
+      // Reset flags when opening modal
+      modalManuallyClosedRef.current = false
+      isCancellingRef.current = false
       setSelectedAppointment(appointment)
       setShowCancelModal(true)
       setCancelSuccess(false)
     }
   }
 
-  const handleConfirmCancel = async (cancelReason) => {
+  const handleConfirmCancel = useCallback(async (cancelReason) => {
     if (!selectedAppointment) return
+    
+    // Prevent multiple simultaneous cancellation requests
+    if (isCancellingRef.current) {
+      console.warn('Cancellation already in progress')
+      return
+    }
     
     if (!cancelReason || !cancelReason.trim()) {
       console.error('Cancel reason is required')
       return
     }
+
+    // Mark that cancellation is in progress
+    isCancellingRef.current = true
 
     const withinTwoHours = isWithinTwoHours(selectedAppointment.dateTime)
     
@@ -309,90 +321,67 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
       console.log('Cancelling within 2 hours - 10 AAH tokens will be charged')
     }
     
+    // Store the cancelled booking ID before any async operations
+    const cancelledBookingId = selectedAppointment.id
+    
     try {
       // Cancel booking via API with reason
       const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
-      console.log('Cancelling booking:', selectedAppointment.id, 'Reason:', cancelReason)
       
-      const response = await apiClient.post(`${apiBaseUrl}/users/bookings/cancel`, { 
-        bookingId: selectedAppointment.id,
+      await apiClient.post(`${apiBaseUrl}/users/bookings/cancel`, { 
+        bookingId: cancelledBookingId,
         reason: cancelReason.trim()
       })
-      console.log('Cancel booking response:', response)
-      
-      // Store the cancelled booking ID before clearing
-      const cancelledBookingId = selectedAppointment.id
       
       // Show success state in modal immediately (don't close and reopen)
-      setCancelSuccess(true)
+      if (isMountedRef.current) {
+        setCancelSuccess(true)
+      }
       
-      // After showing success for 2 seconds, reload appointments and close modal
-      setTimeout(async () => {
-        // Reload appointments using the same method as initial load
-        const profile = await userService.getProfile()
-        if (profile.user && profile.user.id) {
-          // Use the same API endpoint that was used to load appointments initially
-          const bookingsResponse = await apiClient.get(`${apiBaseUrl}/users/bookings`)
-          const bookings = bookingsResponse.bookings || []
-          
-          // Transform backend booking format to appointment format
-          const userAppointments = bookings.map(booking => ({
-            id: booking.id,
-            providerId: booking.providerId,
-            providerName: booking.providerName || 'Provider',
-            providerInitials: booking.providerName ? 
-              booking.providerName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'PR',
-            dateTime: booking.appointmentDate,
-            sessionType: booking.sessionType || 'Video Consultation',
-            notes: booking.notes,
-            status: booking.status || 'confirmed',
-            reason: booking.reason || null,
-            createdAt: booking.createdAt
-          }))
-          
-          // Filter to show appointments that are not cancelled or completed
-          // Show appointments until they are cancelled or the session has started (within 30 min window for active sessions)
-          const now = new Date()
-          const upcoming = userAppointments.filter(apt => {
-            const aptDate = new Date(apt.dateTime)
-            const status = apt.status?.toLowerCase() || ''
-            const isCancelled = status === 'cancelled'
-            const isCompleted = status === 'completed'
-            
-            // Don't show cancelled or completed appointments
-            if (isCancelled || isCompleted) {
-              return false
-            }
-            
-            // Show appointments that haven't started yet, or are within 30 minutes of start time (active session window)
-            const diffInMinutes = (aptDate - now) / (1000 * 60)
-            // Show if appointment is in the future OR within 30 minutes after start (active session)
-            return diffInMinutes >= -30
-          })
-          
-          // Sort by date
-          upcoming.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))
-          setAppointments(upcoming)
+      // Reload appointments immediately after successful cancellation
+      // This ensures the list updates even if user closes modal early
+      loadAppointments().catch((error) => {
+        console.error('Error reloading appointments after cancellation:', error)
+      })
+      
+      // Notify parent that session was cancelled (to clear active session if it was the active one)
+      if (onSessionCancelled) {
+        onSessionCancelled(cancelledBookingId)
+      }
+      
+      // Clear any existing timeout
+      if (cancelTimeoutRef.current) {
+        clearTimeout(cancelTimeoutRef.current)
+        cancelTimeoutRef.current = null
+      }
+      
+      // Reset manual close flag when starting cancellation
+      modalManuallyClosedRef.current = false
+      
+      // After showing success for 2 seconds, auto-close modal (if not manually closed)
+      cancelTimeoutRef.current = setTimeout(() => {
+        // Check if component is still mounted and modal wasn't manually closed
+        if (!isMountedRef.current || modalManuallyClosedRef.current) {
+          cancelTimeoutRef.current = null
+          isCancellingRef.current = false
+          return
         }
         
-        // Notify parent that session was cancelled (to clear active session if it was the active one)
-        if (onSessionCancelled) {
-          onSessionCancelled(cancelledBookingId)
+        // Close modal after timeout (appointments already reloaded above)
+        if (isMountedRef.current && !modalManuallyClosedRef.current) {
+          setShowCancelModal(false)
+          setSelectedAppointment(null)
+          setCancelSuccess(false)
         }
         
-        // Close modal after reload
-        setShowCancelModal(false)
-        setSelectedAppointment(null)
-        setCancelSuccess(false)
+        cancelTimeoutRef.current = null
+        isCancellingRef.current = false
       }, 2000) // Show success message for 2 seconds
       
     } catch (error) {
+      // Reset cancellation flag on error
+      isCancellingRef.current = false
       console.error('Error cancelling appointment:', error)
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data
-      })
       
       // Show detailed error message
       let errorMessage = 'Failed to cancel appointment. Please try again.'
@@ -406,16 +395,41 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         errorMessage = error.message
       }
       
-      alert(`Cancel Error: ${errorMessage}`)
-      setShowCancelModal(false)
-      setSelectedAppointment(null)
+      if (isMountedRef.current) {
+        alert(`Cancel Error: ${errorMessage}`)
+        setShowCancelModal(false)
+        setSelectedAppointment(null)
+      }
     }
-  }
+  }, [selectedAppointment, loadAppointments, onSessionCancelled])
 
   const handleCancelModalClose = () => {
-    setShowCancelModal(false)
-    setSelectedAppointment(null)
-    setCancelSuccess(false)
+    // Mark that modal was manually closed
+    modalManuallyClosedRef.current = true
+    
+    // Clear any pending cancel timeout FIRST
+    if (cancelTimeoutRef.current) {
+      clearTimeout(cancelTimeoutRef.current)
+      cancelTimeoutRef.current = null
+    }
+    
+    // If cancellation was successful, ensure appointments are reloaded
+    // (They should already be reloaded, but reload again to be safe)
+    if (cancelSuccess && isMountedRef.current) {
+      loadAppointments().catch((error) => {
+        console.error('Error reloading appointments on modal close:', error)
+      })
+    }
+    
+    // Reset cancellation flag
+    isCancellingRef.current = false
+    
+    // Only update state if component is still mounted
+    if (isMountedRef.current) {
+      setShowCancelModal(false)
+      setSelectedAppointment(null)
+      setCancelSuccess(false)
+    }
   }
 
   const handleJoinSession = (appointment) => {

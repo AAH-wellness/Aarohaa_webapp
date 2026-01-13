@@ -171,7 +171,7 @@ function App() {
   const renderContent = () => {
     switch (activeView) {
       case 'Find Providers':
-        return <FindProviders onBookSession={handleBookSession} />
+        return <FindProviders onBookSession={handleBookSession} onNavigateToAppointments={handleNavigateToAppointments} />
       case 'Book Appointment':
         return (
           <BookAppointment

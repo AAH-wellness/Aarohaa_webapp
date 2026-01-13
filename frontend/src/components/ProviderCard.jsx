@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Star, CheckCircle2 } from 'lucide-react'
+import ProviderAvailabilityModal from './ProviderAvailabilityModal'
 
-const ProviderCard = ({ provider, onBookSession, getInitials }) => {
+const ProviderCard = ({ provider, onBookSession, onNavigateToAppointments, getInitials }) => {
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false)
   // Split specialty by comma or semicolon
   const specialties = provider.specialty
     ? provider.specialty.split(/[,;]/).map(s => s.trim()).filter(s => s)
@@ -103,13 +105,26 @@ const ProviderCard = ({ provider, onBookSession, getInitials }) => {
         {/* Right: CTA Button */}
         <div className="flex-shrink-0 flex items-start sm:items-center">
           <button
-            onClick={() => onBookSession(provider.id)}
+            onClick={() => setShowAvailabilityModal(true)}
             className="bg-green-800 hover:bg-green-900 text-white rounded-xl px-6 py-3 shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98] font-medium text-sm whitespace-nowrap w-full sm:w-auto"
           >
             Book Session
           </button>
         </div>
       </div>
+
+      {/* Availability Modal */}
+      {showAvailabilityModal && (
+        <ProviderAvailabilityModal
+          provider={provider}
+          onClose={() => setShowAvailabilityModal(false)}
+          onBook={(booking) => {
+            // Booking is handled in the modal, just close it
+            setShowAvailabilityModal(false)
+          }}
+          onNavigateToAppointments={onNavigateToAppointments}
+        />
+      )}
     </div>
   )
 }

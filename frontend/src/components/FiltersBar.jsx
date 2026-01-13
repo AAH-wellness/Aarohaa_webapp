@@ -14,7 +14,7 @@ const FiltersBar = ({
   const hasActiveFilters = selectedSpecialty || minRating || availableToday
 
   return (
-    <div className="sticky top-0 z-20 bg-white/70 backdrop-blur-sm border-b border-gray-100 py-4">
+    <div className="sticky top-0 z-10 bg-white/70 backdrop-blur-sm border-b border-gray-100 py-4">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
