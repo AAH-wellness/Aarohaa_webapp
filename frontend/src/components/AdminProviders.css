@@ -326,12 +326,4 @@
     font-size: 13px;
   }
 }
-  .admin-providers {
-    padding: 20px;
-  }
-
-  .providers-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
