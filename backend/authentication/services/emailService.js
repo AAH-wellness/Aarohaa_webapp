@@ -157,6 +157,7 @@ async function sendEmail(to, subject, html, text = null) {
 // Premium email signature with logo (reusable component)
 function getEmailSignature() {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  // Use the new circular gradient logo from public folder
   const logoUrl = process.env.EMAIL_LOGO_URL || `${frontendUrl}/logo.png`;
   const websiteUrl = process.env.COMPANY_WEBSITE || frontendUrl;
   const supportEmail = process.env.EMAIL_FROM || 'support1@aarohaa.io';
@@ -168,7 +169,7 @@ function getEmailSignature() {
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 60px; padding-top: 40px; border-top: 1px solid rgba(14, 72, 38, 0.1);">
       <tr>
         <td style="text-align: center; padding-bottom: 30px;">
-          <img src="${logoUrl}" alt="${companyName} Logo" style="max-width: 120px; height: auto; display: block; margin: 0 auto; border-radius: 50%; box-shadow: 0 4px 20px rgba(14, 72, 38, 0.15);" />
+          <img src="${logoUrl}" alt="${companyName} Logo" style="max-width: 140px; width: 140px; height: 140px; display: block; margin: 0 auto; border-radius: 50%; box-shadow: 0 6px 25px rgba(14, 72, 38, 0.2); object-fit: contain; background: transparent;" />
         </td>
       </tr>
       <tr>

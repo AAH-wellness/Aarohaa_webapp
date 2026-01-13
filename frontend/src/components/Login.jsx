@@ -346,11 +346,19 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         const userRole = result.user.role || loginMode || 'user'
         localStorage.setItem('userRole', userRole)
         localStorage.setItem('lastLoginTime', new Date().toLocaleString())
+        
+        // Log whether this is a new user sign-up or existing user login
+        if (result.isNewUser) {
+          console.log('✅ New user account created via Google OAuth:', result.user.email)
+        } else {
+          console.log('✅ Existing user logged in via Google OAuth:', result.user.email)
+        }
       }
 
       setIsGoogleLoading(false)
 
-      // Show success animation for all modes
+      // Show Lottie success animation - this will display the same animation
+      // used in regular login, then navigate to dashboard after animation completes
       setShowSuccessAnimation(true)
     } catch (error) {
       console.error('Google login callback error:', error)
@@ -1023,7 +1031,12 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         </div>
       )}
 
-      {/* Success Animation - Shows for all login modes (user, provider, admin) */}
+      {/* Success Animation with Lottie - Shows for all login methods:
+          - Regular email/password login
+          - Google OAuth login (both new sign-ups and existing users)
+          - Wallet login
+          - Provider login
+          After animation completes (2.5s), navigates to user dashboard */}
       {showSuccessAnimation && (
         <LoginSuccess 
           onAnimationComplete={() => {

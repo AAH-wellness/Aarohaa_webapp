@@ -1691,12 +1691,26 @@ async function loginWithGoogle(req, res, next) {
     // Parse user agent (simple parsing)
     const deviceInfo = parseUserAgent(userAgent);
 
-    // Check if user already exists
+    // STEP 1: Check if user already exists in users table
     let user = await User.findByEmail(email);
     let isNewUser = false;
 
+    // SECURITY: Check if provider with same email exists (prevent duplicate emails across tables)
+    if (!user) {
+      const existingProvider = await Provider.findByEmail(email);
+      if (existingProvider) {
+        return res.status(409).json({
+          error: {
+            message: 'Email already registered as provider. Please use email/password login.',
+            code: 'EMAIL_EXISTS',
+            status: 409
+          }
+        });
+      }
+    }
+
     if (user) {
-      // User exists, update last login and Google info
+      // User exists - update last login and Google info
       await pool.query(
         `UPDATE users 
          SET last_login = CURRENT_TIMESTAMP, 
@@ -1711,13 +1725,15 @@ async function loginWithGoogle(req, res, next) {
       // Refresh user data
       user = await User.findById(user.id);
     } else {
-      // Create new user from Google account
+      // STEP 2: User doesn't exist - auto-create account in users table with Google details
       isNewUser = true;
-      // Generate a random password (won't be used for OAuth users)
+      console.log(`🆕 Creating new user account for Google OAuth: ${email}`);
+      
+      // Generate a random password (won't be used for OAuth users, but required by schema)
       const randomPassword = Math.random().toString(36).slice(-12);
       const passwordHash = await bcrypt.hash(randomPassword, 10);
 
-      // Create user with Google info
+      // Create user with Google info (email, name, picture, google_id, etc.)
       const insertQuery = `
         INSERT INTO users (email, password, name, role, phone, google_id, google_picture, auth_method, created_at, updated_at, last_login)
         VALUES ($1, $2, $3, $4, $5, $6, $7, 'google', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -1735,6 +1751,7 @@ async function loginWithGoogle(req, res, next) {
       ]);
       
       user = result.rows[0];
+      console.log(`✅ User account created successfully: ${user.email} (ID: ${user.id})`);
 
       // If role is provider, create provider record
       if (user.role === 'provider') {
@@ -1754,6 +1771,21 @@ async function loginWithGoogle(req, res, next) {
           console.error('Error creating provider record:', error);
         }
       }
+
+      // STEP 3: Send welcome email in parallel (non-blocking) - don't wait for it
+      // This runs asynchronously and won't block the login response
+      emailService.sendWelcomeEmail(user.name || 'User', user.email, user.role || 'user')
+        .then(result => {
+          if (result.success) {
+            console.log('✅ Welcome email sent to new Google OAuth user:', user.email);
+          } else {
+            console.warn('⚠️  Failed to send welcome email to Google OAuth user:', result.error);
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error sending welcome email to Google OAuth user:', err);
+          // Don't fail login if email fails - email is sent in parallel
+        });
     }
 
     // Log login event
@@ -1773,7 +1805,7 @@ async function loginWithGoogle(req, res, next) {
       // Don't fail the login if logging fails
     }
 
-    // Generate JWT token
+    // STEP 4: Auto-login - Generate JWT token and automatically log user into dashboard
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       JWT_CONFIG.SECRET,
@@ -1783,7 +1815,8 @@ async function loginWithGoogle(req, res, next) {
     // Check if profile is incomplete (for Google users)
     const profileIncomplete = user.auth_method === 'google' && (!user.name || !user.phone || !user.date_of_birth);
 
-    // Return user and token
+    // Return user data and token - user is now automatically logged in
+    // The welcome email is being sent in parallel (non-blocking) and won't delay this response
     res.json({
       user: {
         id: user.id,
@@ -1798,7 +1831,7 @@ async function loginWithGoogle(req, res, next) {
         createdAt: user.created_at
       },
       token,
-      message: 'Google login successful',
+      message: isNewUser ? 'Account created and logged in successfully' : 'Google login successful',
       isNewUser: isNewUser
     });
   } catch (error) {

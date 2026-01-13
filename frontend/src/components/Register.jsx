@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { userService } from '../services'
+import LoginSuccess from './LoginSuccess'
 import './Register.css'
 
 const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) => {
@@ -47,6 +48,7 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
     hourlyRate: false,
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
   const [focused, setFocused] = useState({
     fullName: false,
     email: false,
@@ -387,10 +389,8 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
           localStorage.setItem('rememberEmail', formData.email)
         }
 
-        // Call onRegister callback
-        if (onRegister) {
-          onRegister()
-        }
+        // Show success animation before navigating
+        setShowSuccessAnimation(true)
       } else {
         // Register as user - stores in users table only
         const response = await userService.register({
@@ -406,10 +406,8 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
           localStorage.setItem('rememberEmail', formData.email)
         }
 
-        // Call onRegister callback
-        if (onRegister) {
-          onRegister()
-        }
+        // Show success animation before navigating
+        setShowSuccessAnimation(true)
       }
     } catch (error) {
       console.error('Registration error:', error)
@@ -832,6 +830,18 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
           Login
         </button>
       </p>
+
+      {/* Success Animation - Shows after successful registration */}
+      {showSuccessAnimation && (
+        <LoginSuccess 
+          onAnimationComplete={() => {
+            setShowSuccessAnimation(false)
+            if (onRegister) {
+              onRegister()
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
