@@ -3,12 +3,10 @@
   background: linear-gradient(180deg, #0e4826 0%, #0a3620 100%);
   padding: 32px 20px;
   box-shadow: 4px 0 20px rgba(14, 72, 38, 0.3);
-  min-height: calc(100vh - 84px);
-  height: 100%;
+  height: calc(100vh - 84px);
   overflow-y: auto;
   border-right: 2px solid #FFD700;
   box-shadow: 4px 0 20px rgba(14, 72, 38, 0.3), 0 0 0 1px rgba(255, 215, 0, 0.3), 0 0 15px rgba(255, 215, 0, 0.1);
-  align-self: stretch;
 }
 
 .sidebar-title {
