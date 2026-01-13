@@ -373,6 +373,33 @@ class UserService {
   }
 
   /**
+   * Get available time slots for a provider
+   * @param {number} providerId - Provider ID
+   * @param {string} startDate - Start date (YYYY-MM-DD)
+   * @param {string} endDate - End date (YYYY-MM-DD)
+   * @returns {Promise<Object>} Object with slots array
+   */
+  async getProviderAvailableSlots(providerId, startDate, endDate) {
+    if (this.useMock) {
+      return this.mockGetProviderAvailableSlots(providerId, startDate, endDate)
+    }
+
+    try {
+      // Use /api/providers/:providerId/available-slots endpoint
+      // (direct route mounted in routes/index.js)
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      const queryParams = new URLSearchParams({ startDate, endDate }).toString()
+      const url = `${apiBaseUrl}/providers/${providerId}/available-slots?${queryParams}`
+      
+      const response = await apiClient.get(url)
+      return response
+    } catch (error) {
+      console.error('Get provider available slots error:', error)
+      throw error
+    }
+  }
+
+  /**
    * Update provider availability
    * @param {Object} availability - Availability data
    * @returns {Promise<Object>} Updated provider with availability
@@ -640,6 +667,41 @@ class UserService {
     }
     localStorage.setItem('currentUser', JSON.stringify(updated.provider))
     return updated
+  }
+
+  async mockGetProviderAvailableSlots(providerId, startDate, endDate) {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    // Generate mock slots for demonstration
+    const slots = []
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    
+    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+      const dayOfWeek = date.getDay()
+      // Only generate slots for weekdays (Mon-Fri)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        // Generate slots from 9 AM to 5 PM, every 30 minutes
+        for (let hour = 9; hour < 17; hour++) {
+          for (let minute = 0; minute < 60; minute += 30) {
+            const slotDate = new Date(date)
+            slotDate.setHours(hour, minute, 0, 0)
+            if (slotDate > new Date()) {
+              slots.push({
+                date: date.toISOString().split('T')[0],
+                time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+                datetime: slotDate.toISOString(),
+                available: true
+              })
+            }
+          }
+        }
+      }
+    }
+    
+    return {
+      providerId: parseInt(providerId),
+      slots: slots
+    }
   }
 
   async mockGetAllProviders(filters = {}) {

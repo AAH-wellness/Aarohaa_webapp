@@ -7,7 +7,7 @@ import ProviderCardSkeletonList from './ProviderCardSkeleton'
 import EmptyState from './EmptyState'
 // CSS file no longer needed - using Tailwind
 
-const FindProviders = ({ onBookSession }) => {
+const FindProviders = ({ onBookSession, onNavigateToAppointments }) => {
   const [providers, setProviders] = useState([])
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
@@ -226,6 +226,7 @@ const FindProviders = ({ onBookSession }) => {
                   key={provider.id}
                   provider={provider}
                   onBookSession={handleBookSession}
+                  onNavigateToAppointments={onNavigateToAppointments}
                   getInitials={getInitials}
                 />
               ))}

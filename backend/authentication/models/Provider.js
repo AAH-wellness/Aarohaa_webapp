@@ -389,10 +389,20 @@ class Provider {
     const query = 'SELECT availability FROM providers WHERE id = $1';
     try {
       const result = await pool.query(query, [id]);
-      if (result.rows[0]) {
-        return result.rows[0].availability || {};
+      if (result.rows[0] && result.rows[0].availability) {
+        const availability = result.rows[0].availability;
+        // PostgreSQL JSONB returns as object, but handle string case too
+        if (typeof availability === 'string') {
+          try {
+            return JSON.parse(availability);
+          } catch (parseError) {
+            console.error('Error parsing availability JSON string:', parseError);
+            return {};
+          }
+        }
+        return availability;
       }
-      return null;
+      return {};
     } catch (error) {
       console.error('Error getting provider availability:', error);
       throw error;

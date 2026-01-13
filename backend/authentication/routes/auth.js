@@ -17,6 +17,7 @@ const {
   updateProviderAvailability,
   getAllProviders,
   getProviderAvailabilityById,
+  getProviderAvailableSlots,
   createBooking,
   getUserBookings,
   getUpcomingBookings,
@@ -64,6 +65,9 @@ router.get('/providers', getAllProviders);
 
 // Get provider availability by ID (public endpoint for booking page)
 router.get('/providers/:providerId/availability', getProviderAvailabilityById);
+
+// Get available time slots for a provider (public endpoint)
+router.get('/providers/:providerId/available-slots', getProviderAvailableSlots);
 
 // Get provider profile (requires authentication)
 router.get('/provider/profile', authenticateToken, getProviderProfile);

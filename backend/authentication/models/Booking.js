@@ -356,6 +356,49 @@ class Booking {
     }
     return await this.updateStatus(id, 'cancelled', reason.trim());
   }
+
+  /**
+   * Get bookings by provider ID and date range
+   * Returns bookings that are scheduled or confirmed (not cancelled/completed)
+   */
+  static async getByProviderAndDateRange(providerId, startDate, endDate) {
+    const query = `
+      SELECT 
+        id,
+        provider_id,
+        appointment_date,
+        status,
+        session_type
+      FROM user_bookings
+      WHERE provider_id = $1
+        AND appointment_date >= $2::timestamp
+        AND appointment_date <= $3::timestamp
+        AND status IN ('scheduled', 'confirmed')
+      ORDER BY appointment_date ASC
+    `;
+    
+    try {
+      const result = await pool.query(query, [
+        parseInt(providerId),
+        startDate,
+        endDate
+      ]);
+      
+      // Normalize appointment_date to ISO string
+      return result.rows.map(booking => {
+        if (booking.appointment_date) {
+          const date = booking.appointment_date instanceof Date 
+            ? booking.appointment_date 
+            : new Date(booking.appointment_date);
+          booking.appointment_date = date.toISOString();
+        }
+        return booking;
+      });
+    } catch (error) {
+      console.error('Error getting bookings by provider and date range:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = Booking;

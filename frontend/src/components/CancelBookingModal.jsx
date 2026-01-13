@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import './CancelBookingModal.css'
 
 const CancelBookingModal = ({ 
@@ -11,8 +11,14 @@ const CancelBookingModal = ({
   const [showSadAnimation, setShowSadAnimation] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [reasonError, setReasonError] = useState('')
+  const timeoutRef = useRef(null)
+  const animationTimeoutRef = useRef(null)
+  const isMountedRef = useRef(true)
 
   useEffect(() => {
+    // Set mounted flag
+    isMountedRef.current = true
+    
     // Always show modal when it's mounted (parent controls visibility via showCancelModal)
     setIsVisible(true)
     
@@ -21,6 +27,16 @@ const CancelBookingModal = ({
     
     // Cleanup on unmount
     return () => {
+      isMountedRef.current = false
+      // Clear any pending timeouts
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current)
+        animationTimeoutRef.current = null
+      }
       document.body.classList.remove('modal-open')
     }
   }, [])
@@ -28,10 +44,32 @@ const CancelBookingModal = ({
   useEffect(() => {
     // When showSuccess changes to true, trigger the sad animation
     if (showSuccess) {
-      setTimeout(() => setShowSadAnimation(true), 300)
+      // Clear any existing animation timeout
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current)
+      }
+      animationTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          setShowSadAnimation(true)
+        }
+      }, 300)
     } else {
       // Reset animation when going back to confirmation state
-      setShowSadAnimation(false)
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current)
+        animationTimeoutRef.current = null
+      }
+      if (isMountedRef.current) {
+        setShowSadAnimation(false)
+      }
+    }
+    
+    // Cleanup
+    return () => {
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current)
+        animationTimeoutRef.current = null
+      }
     }
   }, [showSuccess])
 
@@ -63,12 +101,26 @@ const CancelBookingModal = ({
   }
 
   const handleCancel = () => {
-    setIsVisible(false)
-    setTimeout(() => {
-      if (onCancel) {
-        onCancel()
-      }
-    }, 300)
+    // Clear any pending timeouts immediately
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current)
+      animationTimeoutRef.current = null
+    }
+    
+    // Hide modal immediately
+    if (isMountedRef.current) {
+      setIsVisible(false)
+    }
+    
+    // Call parent's onCancel immediately (no delay needed)
+    // The parent will handle cleanup
+    if (onCancel && isMountedRef.current) {
+      onCancel()
+    }
   }
 
   const formatDateTime = (dateTimeString) => {
