@@ -36,10 +36,12 @@ app.use((req, res, next) => {
 app.get('/health', async (req, res) => {
   try {
     const dbStatus = await testConnection();
+    const emailTransporter = emailService.initializeTransporter();
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
       database: dbStatus.connected ? 'connected' : 'disconnected',
+      email: emailTransporter ? 'configured' : 'not configured',
       service: 'authentication-service',
       version: '1.0.0'
     });
@@ -148,9 +150,7 @@ async function startServer() {
     
     // Initialize email service
     const emailTransporter = emailService.initializeTransporter();
-    if (emailTransporter) {
-      console.log('✅ Email service initialized successfully');
-    } else {
+    if (!emailTransporter) {
       console.warn('⚠️  Email service not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env file to enable email notifications.');
     }
     

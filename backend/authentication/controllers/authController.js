@@ -1927,9 +1927,11 @@ async function getProviderBookings(req, res, next) {
  */
 async function loginWithGoogle(req, res, next) {
   try {
+    console.log('🔐 Google OAuth login attempt started');
     const { idToken, role } = req.body;
 
     if (!idToken) {
+      console.error('❌ No Google ID token provided');
       return res.status(400).json({
         error: {
           message: 'Google ID token is required',
@@ -1940,6 +1942,8 @@ async function loginWithGoogle(req, res, next) {
     }
 
     if (!googleClient) {
+      console.error('❌ Google OAuth client not initialized');
+      console.error('   GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
       return res.status(500).json({
         error: {
           message: 'Google OAuth is not configured',
@@ -1948,21 +1952,42 @@ async function loginWithGoogle(req, res, next) {
         }
       });
     }
+    
+    console.log('✅ Google OAuth client initialized');
 
     // Verify the Google ID token
     let ticket;
     try {
+      console.log('🔐 Verifying Google token...');
+      console.log('   Client ID:', GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'NOT SET');
+      console.log('   Token length:', idToken ? idToken.length : 0);
+      
       ticket = await googleClient.verifyIdToken({
         idToken: idToken,
         audience: GOOGLE_CLIENT_ID
       });
+      console.log('✅ Google token verified successfully');
     } catch (error) {
-      console.error('Google token verification error:', error);
+      console.error('❌ Google token verification error:', error.message);
+      console.error('   Error code:', error.code);
+      console.error('   Error details:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Invalid Google token';
+      if (error.message?.includes('audience')) {
+        errorMessage = 'Google Client ID mismatch. Please check GOOGLE_CLIENT_ID in backend .env matches your Google OAuth app.';
+      } else if (error.message?.includes('expired')) {
+        errorMessage = 'Google token has expired. Please try again.';
+      } else if (error.message?.includes('signature')) {
+        errorMessage = 'Google token signature is invalid. Please try again.';
+      }
+      
       return res.status(401).json({
         error: {
-          message: 'Invalid Google token',
+          message: errorMessage,
           code: 'INVALID_TOKEN',
-          status: 401
+          status: 401,
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
         }
       });
     }

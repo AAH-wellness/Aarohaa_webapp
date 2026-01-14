@@ -2,29 +2,24 @@ const nodemailer = require('nodemailer');
 
 /**
  * Email Service for Aarohaa Wellness
- * Handles all automated email notifications
+ * Uses nodemailer with SMTP for email delivery
  */
 
 // Email configuration from environment variables
-// Default to Microsoft/Outlook settings (common for GoDaddy-hosted emails)
 const EMAIL_CONFIG = {
-  host: process.env.EMAIL_HOST || 'smtp.office365.com', // Microsoft 365 SMTP
+  host: process.env.EMAIL_HOST || 'smtp.office365.com',
   port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: process.env.EMAIL_SECURE === 'true', // false for 587 (STARTTLS), true for 465
+  secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL_USER, // Your Microsoft email (e.g., support@yourdomain.com)
-    pass: process.env.EMAIL_PASSWORD // Your Microsoft email password
-  },
-  from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'support@aarohaa.com',
-  fromName: process.env.EMAIL_FROM_NAME || 'Aarohaa Wellness Support',
-  // Microsoft/Outlook specific settings
-  tls: {
-    ciphers: 'SSLv3',
-    rejectUnauthorized: false // Set to true in production with proper SSL certificates
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
   }
 };
 
-// Create reusable transporter
+const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_CONFIG.auth.user || 'support@aarohaa.com';
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || 'Aarohaa Wellness Support';
+
+// Initialize transporter
 let transporter = null;
 
 /**
@@ -37,71 +32,26 @@ function initializeTransporter() {
   }
 
   if (!transporter) {
-    // Detect GoDaddy SMTP server
-    const isGoDaddy = EMAIL_CONFIG.host.includes('secureserver.net');
-    
-    const transporterConfig = {
+    transporter = nodemailer.createTransport({
       host: EMAIL_CONFIG.host,
       port: EMAIL_CONFIG.port,
       secure: EMAIL_CONFIG.secure,
       auth: EMAIL_CONFIG.auth,
-      connectionTimeout: 20000, // Increased timeout
-      greetingTimeout: 20000,   // Increased timeout
-      socketTimeout: 20000,     // Added socket timeout
-      debug: false,              // Set to true for detailed logs
-      logger: false
-    };
-
-    // Configure TLS based on server type
-    if (isGoDaddy) {
-      // GoDaddy SMTP configuration - try simpler approach
-      transporterConfig.tls = {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1'
-      };
-      // Don't force requireTLS - let nodemailer decide
-      if (EMAIL_CONFIG.port === 587) {
-        transporterConfig.requireTLS = true;
-      } else if (EMAIL_CONFIG.port === 465) {
-        transporterConfig.requireTLS = false;
-      }
-    } else {
-      // Microsoft/Outlook configuration
-      transporterConfig.tls = EMAIL_CONFIG.tls || {
-        ciphers: 'SSLv3',
+      tls: {
         rejectUnauthorized: false
-      };
-      transporterConfig.requireTLS = true;
-    }
-
-    transporter = nodemailer.createTransport(transporterConfig);
-    
-    // Verify connection on initialization (async, don't block server startup)
-    transporter.verify((error, success) => {
-      if (error) {
-        console.error('❌ Email service connection failed:', error.message);
-        console.error('');
-        console.error('📧 Email Configuration Help:');
-        console.error('   1. Check your .env file in backend/authentication/.env');
-        console.error('   2. Verify EMAIL_HOST, EMAIL_PORT, EMAIL_USER, and EMAIL_PASSWORD are set');
-        console.error('   3. For GoDaddy, try: EMAIL_HOST=smtpout.secureserver.net, EMAIL_PORT=587, EMAIL_SECURE=false');
-        console.error('   4. Make sure to RESTART the server after updating .env');
-        console.error('   5. See EMAIL_SETUP_GUIDE.md for detailed instructions');
-        console.error('');
-      } else {
-        console.log('✅ Email service connection verified successfully');
-        console.log('   Host:', EMAIL_CONFIG.host);
-        console.log('   Port:', EMAIL_CONFIG.port);
-        console.log('   From:', EMAIL_CONFIG.from);
       }
     });
+    console.log('✅ Email service initialized successfully');
+    console.log('   Host:', EMAIL_CONFIG.host);
+    console.log('   Port:', EMAIL_CONFIG.port);
+    console.log('   From:', EMAIL_FROM);
   }
 
   return transporter;
 }
 
 /**
- * Send email
+ * Send email using nodemailer
  */
 async function sendEmail(to, subject, html, text = null) {
   try {
@@ -112,40 +62,33 @@ async function sendEmail(to, subject, html, text = null) {
     
     if (!emailTransporter) {
       console.error('❌ Email service not configured. Skipping email to:', to);
-      console.error('   Please check EMAIL_USER and EMAIL_PASSWORD in .env file');
+      console.error('   Please set EMAIL_USER and EMAIL_PASSWORD in .env file');
       return { success: false, message: 'Email service not configured' };
     }
 
-    if (!EMAIL_CONFIG.auth.user || !EMAIL_CONFIG.auth.pass) {
-      console.error('❌ Email credentials not set in environment variables');
-      console.error('   EMAIL_USER:', EMAIL_CONFIG.auth.user ? 'Set' : 'NOT SET');
-      console.error('   EMAIL_PASSWORD:', EMAIL_CONFIG.auth.pass ? 'Set' : 'NOT SET');
-      return { success: false, message: 'Email credentials not configured' };
-    }
+    // Strip HTML for plain text version if not provided
+    const plainText = text || html.replace(/<[^>]*>/g, '').replace(/\n\s*\n/g, '\n\n');
 
-    const mailOptions = {
-      from: `"${EMAIL_CONFIG.fromName}" <${EMAIL_CONFIG.from}>`,
+    // Send email via nodemailer
+    const info = await emailTransporter.sendMail({
+      from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
       to: to,
       subject: subject,
       html: html,
-      text: text || html.replace(/<[^>]*>/g, '') // Strip HTML for text version
-    };
+      text: plainText
+    });
 
-    const info = await emailTransporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully:', {
       to: to,
       subject: subject,
-      messageId: info.messageId
+      messageId: info.messageId || 'N/A'
     });
     
-    return { success: true, messageId: info.messageId };
+    return { success: true, messageId: info.messageId || null };
   } catch (error) {
     console.error('❌ Error sending email to:', to);
     console.error('   Error message:', error.message);
-    console.error('   Error code:', error.code);
-    if (error.response) {
-      console.error('   SMTP Response:', error.response);
-    }
+    console.error('   Error details:', error);
     return { success: false, error: error.message };
   }
 }
@@ -160,7 +103,7 @@ function getEmailSignature() {
   // Use the new circular gradient logo from public folder
   const logoUrl = process.env.EMAIL_LOGO_URL || `${frontendUrl}/logo.png`;
   const websiteUrl = process.env.COMPANY_WEBSITE || frontendUrl;
-  const supportEmail = process.env.EMAIL_FROM || 'support1@aarohaa.io';
+  const supportEmail = EMAIL_FROM || 'support@aarohaa.com';
   const companyName = 'Aarohaa Wellness';
   const companyAddress = process.env.COMPANY_ADDRESS || 'Your Company Address';
   const companyPhone = process.env.COMPANY_PHONE || '+1 (555) 123-4567';
@@ -959,7 +902,7 @@ function getSupportTicketEmailTemplate(userName, userEmail, subject, messageType
 
 // Send support ticket email to support team
 async function sendSupportTicketEmail(userName, userEmail, subject, messageType, message, ticketId) {
-  const supportEmail = process.env.SUPPORT_EMAIL || process.env.EMAIL_FROM || 'support1@aarohaa.io';
+  const supportEmail = process.env.SUPPORT_EMAIL || EMAIL_FROM || 'support@aarohaa.com';
   const emailSubject = `[Support Ticket #${ticketId}] ${subject} - ${messageType}`;
   const html = getSupportTicketEmailTemplate(userName, userEmail, subject, messageType, message, ticketId);
   return await sendEmail(supportEmail, emailSubject, html);
