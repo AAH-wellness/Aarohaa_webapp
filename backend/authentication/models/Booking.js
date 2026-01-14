@@ -78,13 +78,25 @@ class Booking {
       
       // Also insert into provider_bookings table (required for provider to see bookings)
       // This ensures both tables stay in sync
+      // Use the same ID as user_bookings to keep them in sync
       try {
         const providerBookingQuery = `
-          INSERT INTO provider_bookings (user_id, provider_id, appointment_date, session_type, notes, status, user_name, provider_name, created_at, updated_at)
-          VALUES ($1, $2, $3::timestamptz, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          INSERT INTO provider_bookings (id, user_id, provider_id, appointment_date, session_type, notes, status, user_name, provider_name, created_at, updated_at)
+          VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            provider_id = EXCLUDED.provider_id,
+            appointment_date = EXCLUDED.appointment_date,
+            session_type = EXCLUDED.session_type,
+            notes = EXCLUDED.notes,
+            status = EXCLUDED.status,
+            user_name = EXCLUDED.user_name,
+            provider_name = EXCLUDED.provider_name,
+            updated_at = CURRENT_TIMESTAMP
           RETURNING id
         `;
         const providerResult = await pool.query(providerBookingQuery, [
+          createdBooking.id, // Use the same ID from user_bookings
           parseInt(userId),
           parseInt(providerId),
           appointmentDate,
@@ -94,19 +106,25 @@ class Booking {
           userName || null,
           providerName || null
         ]);
-        console.log('Booking.create - Successfully created entry in provider_bookings table with ID:', providerResult.rows[0]?.id);
+        console.log('✅ Booking.create - Successfully created entry in provider_bookings table with ID:', providerResult.rows[0]?.id);
       } catch (providerBookingError) {
-        // Log the error but don't fail the main booking
-        console.error('Booking.create - ERROR inserting into provider_bookings:', {
+        // Log the error prominently - this is critical for provider visibility
+        console.error('❌ Booking.create - CRITICAL ERROR inserting into provider_bookings:', {
           error: providerBookingError.message,
           code: providerBookingError.code,
           detail: providerBookingError.detail,
+          hint: providerBookingError.hint,
           userId,
           providerId,
-          appointmentDate
+          appointmentDate,
+          sessionType,
+          notes
         });
+        console.error('⚠️  WARNING: Provider will NOT see this booking in their dashboard!');
+        console.error('   The booking was created in user_bookings but failed to sync to provider_bookings.');
         // Note: We continue even if this fails, but provider won't see the booking
         // In production, you might want to retry or alert admin
+        // TODO: Consider implementing a retry mechanism or background sync job
       }
       
       console.log('Booking.create - Successfully created booking:', {
@@ -206,9 +224,25 @@ class Booking {
 
   /**
    * Get bookings by provider ID
+   * First tries provider_bookings table, then falls back to user_bookings if needed
    */
   static async findByProviderId(providerId) {
-    const query = `
+    // Ensure providerId is an integer
+    const providerIdInt = parseInt(providerId);
+    if (isNaN(providerIdInt)) {
+      console.error('Booking.findByProviderId: Invalid provider ID:', providerId);
+      throw new Error('Invalid provider ID');
+    }
+    
+    console.log('Booking.findByProviderId: Starting query', {
+      providerId: providerId,
+      providerIdInt: providerIdInt,
+      providerIdType: typeof providerId,
+      providerIdIntType: typeof providerIdInt
+    });
+    
+    // First, try to get bookings from provider_bookings table
+    const providerBookingsQuery = `
       SELECT 
         b.*,
         COALESCE(u.name, b.user_name) as user_name,
@@ -222,26 +256,110 @@ class Booking {
         AND b.status != 'completed'
       ORDER BY b.appointment_date ASC
     `;
+    
     try {
-      console.log('Booking.findByProviderId: Querying for provider_id:', providerId);
-      const result = await pool.query(query, [providerId]);
-      console.log('Booking.findByProviderId: Found', result.rows.length, 'bookings');
+      console.log('Booking.findByProviderId: Querying provider_bookings for provider_id:', providerIdInt);
+      const providerResult = await pool.query(providerBookingsQuery, [providerIdInt]);
+      console.log('Booking.findByProviderId: Found', providerResult.rows.length, 'bookings in provider_bookings');
+      
+      // Debug: Check all bookings for this provider (including cancelled/completed)
+      const debugQuery = `
+        SELECT id, provider_id, user_id, appointment_date, status, user_name, provider_name
+        FROM provider_bookings
+        WHERE provider_id = $1
+        ORDER BY appointment_date ASC
+      `;
+      const debugResult = await pool.query(debugQuery, [providerIdInt]);
+      console.log('Booking.findByProviderId: DEBUG - All bookings in provider_bookings (including cancelled/completed):', 
+        debugResult.rows.map(b => ({
+          id: b.id,
+          provider_id: b.provider_id,
+          user_id: b.user_id,
+          appointment_date: b.appointment_date,
+          status: b.status,
+          user_name: b.user_name
+        }))
+      );
+      
+      // If we found bookings in provider_bookings, return them
+      if (providerResult.rows.length > 0) {
+        return providerResult.rows.map(booking => {
+          if (booking.appointment_date) {
+            const date = booking.appointment_date instanceof Date 
+              ? booking.appointment_date 
+              : new Date(booking.appointment_date);
+            booking.appointment_date = date.toISOString();
+          }
+          delete booking.appointment_date_utc;
+          return booking;
+        });
+      }
+      
+      // Fallback: If no bookings found in provider_bookings, check user_bookings
+      // This handles cases where the insert into provider_bookings failed
+      console.log('⚠️  Booking.findByProviderId: No bookings in provider_bookings, checking user_bookings as fallback');
+      const userBookingsQuery = `
+        SELECT 
+          b.*,
+          COALESCE(u.name, b.user_name) as user_name,
+          COALESCE(u.email, NULL) as user_email,
+          COALESCE(u.phone, NULL) as user_phone,
+          b.appointment_date AT TIME ZONE 'UTC' as appointment_date_utc
+        FROM user_bookings b
+        LEFT JOIN users u ON b.user_id = u.id
+        WHERE b.provider_id = $1
+          AND b.status != 'cancelled'
+          AND b.status != 'completed'
+        ORDER BY b.appointment_date ASC
+      `;
+      
+      const userResult = await pool.query(userBookingsQuery, [providerIdInt]);
+      console.log('Booking.findByProviderId: Found', userResult.rows.length, 'bookings in user_bookings (fallback)');
+      
+      // Debug: Check all bookings in user_bookings for this provider
+      const debugUserQuery = `
+        SELECT id, provider_id, user_id, appointment_date, status, user_name, provider_name
+        FROM user_bookings
+        WHERE provider_id = $1
+        ORDER BY appointment_date ASC
+      `;
+      const debugUserResult = await pool.query(debugUserQuery, [providerIdInt]);
+      console.log('Booking.findByProviderId: DEBUG - All bookings in user_bookings (including cancelled/completed):', 
+        debugUserResult.rows.map(b => ({
+          id: b.id,
+          provider_id: b.provider_id,
+          user_id: b.user_id,
+          appointment_date: b.appointment_date,
+          status: b.status,
+          user_name: b.user_name
+        }))
+      );
+      
+      if (userResult.rows.length > 0) {
+        console.warn('⚠️  WARNING: Found bookings in user_bookings but not in provider_bookings. This indicates a sync issue.');
+        console.warn('   Consider running a sync job to populate provider_bookings from user_bookings.');
+      }
+      
       // Normalize appointment_date to UTC ISO string for all bookings
-      return result.rows.map(booking => {
+      return userResult.rows.map(booking => {
         if (booking.appointment_date) {
-          // Always convert to UTC ISO string, regardless of how PostgreSQL returns it
           const date = booking.appointment_date instanceof Date 
             ? booking.appointment_date 
             : new Date(booking.appointment_date);
-          // Ensure it's in UTC by using toISOString()
           booking.appointment_date = date.toISOString();
         }
-        // Remove the temporary UTC field if it exists
         delete booking.appointment_date_utc;
         return booking;
       });
     } catch (error) {
       console.error('Error finding bookings by provider_id:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        providerId: providerId,
+        providerIdInt: providerIdInt
+      });
       throw error;
     }
   }

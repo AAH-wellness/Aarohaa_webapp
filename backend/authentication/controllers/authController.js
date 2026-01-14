@@ -1503,7 +1503,10 @@ async function createBooking(req, res, next) {
     
     console.log('createBooking: Creating booking with:', {
       userId,
+      userIdType: typeof userId,
       providerId: providerIdNum,
+      providerIdType: typeof providerIdNum,
+      providerIdFromDB: provider.id,
       appointmentDate: formattedDate,
       appointmentDateType: typeof formattedDate,
       sessionType,
@@ -1533,7 +1536,23 @@ async function createBooking(req, res, next) {
       providerName: provider.name
     });
     
-    console.log('createBooking: Booking created successfully:', booking);
+    console.log('createBooking: Booking created successfully:', {
+      bookingId: booking.id,
+      userId: booking.user_id,
+      providerId: booking.provider_id,
+      providerIdType: typeof booking.provider_id,
+      appointmentDate: booking.appointment_date,
+      status: booking.status
+    });
+    
+    // Verify the booking was created with the correct provider ID
+    if (booking.provider_id !== providerIdNum && booking.provider_id !== provider.id) {
+      console.error('⚠️  WARNING: Provider ID mismatch!', {
+        expectedProviderId: providerIdNum,
+        providerIdFromDB: provider.id,
+        actualProviderIdInBooking: booking.provider_id
+      });
+    }
 
     if (!booking || !booking.id) {
       console.error('createBooking: Booking creation returned invalid data:', booking);
@@ -1844,7 +1863,14 @@ async function getUpcomingBookings(req, res, next) {
 async function getProviderBookings(req, res, next) {
   try {
     const providerId = req.user?.userId;
+    console.log('getProviderBookings: Request received', {
+      providerIdFromToken: providerId,
+      userRole: req.user?.role,
+      userEmail: req.user?.email
+    });
+    
     if (!providerId) {
+      console.error('getProviderBookings: No providerId found in token');
       return res.status(401).json({
         error: {
           message: 'Provider not authenticated',
@@ -1857,6 +1883,7 @@ async function getProviderBookings(req, res, next) {
     // Get provider by ID (userId in token is actually provider.id for providers)
     const provider = await Provider.findById(providerId);
     if (!provider) {
+      console.error('getProviderBookings: Provider not found for ID:', providerId);
       return res.status(404).json({
         error: {
           message: 'Provider profile not found',
@@ -1865,6 +1892,12 @@ async function getProviderBookings(req, res, next) {
         }
       });
     }
+
+    console.log('getProviderBookings: Provider found', {
+      providerId: provider.id,
+      providerName: provider.name,
+      providerEmail: provider.email
+    });
 
     // Get all bookings for this provider
     console.log('getProviderBookings: Fetching bookings for provider ID:', provider.id);
@@ -2477,43 +2510,49 @@ async function requestPasswordReset(req, res, next) {
       user = await User.findByEmail(email);
     }
     
-    // Don't reveal if email exists or not (security best practice)
-    // But still send email if user exists
-    if (user) {
-      // Generate reset token (JWT with short expiration)
-      resetToken = jwt.sign(
-        { userId: user.id, email: user.email, role: role, type: 'password-reset' },
-        JWT_CONFIG.SECRET,
-        { expiresIn: '1h' } // Token expires in 1 hour
-      );
-      
-      // Send password reset email (non-blocking)
-      emailService.sendPasswordResetEmail(
-        user.name || 'User',
-        user.email,
-        resetToken
-      ).then(result => {
-        if (result.success) {
-          console.log('✅ Password reset email sent successfully to:', user.email);
-          console.log('   Message ID:', result.messageId);
-        } else {
-          console.error('⚠️  Failed to send password reset email to:', user.email);
-          console.error('   Error:', result.error || result.message);
-          console.error('   Please check email service configuration in .env file');
+    // Check if user exists - return error if not found
+    if (!user) {
+      const accountType = role === 'provider' ? 'provider' : 'user';
+      console.log(`❌ Password reset requested for non-existent ${accountType} email:`, email);
+      return res.status(404).json({
+        error: {
+          message: `No ${accountType} account found with this email address. Please check your email or register for a new account.`,
+          code: 'EMAIL_NOT_FOUND',
+          status: 404
         }
-      }).catch(err => {
-        console.error('❌ Error sending password reset email to:', user.email);
-        console.error('   Error details:', err.message);
-        console.error('   Stack:', err.stack);
       });
-    } else {
-      // Still return success to prevent email enumeration
-      console.log('Password reset requested for non-existent email:', email);
     }
     
-    // Always return success message (don't reveal if email exists)
+    // Generate reset token (JWT with short expiration)
+    resetToken = jwt.sign(
+      { userId: user.id, email: user.email, role: role, type: 'password-reset' },
+      JWT_CONFIG.SECRET,
+      { expiresIn: '1h' } // Token expires in 1 hour
+    );
+    
+    // Send password reset email (non-blocking)
+    emailService.sendPasswordResetEmail(
+      user.name || 'User',
+      user.email,
+      resetToken
+    ).then(result => {
+      if (result.success) {
+        console.log('✅ Password reset email sent successfully to:', user.email);
+        console.log('   Message ID:', result.messageId);
+      } else {
+        console.error('⚠️  Failed to send password reset email to:', user.email);
+        console.error('   Error:', result.error || result.message);
+        console.error('   Please check email service configuration in .env file');
+      }
+    }).catch(err => {
+      console.error('❌ Error sending password reset email to:', user.email);
+      console.error('   Error details:', err.message);
+      console.error('   Stack:', err.stack);
+    });
+    
+    // Return success message
     res.json({
-      message: 'If an account with that email exists, a password reset link has been sent.'
+      message: 'Password reset link has been sent to your email address.'
     });
   } catch (error) {
     console.error('Password reset request error:', error);
