@@ -1,6 +1,6 @@
 import React from 'react'
 
-const TimeSlotsList = ({ slots, selectedDate, onSlotSelect }) => {
+const TimeSlotsList = ({ slots, selectedDate, onSlotSelect, isSlotBooked }) => {
   if (!selectedDate) {
     return null
   }
@@ -57,15 +57,20 @@ const TimeSlotsList = ({ slots, selectedDate, onSlotSelect }) => {
     <div className="time-slots-section">
       <h3 className="time-slots-date-label">{dateLabel}</h3>
       <div className="time-slots-grid">
-        {sortedSlots.map((slot) => (
-          <button
-            key={slot.datetime}
-            className="time-slot-btn"
-            onClick={() => onSlotSelect(slot)}
-          >
-            {formatTime(slot.time)}
-          </button>
-        ))}
+        {sortedSlots.map((slot) => {
+          const booked = isSlotBooked ? isSlotBooked(slot.datetime) : false
+          return (
+            <button
+              key={slot.datetime}
+              className={`time-slot-btn ${booked ? 'booked' : ''}`}
+              onClick={() => !booked && onSlotSelect(slot)}
+              disabled={booked}
+              title={booked ? 'You already have an appointment at this time' : ''}
+            >
+              {formatTime(slot.time)}
+            </button>
+          )
+        })}
       </div>
     </div>
   )

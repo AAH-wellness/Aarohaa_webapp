@@ -135,6 +135,21 @@
   transform: translateY(0);
 }
 
+.time-slot-btn.booked {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.time-slot-btn.booked:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+  transform: none;
+  box-shadow: none;
+}
+
 .no-slots-message {
   text-align: center;
   padding: 24px;

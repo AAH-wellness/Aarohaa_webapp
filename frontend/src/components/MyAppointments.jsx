@@ -15,13 +15,22 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
   const intervalRef = useRef(null)
   const modalManuallyClosedRef = useRef(false)
   const isCancellingRef = useRef(false)
+  const isLoadingRef = useRef(false)
+  const debouncedReloadRef = useRef(null)
 
-  // Memoize loadAppointments to prevent infinite loops
+  // Memoize loadAppointments to prevent infinite loops and concurrent calls
   const loadAppointments = useCallback(async () => {
+    // Prevent concurrent calls - if already loading, skip
+    if (isLoadingRef.current) {
+      return
+    }
+    
     // Check if component is still mounted before starting
     if (!isMountedRef.current) {
       return
     }
+
+    isLoadingRef.current = true
 
     try {
       // Only set loading if component is still mounted
@@ -124,8 +133,27 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         setAppointments([])
         setLoading(false)
       }
+    } finally {
+      isLoadingRef.current = false
     }
   }, [])
+
+  // Debounced reload function to prevent multiple rapid calls
+  const debouncedReload = useCallback(() => {
+    // Clear any existing debounce timeout
+    if (debouncedReloadRef.current) {
+      clearTimeout(debouncedReloadRef.current)
+      debouncedReloadRef.current = null
+    }
+    
+    // Set new debounced call
+    debouncedReloadRef.current = setTimeout(() => {
+      if (isMountedRef.current && !isLoadingRef.current) {
+        loadAppointments()
+      }
+      debouncedReloadRef.current = null
+    }, 500) // 500ms debounce
+  }, [loadAppointments])
 
   useEffect(() => {
     // Set mounted flag
@@ -152,7 +180,13 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         clearTimeout(cancelTimeoutRef.current)
         cancelTimeoutRef.current = null
       }
+      // Clear debounced reload
+      if (debouncedReloadRef.current) {
+        clearTimeout(debouncedReloadRef.current)
+        debouncedReloadRef.current = null
+      }
       isMountedRef.current = false
+      isLoadingRef.current = false
     }
   }, [loadAppointments])
 
@@ -338,11 +372,9 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         setCancelSuccess(true)
       }
       
-      // Reload appointments immediately after successful cancellation
-      // This ensures the list updates even if user closes modal early
-      loadAppointments().catch((error) => {
-        console.error('Error reloading appointments after cancellation:', error)
-      })
+      // Reload appointments after successful cancellation using debounced reload
+      // This prevents multiple simultaneous calls and ensures the list updates
+      debouncedReload()
       
       // Notify parent that session was cancelled (to clear active session if it was the active one)
       if (onSessionCancelled) {
@@ -401,7 +433,7 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         setSelectedAppointment(null)
       }
     }
-  }, [selectedAppointment, loadAppointments, onSessionCancelled])
+  }, [selectedAppointment, debouncedReload, onSessionCancelled])
 
   const handleCancelModalClose = () => {
     // Mark that modal was manually closed
@@ -414,11 +446,9 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
     }
     
     // If cancellation was successful, ensure appointments are reloaded
-    // (They should already be reloaded, but reload again to be safe)
+    // Use debounced reload to prevent duplicate calls
     if (cancelSuccess && isMountedRef.current) {
-      loadAppointments().catch((error) => {
-        console.error('Error reloading appointments on modal close:', error)
-      })
+      debouncedReload()
     }
     
     // Reset cancellation flag

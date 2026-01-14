@@ -82,14 +82,14 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
     }
   }, [provider?.id]) // Only depend on provider.id, not the whole object
 
-  // Load existing bookings to check for conflicts
+  // Load existing bookings to check for conflicts and grey out booked slots
   useEffect(() => {
     const loadExistingBookings = async () => {
       try {
         const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
         const response = await apiClient.get(`${apiBaseUrl}/users/bookings`)
         const bookings = response.bookings || []
-        // Filter out completed and cancelled bookings
+        // Filter out completed and cancelled bookings (cancelled bookings should show as available again)
         const activeBookings = bookings.filter(
           booking => booking.status !== 'completed' && booking.status !== 'cancelled'
         )
@@ -102,6 +102,28 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
     
     loadExistingBookings()
   }, [])
+  
+  // Check if a slot is booked by the current user
+  // Sessions are 1 hour long, so we grey out the booked slot and the next slot (30 min later)
+  const isSlotBooked = (slotDatetime) => {
+    if (!slotDatetime || existingBookings.length === 0) return false
+    
+    const slotTime = new Date(slotDatetime).getTime()
+    
+    // Check if any active booking matches this slot or the slot 30 minutes after it
+    // (since sessions are 1 hour, booking 4:00 PM greys out both 4:00 PM and 4:30 PM)
+    return existingBookings.some(booking => {
+      const bookingTime = new Date(booking.appointmentDate || booking.dateTime).getTime()
+      const timeDifference = slotTime - bookingTime
+      
+      // Match if:
+      // 1. It's the exact booked slot (within 1 minute tolerance)
+      // 2. OR it's the slot 30 minutes after the booking (the next slot in the session)
+      // Example: If 4:00 PM is booked, grey out both 4:00 PM (timeDifference ≈ 0) and 4:30 PM (timeDifference = 30 min)
+      return (Math.abs(timeDifference) < 60 * 1000) || 
+             (timeDifference > 0 && timeDifference <= 31 * 60 * 1000)
+    })
+  }
 
   useEffect(() => {
     loadAvailableSlots()
@@ -183,10 +205,13 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
       const bookingProviderName = response.booking?.providerName || provider.name
       setBookedProvider(bookingProviderName)
       
-      // Update existing bookings list to include the new booking
-      if (response.booking) {
-        setExistingBookings(prev => [...prev, response.booking])
-      }
+      // Reload bookings to update the UI (so the booked slot shows as greyed out)
+      const bookingsResponse = await apiClient.get(`${apiBaseUrl}/users/bookings`)
+      const bookings = bookingsResponse.bookings || []
+      const activeBookings = bookings.filter(
+        booking => booking.status !== 'completed' && booking.status !== 'cancelled'
+      )
+      setExistingBookings(activeBookings)
       
       // Call the onBook callback if provided
       if (onBook) {
@@ -318,6 +343,7 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
                     slots={slots}
                     selectedDate={selectedDate}
                     onSlotSelect={handleSlotSelect}
+                    isSlotBooked={isSlotBooked}
                   />
                 </div>
               )}
