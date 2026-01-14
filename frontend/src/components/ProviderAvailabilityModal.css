@@ -8,7 +8,7 @@
 
 .calendar-week {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 8px;
 }
 
@@ -53,6 +53,54 @@
   background-color: #f9fafb;
   color: #9ca3af;
   border-color: #e5e7eb;
+}
+
+/* Enabled days with no slots should still be clickable and not look disabled */
+/* Higher specificity to override .no-slots - must come after .no-slots */
+/* Use .no-slots.enabled-no-slots to have higher specificity than just .no-slots */
+.calendar-day.no-slots.enabled-no-slots {
+  cursor: pointer !important;
+  opacity: 1 !important;
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+}
+
+.calendar-day.no-slots.enabled-no-slots:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background-color: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Override child element colors with higher specificity */
+.calendar-day.no-slots.enabled-no-slots .day-name,
+.calendar-day.no-slots.enabled-no-slots .day-date {
+  color: #374151 !important;
+}
+
+.calendar-day.no-slots.enabled-no-slots .day-count {
+  color: #6b7280 !important;
+}
+
+.calendar-day.unavailable {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  border-color: #d1d5db;
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+.calendar-day.unavailable:hover {
+  transform: none;
+  box-shadow: none;
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.calendar-day.unavailable .day-name,
+.calendar-day.unavailable .day-date,
+.calendar-day.unavailable .day-count {
+  color: #9ca3af;
 }
 
 .day-name {
@@ -160,7 +208,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .calendar-week {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .calendar-day {
@@ -182,7 +230,7 @@
 
 @media (max-width: 480px) {
   .calendar-week {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
   }
   
   .calendar-day {

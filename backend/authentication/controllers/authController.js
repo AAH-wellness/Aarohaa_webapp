@@ -967,7 +967,9 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
     return [];
   }
   
-  // Group bookings by date for quick lookup
+  // Group bookings by date and time for quick lookup
+  // Store both the time and user_id so we can distinguish between current user's bookings and others'
+  // IMPORTANT: Bookings are stored in UTC in the database, but we need to match them with local time slots
   const bookingsByDate = {};
   if (Array.isArray(bookings)) {
     bookings.forEach(booking => {
@@ -978,12 +980,19 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
         if (isNaN(bookingDate.getTime())) return;
         
         const dateKey = bookingDate.toISOString().split('T')[0];
-        const timeKey = bookingDate.toTimeString().slice(0, 5); // HH:MM format
+        // Convert UTC booking time to local time for matching with local time slots
+        const hours = String(bookingDate.getHours()).padStart(2, '0');
+        const minutes = String(bookingDate.getMinutes()).padStart(2, '0');
+        const timeKey = `${hours}:${minutes}`; // HH:MM in local time
         
         if (!bookingsByDate[dateKey]) {
           bookingsByDate[dateKey] = [];
         }
-        bookingsByDate[dateKey].push(timeKey);
+        // Store time and user_id to identify who booked it
+        bookingsByDate[dateKey].push({
+          time: timeKey,
+          userId: booking.user_id || booking.userId
+        });
       } catch (err) {
         console.warn('Error processing booking:', err, booking);
       }
@@ -1000,8 +1009,22 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
     const dayAvailability = availability[dayName];
     
     // Skip if provider is not available on this day
-    if (!dayAvailability || typeof dayAvailability !== 'object' || !dayAvailability.enabled) {
+    // Check if enabled is explicitly false (default to true if not set)
+    if (!dayAvailability || typeof dayAvailability !== 'object') {
+      console.warn(`No availability data for ${dayName} on ${date.toISOString().split('T')[0]}`);
       continue;
+    }
+    
+    // Only skip if enabled is explicitly false
+    // If enabled is undefined or true, treat as enabled
+    if (dayAvailability.enabled === false) {
+      console.log(`Skipping ${dayName} ${date.toISOString().split('T')[0]} - explicitly disabled`);
+      continue;
+    }
+    
+    // Log when day is enabled (for debugging)
+    if (dayAvailability.enabled === true || dayAvailability.enabled === undefined) {
+      console.log(`Processing ${dayName} ${date.toISOString().split('T')[0]} - enabled: ${dayAvailability.enabled !== false}`);
     }
     
     // Validate and parse start/end times
@@ -1035,10 +1058,14 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
     }
     
     // Create date objects for start and end times
-    const dayStart = new Date(date);
+    // IMPORTANT: Availability times (startHour, endHour) are stored as local time (EST)
+    // We need to treat them as local time, not UTC
+    // Extract the date components from the UTC date and create a new date in local timezone
+    const localDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    const dayStart = new Date(localDate);
     dayStart.setHours(startHour, startMin, 0, 0);
     
-    const dayEnd = new Date(date);
+    const dayEnd = new Date(localDate);
     dayEnd.setHours(endHour, endMin, 0, 0);
     
     // Validate day times
@@ -1047,29 +1074,41 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
       continue;
     }
     
-    // Generate time slots for this day
-    let currentTime = new Date(dayStart);
+    // Get current time in local timezone
     const now = new Date();
     const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour buffer
     
+    // Generate slots using local time, then convert to UTC for storage
+    let currentTime = new Date(dayStart);
+    
     while (currentTime < dayEnd) {
       const dateKey = date.toISOString().split('T')[0];
-      const timeKey = currentTime.toTimeString().slice(0, 5);
+      // Extract time in local timezone (HH:MM format)
+      const hours = String(currentTime.getHours()).padStart(2, '0');
+      const minutes = String(currentTime.getMinutes()).padStart(2, '0');
+      const timeKey = `${hours}:${minutes}`;
       
-      // Check if this slot is already booked
-      const isBooked = bookingsByDate[dateKey]?.some(bookedTime => bookedTime === timeKey);
+      // Check if this slot is already booked (by any user)
+      const slotBookings = bookingsByDate[dateKey]?.filter(b => b.time === timeKey) || [];
+      const isBooked = slotBookings.length > 0;
       
-      // Don't show past slots or slots less than 1 hour away
-      if (currentTime > oneHourFromNow && !isBooked) {
+      // Include all future slots (more than 1 hour away)
+      // Include ALL slots (even if booked) so frontend can grey out the current user's booked slots
+      // Compare in local time to match availability times
+      if (currentTime.getTime() > oneHourFromNow.getTime()) {
+        // Convert to UTC ISO string for datetime field
+        const utcDateTime = new Date(currentTime.toISOString());
         slots.push({
           date: dateKey,
           time: timeKey,
-          datetime: currentTime.toISOString(),
-          available: true
+          datetime: utcDateTime.toISOString(),
+          available: !isBooked, // Mark as unavailable if booked by anyone
+          booked: isBooked, // Explicitly mark as booked
+          bookedBy: slotBookings.map(b => b.userId) // Array of user IDs who booked this slot
         });
       }
       
-      // Move to next slot
+      // Move to next slot (in local time)
       currentTime.setMinutes(currentTime.getMinutes() + slotDuration);
       
       // Safety check to prevent infinite loop
@@ -1227,24 +1266,56 @@ async function getAllProviders(req, res, next) {
     const providers = await Provider.findAll(filters);
     
     // Format providers for frontend
-    const formattedProviders = providers.map(provider => ({
-      id: provider.id,
-      name: provider.name,
-      email: provider.email,
-      phone: provider.phone,
-      specialty: provider.specialty,
-      title: provider.title,
-      bio: provider.bio,
-      hourlyRate: parseFloat(provider.hourly_rate) || 0,
-      rating: parseFloat(provider.rating) || 0,
-      sessionsCompleted: provider.sessions_completed || 0,
-      reviewsCount: provider.reviews_count || 0,
-      verified: provider.verified,
-      status: provider.status,
-      availability: provider.availability || {},
-      createdAt: provider.created_at,
-      updatedAt: provider.updated_at
-    }));
+    const formattedProviders = providers.map(provider => {
+      // Deep clone availability to prevent sharing between providers
+      let availability = provider.availability || {};
+      
+      // Handle JSONB - PostgreSQL returns it as object, but ensure it's cloned
+      if (typeof availability === 'string') {
+        try {
+          availability = JSON.parse(availability);
+        } catch (e) {
+          console.error(`Error parsing availability for provider ${provider.id}:`, e);
+          availability = {};
+        }
+      } else if (availability && typeof availability === 'object') {
+        // Deep clone to prevent object sharing
+        availability = JSON.parse(JSON.stringify(availability));
+      }
+      
+      // Log each provider's availability to debug
+      console.log(`[getAllProviders] Provider ${provider.id} (${provider.name}) availability:`, {
+        providerId: provider.id,
+        providerName: provider.name,
+        availabilityKeys: Object.keys(availability),
+        monday: availability.monday,
+        tuesday: availability.tuesday,
+        wednesday: availability.wednesday,
+        thursday: availability.thursday,
+        friday: availability.friday,
+        saturday: availability.saturday,
+        sunday: availability.sunday
+      });
+      
+      return {
+        id: provider.id,
+        name: provider.name,
+        email: provider.email,
+        phone: provider.phone,
+        specialty: provider.specialty,
+        title: provider.title,
+        bio: provider.bio,
+        hourlyRate: parseFloat(provider.hourly_rate) || 0,
+        rating: parseFloat(provider.rating) || 0,
+        sessionsCompleted: provider.sessions_completed || 0,
+        reviewsCount: provider.reviews_count || 0,
+        verified: provider.verified,
+        status: provider.status,
+        availability: availability,
+        createdAt: provider.created_at,
+        updatedAt: provider.updated_at
+      };
+    });
     
     res.json({
       providers: formattedProviders
