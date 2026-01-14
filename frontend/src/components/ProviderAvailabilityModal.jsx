@@ -33,10 +33,10 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
     setError(null)
     
     try {
-      // Calculate date range (2 weeks from today)
+      // Calculate date range (1 week from today)
       const today = new Date()
       const endDate = new Date(today)
-      endDate.setDate(endDate.getDate() + 14)
+      endDate.setDate(endDate.getDate() + 7)
       
       const startDateStr = today.toISOString().split('T')[0]
       const endDateStr = endDate.toISOString().split('T')[0]
@@ -334,6 +334,44 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
                 slots={slots}
                 selectedDate={selectedDate}
                 onDateSelect={handleDateSelect}
+                providerAvailability={(() => {
+                  // Parse availability if it's a string, otherwise use as-is
+                  // IMPORTANT: Create a deep copy to avoid mutating the original object
+                  if (!provider?.availability) {
+                    console.warn(`[Provider ${provider?.id}] No provider availability found for:`, provider?.name)
+                    return null
+                  }
+                  try {
+                    // Deep clone the availability to prevent sharing between providers
+                    const rawAvailability = provider.availability
+                    const parsed = typeof rawAvailability === 'string' 
+                      ? JSON.parse(rawAvailability) 
+                      : JSON.parse(JSON.stringify(rawAvailability)) // Deep clone
+                    
+                    console.log(`[Provider ${provider.id}] ${provider.name} availability:`, {
+                      providerId: provider.id,
+                      providerName: provider.name,
+                      monday: parsed.monday,
+                      tuesday: parsed.tuesday,
+                      wednesday: parsed.wednesday,
+                      thursday: parsed.thursday,
+                      friday: parsed.friday,
+                      saturday: parsed.saturday,
+                      sunday: parsed.sunday,
+                      rawType: typeof rawAvailability,
+                      isSameObject: rawAvailability === provider.availability
+                    })
+                    return parsed
+                  } catch (e) {
+                    console.error(`[Provider ${provider?.id}] Error parsing availability:`, e, {
+                      providerId: provider?.id,
+                      providerName: provider?.name,
+                      rawAvailability: provider?.availability,
+                      type: typeof provider?.availability
+                    })
+                    return null
+                  }
+                })()}
               />
 
               {/* Time Slots */}

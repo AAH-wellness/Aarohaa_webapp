@@ -1,6 +1,6 @@
 import React from 'react'
 
-const CalendarGrid = ({ slots, selectedDate, onDateSelect }) => {
+const CalendarGrid = ({ slots, selectedDate, onDateSelect, providerAvailability }) => {
   // Group slots by date
   const slotsByDate = slots.reduce((acc, slot) => {
     if (!acc[slot.date]) {
@@ -10,88 +10,84 @@ const CalendarGrid = ({ slots, selectedDate, onDateSelect }) => {
     return acc
   }, {})
 
-  // Get all unique dates and sort them
-  const datesWithSlots = Object.keys(slotsByDate).sort()
-  
-  // Calculate 2-week range starting from today (or first available date)
+  // Calculate 2-week range starting from the Monday of the current week
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   
-  const startDate = datesWithSlots.length > 0 && new Date(datesWithSlots[0]) < today
-    ? new Date(datesWithSlots[0])
-    : new Date(today)
+  // Find the Monday of the current week
+  const dayOfWeek = today.getDay()
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek // If Sunday (0), go back 6 days; otherwise go to Monday (1)
+  const startDate = new Date(today)
+  startDate.setDate(startDate.getDate() + daysToMonday)
   
   const endDate = new Date(startDate)
-  endDate.setDate(endDate.getDate() + 13) // 14 days total (2 weeks)
+  endDate.setDate(endDate.getDate() + 6) // 7 days total (1 week, Monday to Sunday)
 
-  // Generate calendar days (Tue-Sat for 2 weeks = 10 days)
+  // Generate calendar days for 1 week (all 7 days, starting from Monday)
   const calendarDays = []
   let currentDate = new Date(startDate)
   
-  // Find next Tuesday (or today if it's Tue-Sat)
-  const dayOfWeek = currentDate.getDay()
-  // Calculate days to next Tuesday
-  let daysToTuesday = 0
-  if (dayOfWeek === 0) { // Sunday -> Tuesday (2 days)
-    daysToTuesday = 2
-  } else if (dayOfWeek === 1) { // Monday -> Tuesday (1 day)
-    daysToTuesday = 1
-  } else if (dayOfWeek >= 2 && dayOfWeek <= 6) { // Tue-Sat, start from today
-    daysToTuesday = 0
-  }
-  
-  currentDate.setDate(currentDate.getDate() + daysToTuesday)
-  
-  // Generate 10 days (Tue-Sat for 2 weeks)
-  let daysGenerated = 0
-  while (daysGenerated < 10 && currentDate <= endDate) {
+  // Generate 7 days (1 week, Monday through Sunday)
+  while (currentDate <= endDate) {
+    const dateKey = currentDate.toISOString().split('T')[0]
     const dayOfWeek = currentDate.getDay()
-    // Only include Tue-Sat (2-6)
-    if (dayOfWeek >= 2 && dayOfWeek <= 6) {
-      const dateKey = currentDate.toISOString().split('T')[0]
-      const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'short' })
-      const monthDay = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      const slotCount = slotsByDate[dateKey]?.length || 0
-      
-      calendarDays.push({
-        date: dateKey,
-        dayName,
-        monthDay,
-        slotCount,
-        isToday: dateKey === today.toISOString().split('T')[0]
+    
+    // Map day number to day name (0=Sunday, 1=Monday, ..., 6=Saturday)
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const dayNameShort = ['S', 'M', 'T', 'W', 'Th', 'F', 'Sa']
+    const dayNameFull = dayNames[dayOfWeek]
+    const dayName = dayNameShort[dayOfWeek]
+    
+    // Check if this day is available for the provider
+    const dayKey = dayNameFull.toLowerCase()
+    // Check if the day is enabled - explicitly check for false, default to true if not set
+    const dayAvailability = providerAvailability?.[dayKey]
+    // Explicitly check: if enabled is false, day is unavailable; otherwise it's available
+    const isDayAvailable = dayAvailability?.enabled !== false
+    
+    // Debug logging for Monday and Wednesday specifically
+    if ((dayKey === 'monday' || dayKey === 'wednesday') && providerAvailability) {
+      console.log(`${dayNameFull} availability check:`, {
+        dayKey,
+        dayAvailability,
+        enabled: dayAvailability?.enabled,
+        isDayAvailable,
+        dateKey,
+        isToday: dateKey === today.toISOString().split('T')[0],
+        fullAvailability: providerAvailability
       })
-      daysGenerated++
     }
+    
+    // Debug logging for unavailable days
+    if (providerAvailability && !isDayAvailable) {
+      console.log(`Day ${dayNameFull} (${dayKey}) is unavailable:`, dayAvailability)
+    }
+    
+    const monthDay = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const slotCount = slotsByDate[dateKey]?.length || 0
+    
+    calendarDays.push({
+      date: dateKey,
+      dayName,
+      monthDay,
+      slotCount,
+      isToday: dateKey === today.toISOString().split('T')[0],
+      isAvailable: isDayAvailable
+    })
+    
     currentDate.setDate(currentDate.getDate() + 1)
   }
 
-  // Split into 2 rows of 5 days each
-  const week1 = calendarDays.slice(0, 5)
-  const week2 = calendarDays.slice(5, 10)
-
+  // Single week row (7 days: M-S)
   return (
     <div className="calendar-grid">
       <div className="calendar-week">
-        {week1.map((day) => (
+        {calendarDays.map((day) => (
           <div
             key={day.date}
-            className={`calendar-day ${selectedDate === day.date ? 'selected' : ''} ${day.slotCount > 0 ? 'has-slots' : 'no-slots'}`}
-            onClick={() => onDateSelect(day.date)}
-          >
-            <div className="day-name">{day.dayName}</div>
-            <div className="day-date">{day.monthDay}</div>
-            <div className="day-count">
-              {day.slotCount > 0 ? `${day.slotCount} ${day.slotCount === 1 ? 'appt' : 'appts'}` : 'No appts'}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="calendar-week">
-        {week2.map((day) => (
-          <div
-            key={day.date}
-            className={`calendar-day ${selectedDate === day.date ? 'selected' : ''} ${day.slotCount > 0 ? 'has-slots' : 'no-slots'}`}
-            onClick={() => onDateSelect(day.date)}
+            className={`calendar-day ${selectedDate === day.date ? 'selected' : ''} ${day.slotCount > 0 ? 'has-slots' : 'no-slots'} ${!day.isAvailable ? 'unavailable' : ''} ${day.isAvailable && day.slotCount === 0 ? 'enabled-no-slots' : ''}`}
+            onClick={() => day.isAvailable ? onDateSelect(day.date) : null}
+            style={{ cursor: day.isAvailable ? 'pointer' : 'not-allowed' }}
           >
             <div className="day-name">{day.dayName}</div>
             <div className="day-date">{day.monthDay}</div>

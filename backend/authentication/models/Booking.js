@@ -365,6 +365,7 @@ class Booking {
     const query = `
       SELECT 
         id,
+        user_id,
         provider_id,
         appointment_date,
         status,
