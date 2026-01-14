@@ -27,7 +27,7 @@ const ProviderActiveSession = ({ selectedAppointment }) => {
       try {
         setLoadingAppointments(true)
         const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
-        const response = await apiClient.get(`${apiBaseUrl}/provider/bookings`)
+        const response = await apiClient.get(`${apiBaseUrl}/users/provider/bookings`)
         const bookings = response.bookings || []
         
         const now = new Date()

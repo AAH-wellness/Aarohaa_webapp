@@ -464,6 +464,7 @@ function App() {
         {showForgotPassword && (
           <ForgotPasswordModal
             onClose={() => setShowForgotPassword(false)}
+            role={loginMode === 'provider' ? 'provider' : 'user'}
           />
         )}
         {showRegister && (

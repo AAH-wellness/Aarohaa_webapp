@@ -714,6 +714,13 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                         />
                         <span>Remember for 30 days</span>
                       </label>
+                      <button
+                        type="button"
+                        className="forgot-password-link"
+                        onClick={onForgotPassword}
+                      >
+                        forgot password
+                      </button>
                     </div>
                   </div>
 

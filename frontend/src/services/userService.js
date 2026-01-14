@@ -237,15 +237,16 @@ class UserService {
   /**
    * Request password reset
    * @param {string} email - User email
+   * @param {string} role - User role ('user' or 'provider')
    * @returns {Promise<Object>} Success message
    */
-  async forgotPassword(email) {
+  async forgotPassword(email, role = 'user') {
     if (this.useMock) {
       return this.mockForgotPassword(email)
     }
 
     try {
-      return await apiClient.post(`${this.baseUrl}/password/reset-request`, { email })
+      return await apiClient.post(`${this.baseUrl}/password/reset-request`, { email, role })
     } catch (error) {
       console.error('Forgot password error:', error)
       throw error

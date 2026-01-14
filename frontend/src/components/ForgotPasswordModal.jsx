@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { userService } from '../services'
 import './ForgotPasswordModal.css'
 
-const ForgotPasswordModal = ({ onClose }) => {
+const ForgotPasswordModal = ({ onClose, role = 'user' }) => {
   const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -40,11 +40,18 @@ const ForgotPasswordModal = ({ onClose }) => {
     setIsSubmitting(true)
 
     try {
-      await userService.forgotPassword(email)
+      await userService.forgotPassword(email, role)
       setShowSuccess(true)
     } catch (err) {
       console.error('Forgot password error:', err)
-      setError(err.message || 'Failed to send reset email. Please try again.')
+      // Extract error message from API response
+      let errorMessage = 'Failed to send reset email. Please try again.'
+      if (err.response?.data?.error?.message) {
+        errorMessage = err.response.data.error.message
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

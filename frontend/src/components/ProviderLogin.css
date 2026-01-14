@@ -238,6 +238,36 @@
   cursor: pointer;
 }
 
+.provider-login-form .forgot-password-link {
+  background: none;
+  border: none;
+  color: #4285F4;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  text-transform: lowercase;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.provider-login-form .forgot-password-link:hover {
+  color: #1a73e8;
+  text-decoration: underline;
+}
+
+.provider-login-form .forgot-password-link:active {
+  color: #1557b0;
+}
+
+/* Ensure visibility in remember-forgot container */
+.provider-login-form .remember-forgot-container .forgot-password-link {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .provider-login-form .password-toggle {
   position: absolute;
   right: 16px;

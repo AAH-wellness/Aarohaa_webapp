@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import LoginSuccess from './LoginSuccess'
 import LoginErrorModal from './LoginErrorModal'
+import ForgotPasswordModal from './ForgotPasswordModal'
 import { userService } from '../services'
 import './ProviderLogin.css'
 
@@ -25,6 +26,7 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
   })
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -272,6 +274,13 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
                     />
                     <span>Remember for 30 days</span>
                   </label>
+                  <button
+                    type="button"
+                    className="forgot-password-link"
+                    onClick={() => setShowForgotPassword(true)}
+                  >
+                    forgot password
+                  </button>
                 </div>
               </div>
 
@@ -316,6 +325,13 @@ const ProviderLogin = ({ onLogin, onNavigateToUserLogin }) => {
         <LoginErrorModal
           message={errorMessage}
           onClose={() => setShowErrorModal(false)}
+        />
+      )}
+
+      {showForgotPassword && (
+        <ForgotPasswordModal
+          onClose={() => setShowForgotPassword(false)}
+          role="provider"
         />
       )}
     </div>

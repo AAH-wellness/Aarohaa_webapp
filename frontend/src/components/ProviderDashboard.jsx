@@ -18,7 +18,7 @@ const ProviderDashboard = ({ onJoinSession, onNavigateToSchedule }) => {
       try {
         setLoading(true)
         const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
-        const response = await apiClient.get(`${apiBaseUrl}/provider/bookings`)
+        const response = await apiClient.get(`${apiBaseUrl}/users/provider/bookings`)
         
         // Transform backend booking format to appointment format
         const allAppointments = (response.bookings || []).map(booking => ({
