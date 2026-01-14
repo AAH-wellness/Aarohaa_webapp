@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import './CancelBookingModal.css'
 
 const CancelBookingModal = ({ 
@@ -14,6 +14,7 @@ const CancelBookingModal = ({
   const timeoutRef = useRef(null)
   const animationTimeoutRef = useRef(null)
   const isMountedRef = useRef(true)
+  const modalContentRef = useRef(null)
 
   useEffect(() => {
     // Set mounted flag
@@ -23,7 +24,10 @@ const CancelBookingModal = ({
     setIsVisible(true)
     
     // Add class to body when modal is visible to lower header z-index
-    document.body.classList.add('modal-open')
+    // Use a more defensive approach to prevent conflicts
+    if (!document.body.classList.contains('modal-open')) {
+      document.body.classList.add('modal-open')
+    }
     
     // Cleanup on unmount
     return () => {
@@ -37,6 +41,15 @@ const CancelBookingModal = ({
         clearTimeout(animationTimeoutRef.current)
         animationTimeoutRef.current = null
       }
+      
+      // Stop all CSS animations on unmount to prevent memory leaks
+      if (modalContentRef.current) {
+        // Force stop animations by removing animation classes
+        modalContentRef.current.style.animation = 'none'
+        modalContentRef.current.style.animationPlayState = 'paused'
+      }
+      
+      // Remove body class safely
       document.body.classList.remove('modal-open')
     }
   }, [])
@@ -73,7 +86,7 @@ const CancelBookingModal = ({
     }
   }, [showSuccess])
 
-  const handleConfirm = () => {
+  const handleConfirm = useCallback(() => {
     // Validate reason is provided
     if (!cancelReason.trim()) {
       setReasonError('Please provide a reason for cancellation')
@@ -90,7 +103,7 @@ const CancelBookingModal = ({
     if (onConfirm) {
       onConfirm(cancelReason.trim())
     }
-  }
+  }, [cancelReason, onConfirm])
   
   const handleReasonChange = (e) => {
     const value = e.target.value
@@ -100,7 +113,7 @@ const CancelBookingModal = ({
     }
   }
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     // Clear any pending timeouts immediately
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
@@ -109,6 +122,12 @@ const CancelBookingModal = ({
     if (animationTimeoutRef.current) {
       clearTimeout(animationTimeoutRef.current)
       animationTimeoutRef.current = null
+    }
+    
+    // Stop animations immediately to prevent memory leaks
+    if (modalContentRef.current) {
+      modalContentRef.current.style.animation = 'none'
+      modalContentRef.current.style.animationPlayState = 'paused'
     }
     
     // Hide modal immediately
@@ -121,7 +140,7 @@ const CancelBookingModal = ({
     if (onCancel && isMountedRef.current) {
       onCancel()
     }
-  }
+  }, [onCancel])
 
   const formatDateTime = (dateTimeString) => {
     const date = new Date(dateTimeString)
@@ -139,7 +158,7 @@ const CancelBookingModal = ({
     // Success state - booking cancelled
     return (
       <div className={`cancel-modal-overlay ${isVisible ? 'visible' : ''}`} onClick={handleCancel}>
-        <div className={`cancel-modal-content success ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
+        <div ref={modalContentRef} className={`cancel-modal-content success ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
           <div className="cancel-icon-wrapper">
             <div className="cancel-icon success">
               <div className="cancel-circle">
@@ -172,7 +191,7 @@ const CancelBookingModal = ({
   // Confirmation state - asking for confirmation
   return (
     <div className={`cancel-modal-overlay ${isVisible ? 'visible' : ''}`} onClick={handleCancel}>
-      <div className={`cancel-modal-content ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
+      <div ref={modalContentRef} className={`cancel-modal-content ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="cancel-icon-wrapper">
           <div className="cancel-icon">
             <div className="cancel-circle">
