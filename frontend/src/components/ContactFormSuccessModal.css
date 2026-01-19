@@ -132,6 +132,46 @@
   margin-bottom: 32px;
 }
 
+.contact-success-ticket {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(14, 72, 38, 0.08);
+  color: #0e4826;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.contact-success-modal-note {
+  text-align: left;
+  background: linear-gradient(135deg, rgba(14, 72, 38, 0.06) 0%, rgba(255, 215, 0, 0.07) 100%);
+  border: 1px solid rgba(14, 72, 38, 0.15);
+  border-radius: 14px;
+  padding: 16px 16px;
+  margin-bottom: 26px;
+}
+
+.contact-success-modal-note-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #0e4826;
+  margin-bottom: 8px;
+}
+
+.contact-success-modal-note-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.contact-success-modal-note-muted {
+  color: #6b7280;
+}
+
 .contact-success-modal-btn {
   background: linear-gradient(135deg, #0e4826 0%, #0e4826 100%);
   color: white;

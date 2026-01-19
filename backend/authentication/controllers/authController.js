@@ -2814,7 +2814,7 @@ async function submitSupportTicket(req, res, next) {
       type: messageType
     });
 
-    // Send email notification to support team (non-blocking)
+    // Send email notification to support team + acknowledgement to user (non-blocking)
     emailService.sendSupportTicketEmail(
       name,
       email,
@@ -2830,6 +2830,22 @@ async function submitSupportTicket(req, res, next) {
       }
     }).catch(err => {
       console.error('❌ Error sending support ticket email:', err);
+    });
+
+    emailService.sendSupportTicketAcknowledgementEmail(
+      name,
+      email,
+      subject,
+      messageType,
+      supportTicket.id
+    ).then(result => {
+      if (result.success) {
+        console.log('✅ Support ticket acknowledgement email sent to user');
+      } else {
+        console.warn('⚠️  Failed to send support ticket acknowledgement email:', result.error);
+      }
+    }).catch(err => {
+      console.error('❌ Error sending support ticket acknowledgement email:', err);
     });
 
     // Return success response

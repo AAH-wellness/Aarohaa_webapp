@@ -53,7 +53,7 @@ function initializeTransporter() {
 /**
  * Send email using nodemailer
  */
-async function sendEmail(to, subject, html, text = null) {
+async function sendEmail(to, subject, html, text = null, mailOptions = {}) {
   try {
     console.log('📧 Attempting to send email to:', to);
     console.log('   Subject:', subject);
@@ -75,7 +75,8 @@ async function sendEmail(to, subject, html, text = null) {
       to: to,
       subject: subject,
       html: html,
-      text: plainText
+      text: plainText,
+      ...mailOptions
     });
 
     console.log('✅ Email sent successfully:', {
@@ -900,12 +901,113 @@ function getSupportTicketEmailTemplate(userName, userEmail, subject, messageType
   `;
 }
 
+// Premium support ticket acknowledgement email template (to user)
+function getSupportTicketAcknowledgementEmailTemplate(userName, userEmail, subject, messageType, ticketId) {
+  const displayName = userName || 'there';
+  const formattedDate = new Date().toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <title>We received your request - Aarohaa Wellness</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #0e4826 0%, #16a34a 50%, #0e4826 100%); padding: 56px 40px; text-align: center; position: relative; overflow: hidden;">
+                  <div style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%); pointer-events: none;"></div>
+                  <div style="font-size: 52px; margin-bottom: 14px; position: relative; z-index: 1;">✅</div>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 30px; font-weight: 700; letter-spacing: -1px; line-height: 1.2; position: relative; z-index: 1;">Request received</h1>
+                  <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.95); font-size: 16px; font-weight: 400; position: relative; z-index: 1;">We’ll get back to you by email</p>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 46px 40px 18px;">
+                  <h2 style="margin: 0 0 14px 0; color: #111827; font-size: 22px; font-weight: 650; letter-spacing: -0.4px; line-height: 1.35;">Hi ${displayName},</h2>
+                  <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.7;">Thanks for reaching out to Aarohaa Wellness Support. We’ve received your request and our team will reply to you as soon as possible.</p>
+
+                  <!-- Ticket badge -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                    <tr>
+                      <td align="center" style="padding: 6px 0 22px;">
+                        <div style="display: inline-block; background: linear-gradient(135deg, #0e4826 0%, #16a34a 100%); color: #ffffff; padding: 12px 22px; border-radius: 10px; font-size: 15px; font-weight: 650; letter-spacing: 0.4px; box-shadow: 0 4px 14px rgba(14, 72, 38, 0.25);">
+                          Ticket ID: #${ticketId}
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Details card -->
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 12px; padding: 26px; margin: 0 0 22px 0; border: 1px solid rgba(14, 72, 38, 0.10);">
+                    <tr>
+                      <td>
+                        <p style="margin: 0 0 6px 0; color: #059669; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Submitted</p>
+                        <p style="margin: 0 0 14px 0; color: #111827; font-size: 16px; font-weight: 600;">${formattedDate}</p>
+
+                        <p style="margin: 0 0 6px 0; color: #059669; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Type</p>
+                        <p style="margin: 0 0 14px 0; color: #111827; font-size: 16px; font-weight: 600;">${messageType}</p>
+
+                        <p style="margin: 0 0 6px 0; color: #059669; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Subject</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${subject}</p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">
+                    We’ll reply to <strong style="color:#111827;">${userEmail}</strong>. If you don’t see our reply, please check your Spam/Junk folder.
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Signature -->
+              <tr>
+                <td style="padding: 0 40px 40px;">
+                  ${getEmailSignature()}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
 // Send support ticket email to support team
 async function sendSupportTicketEmail(userName, userEmail, subject, messageType, message, ticketId) {
-  const supportEmail = process.env.SUPPORT_EMAIL || EMAIL_FROM || 'support@aarohaa.com';
+  // Default support inbox (override via SUPPORT_EMAIL env var)
+  const supportEmail = process.env.SUPPORT_EMAIL || 'support1@aarohaa.io';
   const emailSubject = `[Support Ticket #${ticketId}] ${subject} - ${messageType}`;
   const html = getSupportTicketEmailTemplate(userName, userEmail, subject, messageType, message, ticketId);
-  return await sendEmail(supportEmail, emailSubject, html);
+  // Set Reply-To so support can simply hit "Reply" to respond to the user.
+  return await sendEmail(supportEmail, emailSubject, html, null, { replyTo: userEmail });
+}
+
+// Send acknowledgement email to user (non-sensitive summary)
+async function sendSupportTicketAcknowledgementEmail(userName, userEmail, subject, messageType, ticketId) {
+  const emailSubject = `We received your support request (#${ticketId})`;
+  const html = getSupportTicketAcknowledgementEmailTemplate(userName, userEmail, subject, messageType, ticketId);
+  // If your SUPPORT_EMAIL is different from EMAIL_FROM, set Reply-To so the user can reply directly to the support inbox.
+  const supportEmail = process.env.SUPPORT_EMAIL || 'support1@aarohaa.io';
+  return await sendEmail(userEmail, emailSubject, html, null, { replyTo: supportEmail });
 }
 
 module.exports = {
@@ -917,5 +1019,6 @@ module.exports = {
   sendBookingCancellationEmail,
   sendProviderCancellationNotificationEmail,
   sendSupportTicketEmail,
+  sendSupportTicketAcknowledgementEmail,
   initializeTransporter
 };

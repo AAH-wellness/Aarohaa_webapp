@@ -12,6 +12,7 @@ const Messages = () => {
     message: '',
   })
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successDetails, setSuccessDetails] = useState({ email: '', ticketId: null })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -71,6 +72,10 @@ const Messages = () => {
       console.log('Support ticket submitted:', response)
       
       setIsSubmitting(false)
+      setSuccessDetails({
+        email: formData.email.trim(),
+        ticketId: response?.ticketId || response?.ticket?.id || null,
+      })
       setShowSuccessModal(true)
 
       // Reset form
@@ -90,6 +95,7 @@ const Messages = () => {
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false)
+      setSuccessDetails({ email: '', ticketId: null })
   }
 
   return (
@@ -212,7 +218,11 @@ const Messages = () => {
       </div>
 
       {showSuccessModal && (
-        <ContactFormSuccessModal onClose={handleSuccessModalClose} />
+        <ContactFormSuccessModal
+          onClose={handleSuccessModalClose}
+          email={successDetails.email}
+          ticketId={successDetails.ticketId}
+        />
       )}
     </div>
   )
