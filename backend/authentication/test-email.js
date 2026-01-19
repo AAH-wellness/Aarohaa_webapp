@@ -51,28 +51,74 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Test connection
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ Connection Failed:', error.message);
-    console.error('');
-    console.error('💡 Possible Issues:');
-    console.error('   1. Check your EMAIL_HOST, EMAIL_PORT, and EMAIL_SECURE settings');
-    console.error('   2. Verify your EMAIL_USER and EMAIL_PASSWORD are correct');
-    console.error('   3. For Microsoft/Outlook accounts, you may need an App Password');
-    console.error('   4. Check if your email provider requires SMTP to be enabled');
-    process.exit(1);
-  } else {
-    console.log('✅ Connection Successful!');
-    console.log('');
-    console.log('🎉 Your email service is configured correctly!');
-    console.log('   You can now send emails from your application.');
-    console.log('');
-    console.log('📝 Current Configuration:');
-    console.log('   Host:', config.host);
-    console.log('   Port:', config.port);
-    console.log('   Secure:', config.secure);
-    console.log('   User:', config.auth.user);
-    process.exit(0);
+// Test connection with multiple configurations for GoDaddy
+async function testConnection() {
+  const configs = [
+    { host: config.host, port: config.port, secure: config.secure, name: 'Current Configuration' },
+    { host: 'smtpout.secureserver.net', port: 587, secure: false, name: 'GoDaddy SMTP (Port 587)' },
+    { host: 'smtpout.secureserver.net', port: 465, secure: true, name: 'GoDaddy SMTP (Port 465 SSL)' },
+    { host: 'smtpout.secureserver.net', port: 80, secure: false, name: 'GoDaddy SMTP (Port 80)' },
+    { host: 'relay-hosting.secureserver.net', port: 25, secure: false, name: 'GoDaddy Relay (Port 25)' }
+  ];
+
+  for (const testConfig of configs) {
+    console.log(`\n🧪 Testing: ${testConfig.name}`);
+    console.log(`   Host: ${testConfig.host}, Port: ${testConfig.port}, Secure: ${testConfig.secure}`);
+    
+    const testTransporter = nodemailer.createTransport({
+      host: testConfig.host,
+      port: testConfig.port,
+      secure: testConfig.secure,
+      auth: config.auth,
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+
+    try {
+      await new Promise((resolve, reject) => {
+        testTransporter.verify((error, success) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(success);
+          }
+        });
+      });
+      
+      console.log('✅ Connection Successful with this configuration!');
+      console.log('');
+      console.log('🎉 Your email service is configured correctly!');
+      console.log('   Update your .env file with these settings:');
+      console.log(`   EMAIL_HOST=${testConfig.host}`);
+      console.log(`   EMAIL_PORT=${testConfig.port}`);
+      console.log(`   EMAIL_SECURE=${testConfig.secure}`);
+      console.log(`   EMAIL_USER=${config.auth.user}`);
+      console.log('');
+      process.exit(0);
+    } catch (error) {
+      console.log(`   ❌ Failed: ${error.message}`);
+    }
   }
-});
+
+  // If all configurations failed
+  console.error('\n❌ All connection attempts failed!');
+  console.error('');
+  console.error('💡 GoDaddy Email Troubleshooting:');
+  console.error('   1. Verify your EMAIL_USER and EMAIL_PASSWORD are correct');
+  console.error('   2. Check if your GoDaddy email account is locked (contact support)');
+  console.error('   3. Try resetting your email password in GoDaddy cPanel');
+  console.error('   4. Contact GoDaddy support to verify SMTP settings for your account');
+  console.error('   5. Make sure SMTP is enabled in your GoDaddy email settings');
+  console.error('   6. Check if your account requires an App Password (less common for GoDaddy)');
+  console.error('');
+  console.error('📧 Common GoDaddy SMTP Settings:');
+  console.error('   Host: smtpout.secureserver.net');
+  console.error('   Port: 587 (TLS) or 465 (SSL)');
+  console.error('   Secure: false (for 587) or true (for 465)');
+  console.error('   Username: Your full email address');
+  console.error('   Password: Your email account password');
+  process.exit(1);
+}
+
+testConnection();

@@ -130,8 +130,10 @@ async function registerProvider(req, res, next) {
     }
 
     // Check if provider already exists
+    console.log('registerProvider: Checking if provider exists with email:', email);
     const existingProvider = await Provider.findByEmail(email);
     if (existingProvider) {
+      console.log('❌ Provider registration failed: Email already registered as provider:', email);
       return res.status(409).json({
         error: {
           message: 'Email already registered as provider',
@@ -140,10 +142,13 @@ async function registerProvider(req, res, next) {
         }
       });
     }
+    console.log('✅ No existing provider found with email:', email);
 
     // Check if user with same email exists (prevent duplicate emails across tables)
+    console.log('registerProvider: Checking if user exists with email:', email);
     const existingUser = await User.findByEmail(email);
     if (existingUser) {
+      console.log('❌ Provider registration failed: Email already registered as user:', email);
       return res.status(409).json({
         error: {
           message: 'Email already registered as user',
@@ -152,6 +157,7 @@ async function registerProvider(req, res, next) {
         }
       });
     }
+    console.log('✅ No existing user found with email:', email);
 
     // Hash password
     const saltRounds = 10;

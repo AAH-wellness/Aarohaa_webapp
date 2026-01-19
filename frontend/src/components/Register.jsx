@@ -412,11 +412,22 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
     } catch (error) {
       console.error('Registration error:', error)
       
-      // Extract error message
+      // Extract error message with more context
       let errorMsg = 'Registration failed. Please try again.'
       
       if (error.response?.data?.error?.message) {
         errorMsg = error.response.data.error.message
+        
+        // Add helpful suggestions for common errors
+        if (error.response.status === 409) {
+          if (errorMsg.includes('already registered as user')) {
+            errorMsg += '\n\nThis email is already registered as a regular user. Please use the user login page instead, or use a different email address.'
+          } else if (errorMsg.includes('already registered as provider')) {
+            errorMsg += '\n\nThis email is already registered as a provider. Please use the provider login page instead, or use a different email address.'
+          } else if (errorMsg.includes('already registered')) {
+            errorMsg += '\n\nThis email is already in use. Please try logging in instead, or use a different email address.'
+          }
+        }
       } else if (error.message) {
         errorMsg = error.message
       }
