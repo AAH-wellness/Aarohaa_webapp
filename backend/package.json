@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Aarohaa Wellness Backend - Microservices Architecture",
   "main": "index.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "npm run dev:auth",
     "dev:auth": "cd authentication && npm run dev",

@@ -149,8 +149,33 @@ function getEmailSignature() {
 
 // Premium Welcome email template for user registration
 function getWelcomeEmailTemplate(name, email, role = 'user') {
-  const roleText = role === 'provider' ? 'Provider' : 'User';
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const isProvider = role === 'provider';
+  const roleText = isProvider ? 'Provider' : 'User';
+  const title = isProvider ? 'Welcome, Provider — Aarohaa Wellness' : 'Welcome to Aarohaa Wellness';
+  const headerSubtitle = isProvider ? 'Thanks for joining as a provider' : 'Your wellness journey begins here';
+  const ctaHref = isProvider ? `${frontendUrl}/provider` : `${frontendUrl}/login`;
+  const ctaText = isProvider ? 'Open Provider Dashboard' : 'Login to Your Account';
+  const intro = isProvider
+    ? `Thank you for registering as a provider on Aarohaa Wellness. We're excited to have you onboard and ready to support you as you help patients on their wellness journeys.`
+    : `Thank you for joining the Aarohaa Wellness community. We're thrilled to have you on board and excited to support you on your path to better health and wellness.`;
+  const nextSteps = isProvider
+    ? `
+      <!-- Provider Next Steps -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 12px; padding: 22px; margin: 22px 0 32px 0; border: 1px solid rgba(14, 72, 38, 0.1);">
+        <tr>
+          <td>
+            <p style="margin: 0 0 14px 0; color: #0e4826; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Next steps</p>
+            <div style="margin: 0; color: #111827; font-size: 15px; line-height: 1.75;">
+              <div style="margin-bottom: 10px;"><strong>1.</strong> Complete your professional profile (title, specialization, bio, hourly rate).</div>
+              <div style="margin-bottom: 10px;"><strong>2.</strong> Set your availability so patients can book sessions.</div>
+              <div><strong>3.</strong> Connect your payout method to receive payments.</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    `
+    : '';
   
   return `
     <!DOCTYPE html>
@@ -159,7 +184,7 @@ function getWelcomeEmailTemplate(name, email, role = 'user') {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <title>Welcome to Aarohaa Wellness</title>
+      <title>${title}</title>
     </head>
     <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -170,8 +195,8 @@ function getWelcomeEmailTemplate(name, email, role = 'user') {
               <tr>
                 <td style="background: linear-gradient(135deg, #0e4826 0%, #16a34a 50%, #0e4826 100%); padding: 60px 40px; text-align: center; position: relative; overflow: hidden;">
                   <div style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none;"></div>
-                  <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1.2; position: relative; z-index: 1;">Welcome to Aarohaa Wellness</h1>
-                  <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.95); font-size: 16px; font-weight: 400; position: relative; z-index: 1;">Your wellness journey begins here</p>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1.2; position: relative; z-index: 1;">${isProvider ? 'Welcome to Aarohaa Wellness' : 'Welcome to Aarohaa Wellness'}</h1>
+                  <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.95); font-size: 16px; font-weight: 400; position: relative; z-index: 1;">${headerSubtitle}</p>
                 </td>
               </tr>
               
@@ -179,7 +204,7 @@ function getWelcomeEmailTemplate(name, email, role = 'user') {
               <tr>
                 <td style="padding: 50px 40px;">
                   <h2 style="margin: 0 0 20px 0; color: #111827; font-size: 24px; font-weight: 600; letter-spacing: -0.5px; line-height: 1.3;">Hello ${name}! 👋</h2>
-                  <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.7;">Thank you for joining the Aarohaa Wellness community. We're thrilled to have you on board and excited to support you on your path to better health and wellness.</p>
+                  <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.7;">${intro}</p>
                   
                   <!-- Account Details Card -->
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 12px; padding: 24px; margin: 32px 0; border: 1px solid rgba(14, 72, 38, 0.1);">
@@ -203,14 +228,20 @@ function getWelcomeEmailTemplate(name, email, role = 'user') {
                       </td>
                     </tr>
                   </table>
+
+                  ${nextSteps}
                   
-                  <p style="margin: 0 0 32px 0; color: #4b5563; font-size: 16px; line-height: 1.7;">You're all set! Log in to your account to explore our services, book appointments, and start your personalized wellness experience.</p>
+                  <p style="margin: 0 0 32px 0; color: #4b5563; font-size: 16px; line-height: 1.7;">${
+                    isProvider
+                      ? "You're all set to start offering sessions. Open your provider dashboard to complete setup and manage your schedule."
+                      : "You're all set! Log in to your account to explore our services, book appointments, and start your personalized wellness experience."
+                  }</p>
                   
                   <!-- Premium CTA Button -->
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                     <tr>
                       <td align="center" style="padding: 8px 0 32px;">
-                        <a href="${frontendUrl}/login" style="display: inline-block; background: linear-gradient(135deg, #0e4826 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600; letter-spacing: 0.3px; box-shadow: 0 4px 14px rgba(14, 72, 38, 0.25); transition: all 0.3s ease;">Login to Your Account</a>
+                        <a href="${ctaHref}" style="display: inline-block; background: linear-gradient(135deg, #0e4826 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600; letter-spacing: 0.3px; box-shadow: 0 4px 14px rgba(14, 72, 38, 0.25); transition: all 0.3s ease;">${ctaText}</a>
                       </td>
                     </tr>
                   </table>
@@ -647,7 +678,9 @@ function getProviderBookingNotificationEmailTemplate(providerName, userName, app
 
 // Send welcome email after registration
 async function sendWelcomeEmail(name, email, role = 'user') {
-  const subject = 'Welcome to Aarohaa Wellness!';
+  const subject = role === 'provider'
+    ? 'Thank you for registering as a Provider — Aarohaa Wellness'
+    : 'Welcome to Aarohaa Wellness!';
   const html = getWelcomeEmailTemplate(name, email, role);
   return await sendEmail(email, subject, html);
 }

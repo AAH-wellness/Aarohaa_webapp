@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import BookingRequiredModal from './BookingRequiredModal'
 import { userService, apiClient, API_CONFIG } from '../services'
+import DailyIframe from '@daily-co/daily-js'
 import './ActiveSession.css'
 
 const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionChange, selectedAppointment }) => {
@@ -13,12 +14,8 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
   const [activeBooking, setActiveBooking] = useState(null)
   const [providerNotes, setProviderNotes] = useState([])
   const [currentUserName, setCurrentUserName] = useState('')
-  const [peerConnection, setPeerConnection] = useState(null)
-  const [remoteStream, setRemoteStream] = useState(null)
-  const videoRef = useRef(null)
-  const remoteVideoRef = useRef(null)
-  const streamRef = useRef(null)
-  const localStreamRef = useRef(null)
+  const callContainerRef = useRef(null)
+  const callObjectRef = useRef(null)
 
   useEffect(() => {
     // If selectedAppointment is passed, use it directly
@@ -164,62 +161,19 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
     }
   }, [isCallStarted])
 
-  // Cleanup WebRTC on unmount
+  // Cleanup embedded call on unmount
   useEffect(() => {
     return () => {
-      if (peerConnection) {
-        peerConnection.close()
-      }
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop())
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-      }
-    }
-  }, [peerConnection])
-
-  useEffect(() => {
-    // Setup video element when call starts and video element is available
-    if (isCallStarted && streamRef.current) {
-      // Use a small timeout to ensure video element is in the DOM
-      const timer = setTimeout(() => {
-        if (videoRef.current && streamRef.current) {
-          const video = videoRef.current
-          video.srcObject = streamRef.current
-          
-          const playVideo = () => {
-            video.play()
-              .then(() => {
-                console.log('Video is playing successfully')
-              })
-              .catch((error) => {
-                console.error('Error playing video:', error)
-              })
-          }
-          
-          if (video.readyState >= 2) {
-            // Metadata already loaded
-            playVideo()
-          } else {
-            // Wait for metadata
-            video.onloadedmetadata = playVideo
-          }
+      try {
+        if (callObjectRef.current) {
+          callObjectRef.current.destroy()
+          callObjectRef.current = null
         }
-      }, 100)
-
-      return () => clearTimeout(timer)
-    }
-
-    // Cleanup video stream when call ends
-    if (!isCallStarted && streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
-      if (videoRef.current) {
-        videoRef.current.srcObject = null
+      } catch (e) {
+        // ignore
       }
     }
-  }, [isCallStarted])
+  }, [])
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
@@ -238,188 +192,67 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
   const handleStartCall = async () => {
     setIsLoading(true)
     try {
-      // Get user media (camera and microphone)
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+      if (!activeBooking?.id) {
+        throw new Error('No active booking found')
+      }
+
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      const joinInfo = await apiClient.post(`${apiBaseUrl}/users/bookings/${activeBooking.id}/video/join`, {})
+
+      if (!callContainerRef.current) {
+        throw new Error('Call container not available')
+      }
+
+      // Clean up existing call if any
+      if (callObjectRef.current) {
+        callObjectRef.current.destroy()
+        callObjectRef.current = null
+      }
+
+      const callObject = DailyIframe.createFrame(callContainerRef.current, {
+        showLeaveButton: true,
+        iframeStyle: {
+          width: '100%',
+          height: '100%',
+          border: '0',
+          borderRadius: '16px',
         },
       })
 
-      console.log('Local stream obtained:', stream)
-      localStreamRef.current = stream
-      streamRef.current = stream
+      callObjectRef.current = callObject
 
-      // Initialize WebRTC peer connection
-      await initializeWebRTC(stream)
+      callObject.on('left-meeting', () => {
+        try {
+          callObject.destroy()
+        } catch (e) {
+          // ignore
+        }
+        callObjectRef.current = null
+        setIsCallStarted(false)
+        setSessionTime(0)
+      })
 
-      // Set call started so video element renders
+      await callObject.join({ url: joinInfo.roomUrl, token: joinInfo.token })
+
       setIsCallStarted(true)
       setIsLoading(false)
-
-      // Attach local stream to video element
-      setTimeout(() => {
-        if (videoRef.current && streamRef.current) {
-          const video = videoRef.current
-          video.srcObject = streamRef.current
-          video.muted = true // Mute local video to avoid echo
-          
-          video.onloadedmetadata = () => {
-            video.play()
-              .then(() => {
-                console.log('Local video started playing successfully')
-              })
-              .catch((error) => {
-                console.error('Error playing local video:', error)
-              })
-          }
-          
-          if (video.readyState >= 2) {
-            video.play().catch((error) => {
-              console.error('Error playing local video:', error)
-            })
-          }
-        }
-      }, 200)
     } catch (error) {
-      console.error('Error accessing webcam:', error)
-      alert('Failed to access webcam. Please ensure you have granted camera and microphone permissions.')
+      console.error('Error starting embedded call:', error)
+      alert(error?.message || 'Failed to start the call. Please try again.')
       setIsLoading(false)
-    }
-  }
-
-  const initializeWebRTC = async (localStream) => {
-    try {
-      // Create RTCPeerConnection with STUN servers for NAT traversal
-      const configuration = {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      }
-
-      const pc = new RTCPeerConnection(configuration)
-      setPeerConnection(pc)
-
-      // Add local stream tracks to peer connection
-      localStream.getTracks().forEach(track => {
-        pc.addTrack(track, localStream)
-        console.log('Added local track:', track.kind)
-      })
-
-      // Handle remote stream
-      pc.ontrack = (event) => {
-        console.log('Received remote track:', event.track.kind)
-        const remoteStream = event.streams[0]
-        setRemoteStream(remoteStream)
-        
-        // Attach remote stream to remote video element
-        setTimeout(() => {
-          if (remoteVideoRef.current && remoteStream) {
-            remoteVideoRef.current.srcObject = remoteStream
-            remoteVideoRef.current.play().catch(err => {
-              console.error('Error playing remote video:', err)
-            })
-          }
-        }, 100)
-      }
-
-      // Handle ICE candidates
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          console.log('ICE candidate:', event.candidate)
-          // In production, send this to signaling server
-          // For now, store in localStorage for demo
-          if (activeBooking) {
-            const candidates = JSON.parse(localStorage.getItem(`ice_candidates_${activeBooking.id}`) || '[]')
-            candidates.push(event.candidate)
-            localStorage.setItem(`ice_candidates_${activeBooking.id}`, JSON.stringify(candidates))
-          }
-        }
-      }
-
-      // Handle connection state changes
-      pc.onconnectionstatechange = () => {
-        console.log('Connection state:', pc.connectionState)
-        if (pc.connectionState === 'connected') {
-          console.log('WebRTC connection established!')
-        } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-          console.warn('WebRTC connection lost')
-        }
-      }
-
-      // Create offer (user initiates connection)
-      const offer = await pc.createOffer()
-      await pc.setLocalDescription(offer)
-      console.log('Created offer:', offer)
-
-      // In production, send offer to signaling server
-      // For now, store in localStorage
-      if (activeBooking) {
-        localStorage.setItem(`webrtc_offer_${activeBooking.id}`, JSON.stringify(offer))
-      }
-
-      // Simulate receiving answer (in production, this comes from signaling server)
-      // For demo purposes, we'll create a simple peer connection
-      // In real implementation, provider would receive offer and create answer
-
-    } catch (error) {
-      console.error('Error initializing WebRTC:', error)
-      // Continue with local video even if WebRTC fails
     }
   }
 
   const handleEndCall = () => {
     if (window.confirm('Are you sure you want to end this session?')) {
-      // Close peer connection
-      if (peerConnection) {
-        peerConnection.close()
-        setPeerConnection(null)
-      }
-
-      // Stop all local tracks
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop())
-        localStreamRef.current = null
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop())
-        streamRef.current = null
-      }
-
-      // Clear video elements
-      if (videoRef.current) {
-        videoRef.current.srcObject = null
-      }
-
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = null
-      }
-
-      setRemoteStream(null)
-
-      // Mark session as completed
-      if (activeBooking) {
-        const appointments = JSON.parse(localStorage.getItem('appointments') || '[]')
-        const updatedAppointments = appointments.map(apt => {
-          if (apt.id === activeBooking.id) {
-            return {
-              ...apt,
-              status: 'completed',
-              sessionDuration: sessionTime,
-              completedAt: new Date().toISOString()
-            }
-          }
-          return apt
-        })
-        localStorage.setItem('appointments', JSON.stringify(updatedAppointments))
+      try {
+        if (callObjectRef.current) {
+          callObjectRef.current.leave()
+          callObjectRef.current.destroy()
+          callObjectRef.current = null
+        }
+      } catch (e) {
+        // ignore
       }
 
       setIsCallStarted(false)
@@ -427,8 +260,7 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
       setIsMuted(false)
       setIsVideoOff(false)
       
-      // Show completion message
-      alert('Session completed! You can access session notes in the chat below.')
+      alert('Call ended.')
     }
   }
 
@@ -519,65 +351,13 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
               <span>Cost: ${calculateCost(sessionTime)}</span>
             </div>
 
-            <div className="video-call-interface">
-              <div className="video-grid">
-                {/* Remote video (provider) */}
-                <div className="video-container remote-video">
-                  {remoteStream ? (
-                    <video
-                      ref={remoteVideoRef}
-                      autoPlay
-                      playsInline
-                      className="remote-video-element"
-                    />
-                  ) : (
-                    <div className="video-placeholder">
-                      <div className="video-icon">👤</div>
-                      <p className="video-status">Waiting for {activeBooking?.providerName || 'provider'} to join...</p>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Local video (user) - Picture in picture */}
-                <div className="video-container local-video">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted={true}
-                    className="local-video-element"
-                  />
-                  {isVideoOff && (
-                    <div className="video-off-overlay">
-                      <div className="video-icon">📹</div>
-                      <p className="video-status">Your video is off</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="video-call-interface" style={{ height: '520px' }}>
+              <div ref={callContainerRef} style={{ width: '100%', height: '100%' }} />
             </div>
 
             <div className="call-controls">
-              <button
-                className={`control-btn mic-btn ${isMuted ? 'active' : ''}`}
-                onClick={toggleMute}
-                aria-label="Toggle microphone"
-              >
-                🎤
-              </button>
-              <button
-                className={`control-btn video-btn ${isVideoOff ? 'active' : ''}`}
-                onClick={toggleVideo}
-                aria-label="Toggle video"
-              >
-                📹
-              </button>
-              <button
-                className="control-btn end-call-btn"
-                onClick={handleEndCall}
-                aria-label="End call"
-              >
-                📞
+              <button className="control-btn end-call-btn" onClick={handleEndCall} aria-label="Leave call">
+                Leave
               </button>
             </div>
           </>

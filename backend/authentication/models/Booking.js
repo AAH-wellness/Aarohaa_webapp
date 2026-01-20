@@ -6,15 +6,47 @@ class Booking {
    * Note: Tables user_bookings and provider_bookings already exist in database
    */
   static async createTable() {
-    // Tables already exist, no need to create
-    console.log('✅ Bookings tables (user_bookings, provider_bookings) already exist');
+    // Tables already exist, but we may need to ensure provider_bookings has expected columns
+    try {
+      await pool.query(`
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS notes TEXT;
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS provider_specialty VARCHAR(255);
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS provider_title VARCHAR(255);
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS provider_hourly_rate NUMERIC;
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS appointment_day VARCHAR(20);
+      `);
+      console.log('✅ Bookings tables (user_bookings, provider_bookings) verified (+ provider_bookings columns)');
+    } catch (e) {
+      console.warn('⚠️  Booking.createTable - Could not verify provider_bookings columns:', e?.message || e);
+      console.log('✅ Bookings tables (user_bookings, provider_bookings) already exist');
+    }
   }
 
   /**
    * Create a new booking
    */
   static async create(bookingData) {
-    const { userId, providerId, appointmentDate, sessionType, notes, userName, providerName } = bookingData;
+    const {
+      userId,
+      providerId,
+      appointmentDate,
+      sessionType,
+      notes,
+      userName,
+      providerName,
+      providerSpecialty,
+      providerTitle,
+      providerHourlyRate
+    } = bookingData;
     
     console.log('Booking.create - Input data:', {
       userId,
@@ -75,14 +107,80 @@ class Booking {
       }
       
       const createdBooking = result.rows[0];
+
+      // Also insert into legacy `bookings` table (some dashboards/queries may rely on it).
+      // Keep IDs in sync across user_bookings, provider_bookings, and bookings.
+      // Note: `bookings.appointment_date` is timestamp without time zone, so we store it as UTC.
+      try {
+        const legacyBookingsQuery = `
+          INSERT INTO bookings (id, user_id, provider_id, appointment_date, session_type, notes, status, created_at, updated_at)
+          VALUES ($1, $2, $3, ($4::timestamptz AT TIME ZONE 'UTC'), $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            provider_id = EXCLUDED.provider_id,
+            appointment_date = EXCLUDED.appointment_date,
+            session_type = EXCLUDED.session_type,
+            notes = EXCLUDED.notes,
+            status = EXCLUDED.status,
+            updated_at = CURRENT_TIMESTAMP
+          RETURNING id
+        `;
+        const legacyResult = await pool.query(legacyBookingsQuery, [
+          createdBooking.id,
+          parseInt(userId),
+          parseInt(providerId),
+          appointmentDate,
+          sessionType || 'Video Consultation',
+          notes || null,
+          'confirmed'
+        ]);
+        console.log('✅ Booking.create - Synced to legacy bookings table with ID:', legacyResult.rows[0]?.id);
+      } catch (legacyBookingError) {
+        console.warn(
+          'Booking.create - Could not sync to legacy bookings table (this is OK if table is unused):',
+          legacyBookingError.message
+        );
+      }
       
       // Also insert into provider_bookings table (required for provider to see bookings)
       // This ensures both tables stay in sync
       // Use the same ID as user_bookings to keep them in sync
       try {
         const providerBookingQuery = `
-          INSERT INTO provider_bookings (id, user_id, provider_id, appointment_date, session_type, notes, status, user_name, provider_name, created_at, updated_at)
-          VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          INSERT INTO provider_bookings (
+            id,
+            user_id,
+            provider_id,
+            appointment_date,
+            session_type,
+            notes,
+            status,
+            user_name,
+            provider_name,
+            provider_specialty,
+            provider_title,
+            provider_hourly_rate,
+            appointment_day,
+            created_at,
+            updated_at
+          )
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4::timestamptz,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11,
+            $12,
+            to_char(($4::timestamptz AT TIME ZONE 'UTC'), 'FMDay'),
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+          )
           ON CONFLICT (id) DO UPDATE SET
             user_id = EXCLUDED.user_id,
             provider_id = EXCLUDED.provider_id,
@@ -92,6 +190,10 @@ class Booking {
             status = EXCLUDED.status,
             user_name = EXCLUDED.user_name,
             provider_name = EXCLUDED.provider_name,
+            provider_specialty = EXCLUDED.provider_specialty,
+            provider_title = EXCLUDED.provider_title,
+            provider_hourly_rate = EXCLUDED.provider_hourly_rate,
+            appointment_day = EXCLUDED.appointment_day,
             updated_at = CURRENT_TIMESTAMP
           RETURNING id
         `;
@@ -104,7 +206,10 @@ class Booking {
           notes || null,
           'confirmed', // Default status (changed from 'scheduled')
           userName || null,
-          providerName || null
+          providerName || null,
+          providerSpecialty || null,
+          providerTitle || null,
+          providerHourlyRate !== undefined && providerHourlyRate !== null ? parseFloat(providerHourlyRate) : null
         ]);
         console.log('✅ Booking.create - Successfully created entry in provider_bookings table with ID:', providerResult.rows[0]?.id);
       } catch (providerBookingError) {
@@ -456,6 +561,22 @@ class Booking {
       } catch (providerBookingError) {
         // If provider_bookings table doesn't exist or update fails, log but don't fail
         console.warn('Booking.updateStatus - Could not update provider_bookings (this is okay if table doesn\'t exist):', providerBookingError.message);
+      }
+
+      // Also update legacy bookings table if it exists (no reason column there)
+      try {
+        const legacyUpdateQuery = `
+          UPDATE bookings
+          SET status = $1, updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+        `;
+        await pool.query(legacyUpdateQuery, [status, id]);
+        console.log('Booking.updateStatus - Also updated legacy bookings table');
+      } catch (legacyUpdateError) {
+        console.warn(
+          'Booking.updateStatus - Could not update legacy bookings table (this is okay if table is unused):',
+          legacyUpdateError.message
+        );
       }
       
       return result.rows[0];

@@ -6,9 +6,11 @@ const Provider = require('../models/Provider');
 const Booking = require('../models/Booking');
 const UserLoginEvent = require('../models/UserLoginEvent');
 const Support = require('../models/Support');
+const VideoMeeting = require('../models/VideoMeeting');
 const { pool } = require('../config/database');
 const JWT_CONFIG = require('../config/jwt');
 const emailService = require('../services/emailService');
+const dailyVideoService = require('../services/dailyVideoService');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
@@ -721,6 +723,7 @@ async function getProviderProfile(req, res, next) {
 async function updateProviderProfile(req, res, next) {
   try {
     const providerId = req.user?.userId || req.body.userId;
+    const authMethod = req.user?.authMethod; // present for Google provider tokens we issue
     
     if (!providerId) {
       return res.status(401).json({
@@ -746,6 +749,11 @@ async function updateProviderProfile(req, res, next) {
 
     const { name, phone, specialty, title, bio, hourlyRate } = req.body;
     
+    // Determine whether this update completes onboarding (Google providers only)
+    const wasHourly = parseFloat(provider.hourly_rate ?? 0) || 0;
+    const wasProfileIncomplete =
+      !provider.phone || !provider.title || !provider.specialty || !provider.bio || wasHourly <= 0;
+
     // Build update object
     const updates = {};
     if (name !== undefined) updates.name = name;
@@ -766,6 +774,41 @@ async function updateProviderProfile(req, res, next) {
     }
 
     const updatedProvider = await Provider.update(provider.id, updates);
+
+    // If a Google-auth provider just completed their profile, send welcome/thank-you email once
+    try {
+      const isGoogleProvider = authMethod === 'google';
+      const nowHourly = parseFloat(updatedProvider.hourly_rate ?? 0) || 0;
+      const nowProfileIncomplete =
+        !updatedProvider.phone ||
+        !updatedProvider.title ||
+        !updatedProvider.specialty ||
+        !updatedProvider.bio ||
+        nowHourly <= 0;
+
+      const welcomeAlreadySent = updatedProvider.welcome_email_sent === true;
+
+      if (isGoogleProvider && wasProfileIncomplete && !nowProfileIncomplete && !welcomeAlreadySent) {
+        emailService
+          .sendWelcomeEmail(updatedProvider.name || 'Provider', updatedProvider.email, 'provider')
+          .then((result) => {
+            if (result.success) {
+              console.log('✅ Welcome email sent after provider onboarding:', updatedProvider.email);
+            } else {
+              console.warn('⚠️  Welcome email failed after provider onboarding:', result.error);
+            }
+          })
+          .catch((err) => console.error('❌ Error sending onboarding welcome email:', err));
+
+        // Mark as sent (best-effort)
+        await pool.query(
+          `UPDATE providers SET welcome_email_sent = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [updatedProvider.id]
+        );
+      }
+    } catch (e) {
+      console.warn('updateProviderProfile: welcome email post-onboarding failed:', e?.message || e);
+    }
     
     res.json({
       provider: {
@@ -1610,7 +1653,10 @@ async function createBooking(req, res, next) {
       sessionType,
       notes,
       userName: userName,
-      providerName: provider.name
+      providerName: provider.name,
+      providerSpecialty: provider.specialty || null,
+      providerTitle: provider.title || null,
+      providerHourlyRate: provider.hourly_rate || null
     });
     
     console.log('createBooking: Booking created successfully:', {
@@ -2122,7 +2168,96 @@ async function loginWithGoogle(req, res, next) {
     // Parse user agent (simple parsing)
     const deviceInfo = parseUserAgent(userAgent);
 
-    // STEP 1: Check if user already exists in users table
+    const requestedRole = role === 'provider' ? 'provider' : 'user';
+
+    // Provider Google OAuth should authenticate against providers table (not users table)
+    if (requestedRole === 'provider') {
+      let provider = await Provider.findByEmail(email);
+      let isNewProvider = false;
+
+      if (!provider) {
+        // If a user exists with this email, only allow "legacy provider-in-users" migration if role was provider.
+        const existingUser = await User.findByEmail(email);
+        if (existingUser && existingUser.role !== 'provider') {
+          return res.status(409).json({
+            error: {
+              message: 'Email already registered as user. Please use user login.',
+              code: 'EMAIL_EXISTS',
+              status: 409
+            }
+          });
+        }
+
+        // Create provider with a random password hash (OAuth providers won’t use password login)
+        isNewProvider = true;
+        const randomPassword = Math.random().toString(36).slice(-12);
+        const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+        provider = await Provider.create({
+          passwordHash,
+          name: name || email.split('@')[0],
+          email,
+          phone: null,
+          specialty: null,
+          title: null,
+          bio: null,
+          hourlyRate: 0
+        });
+        console.log(`✅ Provider account created successfully via Google OAuth: ${provider.email} (ID: ${provider.id})`);
+      }
+
+      // Update provider last_login (best-effort)
+      try {
+        await pool.query(
+          `UPDATE providers
+           SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1`,
+          [provider.id]
+        );
+      } catch (e) {
+        console.warn('⚠️  Could not update provider last_login:', e?.message || e);
+      }
+
+      // Provider Google OAuth onboarding requirements
+      const providerHourlyRate = parseFloat(provider.hourly_rate ?? provider.hourlyRate ?? 0) || 0;
+      const providerProfileIncomplete =
+        !provider.phone ||
+        !provider.title ||
+        !provider.specialty ||
+        !provider.bio ||
+        providerHourlyRate <= 0;
+
+      const token = jwt.sign(
+        { userId: provider.id, email: provider.email, role: 'provider', authMethod: 'google' },
+        JWT_CONFIG.SECRET,
+        { expiresIn: JWT_CONFIG.EXPIRES_IN }
+      );
+
+      // Welcome email (optional, best-effort)
+      if (isNewProvider) {
+        emailService.sendWelcomeEmail(provider.name || 'Provider', provider.email, 'provider')
+          .catch(() => {});
+      }
+
+      return res.json({
+        user: {
+          id: provider.id,
+          email: provider.email,
+          name: provider.name,
+          role: 'provider',
+          phone: provider.phone || null,
+          picture: picture || null,
+          authMethod: 'google',
+          profileIncomplete: providerProfileIncomplete,
+          createdAt: provider.created_at
+        },
+        token,
+        message: isNewProvider ? 'Provider account created and logged in successfully' : 'Google login successful',
+        isNewUser: isNewProvider
+      });
+    }
+
+    // User Google OAuth stays on users table
     let user = await User.findByEmail(email);
     let isNewUser = false;
 
@@ -2132,7 +2267,7 @@ async function loginWithGoogle(req, res, next) {
       if (existingProvider) {
         return res.status(409).json({
           error: {
-            message: 'Email already registered as provider. Please use email/password login.',
+            message: 'Email already registered as provider. Please use provider login.',
             code: 'EMAIL_EXISTS',
             status: 409
           }
@@ -2152,74 +2287,37 @@ async function loginWithGoogle(req, res, next) {
          WHERE id = $3`,
         [googleId, picture, user.id]
       );
-      
-      // Refresh user data
       user = await User.findById(user.id);
     } else {
-      // STEP 2: User doesn't exist - auto-create account in users table with Google details
       isNewUser = true;
       console.log(`🆕 Creating new user account for Google OAuth: ${email}`);
-      
-      // Generate a random password (won't be used for OAuth users, but required by schema)
+
       const randomPassword = Math.random().toString(36).slice(-12);
       const passwordHash = await bcrypt.hash(randomPassword, 10);
 
-      // Create user with Google info (email, name, picture, google_id, etc.)
       const insertQuery = `
         INSERT INTO users (email, password, name, role, phone, google_id, google_picture, auth_method, created_at, updated_at, last_login)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'google', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, 'user', $4, $5, $6, 'google', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING id, email, name, role, phone, google_id, google_picture, auth_method, date_of_birth, created_at, updated_at
       `;
-      
+
       const result = await pool.query(insertQuery, [
         email,
         passwordHash,
         name || email.split('@')[0],
-        role || 'user',
         null,
         googleId,
         picture
       ]);
-      
+
       user = result.rows[0];
       console.log(`✅ User account created successfully: ${user.email} (ID: ${user.id})`);
 
-      // If role is provider, create provider record
-      if (user.role === 'provider') {
-        try {
-          await Provider.create({
-            userId: user.id,
-            name: user.name,
-            email: user.email,
-            phone: null,
-            specialty: null,
-            title: null,
-            bio: null,
-            hourlyRate: 0
-          });
-          console.log(`✅ Provider record created for Google OAuth user ${user.id}`);
-        } catch (error) {
-          console.error('Error creating provider record:', error);
-        }
-      }
-
-      // STEP 3: Send welcome email in parallel (non-blocking) - don't wait for it
-      // This runs asynchronously and won't block the login response
-      emailService.sendWelcomeEmail(user.name || 'User', user.email, user.role || 'user')
-        .then(result => {
-          if (result.success) {
-            console.log('✅ Welcome email sent to new Google OAuth user:', user.email);
-          } else {
-            console.warn('⚠️  Failed to send welcome email to Google OAuth user:', result.error);
-          }
-        })
-        .catch(err => {
-          console.error('❌ Error sending welcome email to Google OAuth user:', err);
-          // Don't fail login if email fails - email is sent in parallel
-        });
+      emailService.sendWelcomeEmail(user.name || 'User', user.email, 'user')
+        .catch(() => {});
     }
 
-    // Log login event
+    // Log login event (users only)
     try {
       await UserLoginEvent.create({
         userId: user.id,
@@ -2233,27 +2331,22 @@ async function loginWithGoogle(req, res, next) {
       });
     } catch (error) {
       console.error('Error logging login event:', error);
-      // Don't fail the login if logging fails
     }
 
-    // STEP 4: Auto-login - Generate JWT token and automatically log user into dashboard
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: 'user' },
       JWT_CONFIG.SECRET,
       { expiresIn: JWT_CONFIG.EXPIRES_IN }
     );
 
-    // Check if profile is incomplete (for Google users)
     const profileIncomplete = user.auth_method === 'google' && (!user.name || !user.phone || !user.date_of_birth);
 
-    // Return user data and token - user is now automatically logged in
-    // The welcome email is being sent in parallel (non-blocking) and won't delay this response
     res.json({
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role || 'user',
+        role: 'user',
         phone: user.phone || null,
         dateOfBirth: user.date_of_birth || null,
         picture: user.google_picture || picture || null,
@@ -2866,6 +2959,210 @@ async function submitSupportTicket(req, res, next) {
   }
 }
 
+/**
+ * Join video session (Daily) for a booking.
+ * Providers are always host (Daily "owner").
+ */
+async function joinVideoSession(req, res, next) {
+  try {
+    const bookingId = parseInt(req.params.bookingId);
+    const requesterId = req.user?.userId;
+    const requesterRole = req.user?.role;
+
+    if (!bookingId || isNaN(bookingId)) {
+      return res.status(400).json({
+        error: { message: 'Invalid booking ID', code: 'INVALID_BOOKING_ID', status: 400 },
+      });
+    }
+
+    if (!requesterId || !requesterRole) {
+      return res.status(401).json({
+        error: { message: 'User not authenticated', code: 'UNAUTHORIZED', status: 401 },
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({
+        error: { message: 'Booking not found', code: 'BOOKING_NOT_FOUND', status: 404 },
+      });
+    }
+
+    const status = String(booking.status || '').toLowerCase();
+    if (status === 'cancelled' || status === 'completed') {
+      return res.status(409).json({
+        error: {
+          message: `Booking is ${status} and cannot be joined`,
+          code: 'BOOKING_NOT_JOINABLE',
+          status: 409,
+        },
+      });
+    }
+
+    const isProvider = requesterRole === 'provider';
+    const isUser = requesterRole === 'user';
+    if (!isProvider && !isUser) {
+      return res.status(403).json({
+        error: { message: 'Access denied', code: 'ACCESS_DENIED', status: 403 },
+      });
+    }
+
+    // Ownership checks (token userId is provider.id for providers)
+    if (isProvider && parseInt(booking.provider_id) !== parseInt(requesterId)) {
+      return res.status(403).json({
+        error: { message: 'Access denied', code: 'ACCESS_DENIED', status: 403 },
+      });
+    }
+    if (isUser && parseInt(booking.user_id) !== parseInt(requesterId)) {
+      return res.status(403).json({
+        error: { message: 'Access denied', code: 'ACCESS_DENIED', status: 403 },
+      });
+    }
+
+    // Time gating
+    const startAt = new Date(booking.appointment_date);
+    if (isNaN(startAt.getTime())) {
+      return res.status(500).json({
+        error: {
+          message: 'Booking has invalid appointment date',
+          code: 'INVALID_APPOINTMENT_DATE',
+          status: 500,
+        },
+      });
+    }
+
+    const durationMinutes = 60;
+    const now = new Date();
+    const providerEarlyMinutes = 15;
+    const userEarlyMinutes = 5;
+    const graceMinutes = 5;
+
+    const joinEarliest = new Date(
+      startAt.getTime() - (isProvider ? providerEarlyMinutes : userEarlyMinutes) * 60 * 1000
+    );
+    const joinLatest = new Date(startAt.getTime() + (durationMinutes + graceMinutes) * 60 * 1000);
+
+    if (now < joinEarliest) {
+      return res.status(403).json({
+        error: { message: 'Session is not yet active', code: 'SESSION_NOT_ACTIVE', status: 403 },
+      });
+    }
+    if (now > joinLatest) {
+      return res.status(403).json({
+        error: { message: 'Session join window has ended', code: 'SESSION_EXPIRED', status: 403 },
+      });
+    }
+
+    // Room expiry: enforce "1 hour session" (+buffer).
+    // If scheduled time is in the past, keep at least duration+buffer from now.
+    const scheduledExpiry = new Date(startAt.getTime() + (durationMinutes + 10) * 60 * 1000);
+    const expiresAt =
+      scheduledExpiry > now ? scheduledExpiry : new Date(now.getTime() + (durationMinutes + 10) * 60 * 1000);
+
+    // Resolve display name
+    let displayName = null;
+    if (isProvider) {
+      const provider = await Provider.findById(requesterId);
+      displayName = provider?.name || booking.provider_name || 'Provider';
+    } else {
+      const user = await User.findById(requesterId);
+      displayName = user?.name || booking.user_name || 'User';
+    }
+
+    const { roomName, roomUrl } = await dailyVideoService.ensureRoomForBooking({
+      bookingId,
+      expiresAt,
+    });
+
+    // Persist metadata for audit/debugging (best-effort)
+    try {
+      await VideoMeeting.upsert({
+        bookingId,
+        providerId: booking.provider_id,
+        userId: booking.user_id,
+        vendor: 'daily',
+        roomName,
+        roomUrl,
+        scheduledStart: startAt.toISOString(),
+        scheduledEnd: new Date(startAt.getTime() + durationMinutes * 60 * 1000).toISOString(),
+        status: isProvider ? 'in_progress' : 'scheduled',
+      });
+      if (isProvider) {
+        await VideoMeeting.markStarted(bookingId);
+      }
+    } catch (e) {
+      console.warn('joinVideoSession: failed to upsert video_meetings:', e?.message || e);
+    }
+
+    const token = await dailyVideoService.createMeetingToken({
+      roomName,
+      userName: displayName,
+      isOwner: isProvider, // provider is always host
+      expiresAt,
+    });
+
+    res.json({
+      vendor: 'daily',
+      roomUrl,
+      token,
+      isOwner: isProvider,
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Provider completes a session (marks booking + video meeting completed)
+ */
+async function completeVideoSession(req, res, next) {
+  try {
+    const bookingId = parseInt(req.params.bookingId);
+    const requesterId = req.user?.userId;
+    const requesterRole = req.user?.role;
+
+    if (!bookingId || isNaN(bookingId)) {
+      return res.status(400).json({
+        error: { message: 'Invalid booking ID', code: 'INVALID_BOOKING_ID', status: 400 },
+      });
+    }
+
+    if (!requesterId || requesterRole !== 'provider') {
+      return res.status(403).json({
+        error: { message: 'Only providers can complete sessions', code: 'ACCESS_DENIED', status: 403 },
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({
+        error: { message: 'Booking not found', code: 'BOOKING_NOT_FOUND', status: 404 },
+      });
+    }
+
+    if (parseInt(booking.provider_id) !== parseInt(requesterId)) {
+      return res.status(403).json({
+        error: { message: 'Access denied', code: 'ACCESS_DENIED', status: 403 },
+      });
+    }
+
+    const updated = await Booking.updateStatus(bookingId, 'completed');
+    try {
+      await VideoMeeting.markCompleted(bookingId);
+    } catch (e) {
+      console.warn('completeVideoSession: failed to mark video meeting completed:', e?.message || e);
+    }
+
+    res.json({
+      message: 'Session completed',
+      booking: { id: updated.id, status: updated.status },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   register,
   registerProvider,
@@ -2889,6 +3186,8 @@ module.exports = {
   getUpcomingBookings,
   getProviderBookings,
   cancelBooking,
+  joinVideoSession,
+  completeVideoSession,
   requestPasswordReset,
   resetPassword,
   submitSupportTicket

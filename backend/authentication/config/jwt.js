@@ -12,7 +12,8 @@
 
 const JWT_CONFIG = {
   SECRET: process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-production',
-  EXPIRES_IN: process.env.JWT_EXPIRES_IN || '10s', // 10 seconds for testing (change back to '5m' after testing)
+  // Default should be production-friendly; override via JWT_EXPIRES_IN as needed.
+  EXPIRES_IN: process.env.JWT_EXPIRES_IN || '2h',
 };
 
 module.exports = JWT_CONFIG;

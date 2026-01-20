@@ -3,12 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@daily-co/daily-js": "^0.85.0",
     "@lottiefiles/dotlottie-react": "^0.17.8",
     "lucide-react": "^0.562.0",
     "motion": "^12.23.26",

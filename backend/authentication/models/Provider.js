@@ -36,7 +36,8 @@ class Provider {
             availability JSONB,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_login TIMESTAMP
+            last_login TIMESTAMP,
+            welcome_email_sent BOOLEAN DEFAULT false
           );
           
           CREATE INDEX IF NOT EXISTS idx_providers_email ON providers(email);
@@ -145,6 +146,24 @@ class Provider {
           CREATE INDEX IF NOT EXISTS idx_providers_verified ON providers(verified);
           CREATE INDEX IF NOT EXISTS idx_providers_status ON providers(status);
         `);
+
+        // Add welcome_email_sent flag if missing (used for Google provider onboarding email)
+        const welcomeFlagExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'providers'
+              AND column_name = 'welcome_email_sent'
+          );
+        `);
+
+        if (!welcomeFlagExists.rows[0].exists) {
+          await pool.query(`
+            ALTER TABLE providers
+            ADD COLUMN welcome_email_sent BOOLEAN DEFAULT false;
+          `);
+          console.log('✅ Added welcome_email_sent column to providers table');
+        }
         
         console.log('✅ Providers table migration completed');
       }

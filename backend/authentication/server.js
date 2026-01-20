@@ -161,11 +161,13 @@ async function startServer() {
     const Booking = require('./models/Booking');
     const UserLoginEvent = require('./models/UserLoginEvent');
     const Support = require('./models/Support');
+    const VideoMeeting = require('./models/VideoMeeting');
     await User.createTable();
     await Provider.createTable();
     await Booking.createTable(); // user_bookings and provider_bookings already exist
     await UserLoginEvent.createTable();
     await Support.createTable();
+    await VideoMeeting.createTable();
     console.log('✅ Database tables initialized');
     
     // Start listening

@@ -14,6 +14,29 @@ async function syncProviderBookings() {
     console.log('🔄 Starting sync of provider_bookings from user_bookings...');
     console.log('');
 
+    // Ensure provider_bookings has the snapshot columns we use (safe no-op if they already exist)
+    try {
+      await pool.query(`
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS notes TEXT;
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS provider_specialty VARCHAR(255);
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS provider_title VARCHAR(255);
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS provider_hourly_rate NUMERIC;
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS appointment_day VARCHAR(20);
+      `);
+      console.log('✅ provider_bookings columns verified');
+    } catch (e) {
+      console.warn('⚠️  Could not verify provider_bookings columns:', e?.message || e);
+    }
+
     // Get all bookings from user_bookings that don't exist in provider_bookings
     const syncQuery = `
       SELECT 
@@ -27,8 +50,12 @@ async function syncProviderBookings() {
         ub.user_name,
         ub.provider_name,
         ub.created_at,
-        ub.updated_at
+        ub.updated_at,
+        p.specialty as provider_specialty,
+        p.title as provider_title,
+        p.hourly_rate as provider_hourly_rate
       FROM user_bookings ub
+      LEFT JOIN providers p ON p.id = ub.provider_id
       WHERE NOT EXISTS (
         SELECT 1 
         FROM provider_bookings pb 
@@ -66,11 +93,28 @@ async function syncProviderBookings() {
             status, 
             user_name, 
             provider_name, 
+            provider_specialty,
+            provider_title,
+            provider_hourly_rate,
+            appointment_day,
             created_at, 
             updated_at
           )
-          VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7, $8, $9, $10, $11)
-          ON CONFLICT (id) DO NOTHING
+          VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7, $8, $9, $10, $11, $12, to_char(($4::timestamptz AT TIME ZONE 'UTC'), 'FMDay'), $13, $14)
+          ON CONFLICT (id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            provider_id = EXCLUDED.provider_id,
+            appointment_date = EXCLUDED.appointment_date,
+            session_type = EXCLUDED.session_type,
+            notes = EXCLUDED.notes,
+            status = EXCLUDED.status,
+            user_name = EXCLUDED.user_name,
+            provider_name = EXCLUDED.provider_name,
+            provider_specialty = EXCLUDED.provider_specialty,
+            provider_title = EXCLUDED.provider_title,
+            provider_hourly_rate = EXCLUDED.provider_hourly_rate,
+            appointment_day = EXCLUDED.appointment_day,
+            updated_at = EXCLUDED.updated_at
           RETURNING id
         `;
 
@@ -84,6 +128,9 @@ async function syncProviderBookings() {
           booking.status || 'confirmed',
           booking.user_name || null,
           booking.provider_name || null,
+          booking.provider_specialty || null,
+          booking.provider_title || null,
+          booking.provider_hourly_rate || null,
           booking.created_at || new Date(),
           booking.updated_at || new Date()
         ]);

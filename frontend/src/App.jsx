@@ -23,6 +23,7 @@ import ProviderEarnings from './components/ProviderEarnings'
 import ProviderAvailability from './components/ProviderAvailability'
 import ProviderNotifications from './components/ProviderNotifications'
 import ProviderPaymentMethods from './components/ProviderPaymentMethods'
+import ProviderGoogleOnboardingModal from './components/ProviderGoogleOnboardingModal'
 // Admin components
 import AdminHeader from './components/AdminHeader'
 import AdminSidebar from './components/AdminSidebar'
@@ -59,6 +60,7 @@ function App() {
   const [isAdminSidebarOpen, setIsAdminSidebarOpen] = useState(false)
   const [isProviderSidebarOpen, setIsProviderSidebarOpen] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [providerNeedsOnboarding, setProviderNeedsOnboarding] = useState(false)
 
   useEffect(() => {
     // Check maintenance mode status
@@ -103,7 +105,11 @@ function App() {
         
         // Set default view based on role
         if (role === 'provider') {
-          setProviderActiveView('Dashboard')
+          const needsOnboarding =
+            localStorage.getItem('loginMethod') === 'google' &&
+            localStorage.getItem('profileIncomplete') === 'true'
+          setProviderNeedsOnboarding(needsOnboarding)
+          setProviderActiveView(needsOnboarding ? 'Profile' : 'Dashboard')
         } else if (role === 'admin') {
           setAdminActiveView('Dashboard')
         } else {
@@ -133,6 +139,8 @@ function App() {
       setShowRegister(false)
       setActiveView('My Appointments')
       setProviderActiveView('Dashboard')
+      setProviderActiveSession(null)
+      setProviderNeedsOnboarding(false)
     }
     window.addEventListener('auth:logout', handleAuthLogout)
 
@@ -240,7 +248,11 @@ function App() {
     // Navigate to appropriate dashboard based on role
     if (role === 'provider') {
       console.log('Navigating to provider dashboard')
-      setProviderActiveView('Dashboard')
+      const needsOnboarding =
+        localStorage.getItem('loginMethod') === 'google' &&
+        localStorage.getItem('profileIncomplete') === 'true'
+      setProviderNeedsOnboarding(needsOnboarding)
+      setProviderActiveView(needsOnboarding ? 'Profile' : 'Dashboard')
     } else if (role === 'admin') {
       console.log('Navigating to admin dashboard')
       setAdminActiveView('Dashboard')
@@ -259,7 +271,11 @@ function App() {
     
     // Navigate to appropriate dashboard based on role
     if (role === 'provider') {
-      setProviderActiveView('Dashboard')
+      const needsOnboarding =
+        localStorage.getItem('loginMethod') === 'google' &&
+        localStorage.getItem('profileIncomplete') === 'true'
+      setProviderNeedsOnboarding(needsOnboarding)
+      setProviderActiveView(needsOnboarding ? 'Profile' : 'Dashboard')
     } else if (role === 'admin') {
       setAdminActiveView('Dashboard')
     } else {
@@ -355,6 +371,8 @@ function App() {
       setUserRole('user')
       setActiveView('My Appointments')
       setProviderActiveView('Dashboard')
+      setProviderActiveSession(null)
+      setProviderNeedsOnboarding(false)
     }
   }
 
@@ -559,6 +577,15 @@ function App() {
   if (userRole === 'provider') {
     return (
       <div className="app">
+        {providerNeedsOnboarding && (
+          <ProviderGoogleOnboardingModal
+            onSignOut={handleSignOut}
+            onCompleted={() => {
+              setProviderNeedsOnboarding(false)
+              setProviderActiveView('Dashboard')
+            }}
+          />
+        )}
         <ProviderHeader 
           onNavigateToProfile={() => setProviderActiveView('Profile')}
           onSignOut={handleSignOut}

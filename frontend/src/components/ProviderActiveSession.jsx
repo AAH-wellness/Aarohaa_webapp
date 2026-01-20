@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import './ProviderActiveSession.css'
 import { apiClient, API_CONFIG } from '../services'
+import DailyIframe from '@daily-co/daily-js'
 
 const ProviderActiveSession = ({ selectedAppointment }) => {
   const [isCallStarted, setIsCallStarted] = useState(false)
@@ -11,8 +12,8 @@ const ProviderActiveSession = ({ selectedAppointment }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [activeAppointment, setActiveAppointment] = useState(null)
   const [loadingAppointments, setLoadingAppointments] = useState(true)
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
+  const callContainerRef = useRef(null)
+  const callObjectRef = useRef(null)
 
   useEffect(() => {
     // If selectedAppointment is passed, use it directly
@@ -75,41 +76,17 @@ const ProviderActiveSession = ({ selectedAppointment }) => {
   }, [isCallStarted])
 
   useEffect(() => {
-    if (isCallStarted && streamRef.current) {
-      const timer = setTimeout(() => {
-        if (videoRef.current && streamRef.current) {
-          const video = videoRef.current
-          video.srcObject = streamRef.current
-          
-          const playVideo = () => {
-            video.play()
-              .then(() => {
-                console.log('Video is playing successfully')
-              })
-              .catch((error) => {
-                console.error('Error playing video:', error)
-              })
-          }
-          
-          if (video.readyState >= 2) {
-            playVideo()
-          } else {
-            video.onloadedmetadata = playVideo
-          }
+    return () => {
+      try {
+        if (callObjectRef.current) {
+          callObjectRef.current.destroy()
+          callObjectRef.current = null
         }
-      }, 100)
-
-      return () => clearTimeout(timer)
-    }
-
-    if (!isCallStarted && streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
-      if (videoRef.current) {
-        videoRef.current.srcObject = null
+      } catch (e) {
+        // ignore
       }
     }
-  }, [isCallStarted])
+  }, [])
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
@@ -126,59 +103,69 @@ const ProviderActiveSession = ({ selectedAppointment }) => {
   const handleStartCall = async () => {
     setIsLoading(true)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
+      if (!activeAppointment?.id) {
+        throw new Error('No active appointment found')
+      }
+
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      const joinInfo = await apiClient.post(`${apiBaseUrl}/users/bookings/${activeAppointment.id}/video/join`, {})
+
+      if (!callContainerRef.current) {
+        throw new Error('Call container not available')
+      }
+
+      if (callObjectRef.current) {
+        callObjectRef.current.destroy()
+        callObjectRef.current = null
+      }
+
+      const callObject = DailyIframe.createFrame(callContainerRef.current, {
+        showLeaveButton: true,
+        iframeStyle: {
+          width: '100%',
+          height: '100%',
+          border: '0',
+          borderRadius: '16px',
         },
-        audio: true,
+      })
+      callObjectRef.current = callObject
+
+      callObject.on('left-meeting', async () => {
+        try {
+          // Provider is host: ending/leaving marks session completed in DB
+          await apiClient.post(`${apiBaseUrl}/users/bookings/${activeAppointment.id}/video/complete`, {})
+        } catch (e) {
+          console.warn('Failed to mark session completed:', e)
+        }
+
+        try {
+          callObject.destroy()
+        } catch (e) {
+          // ignore
+        }
+        callObjectRef.current = null
+        setIsCallStarted(false)
+        setSessionTime(0)
       })
 
-      streamRef.current = stream
+      await callObject.join({ url: joinInfo.roomUrl, token: joinInfo.token })
       setIsCallStarted(true)
       setIsLoading(false)
-
-      setTimeout(() => {
-        if (videoRef.current && streamRef.current) {
-          const video = videoRef.current
-          video.srcObject = streamRef.current
-          video.muted = false
-          
-          video.onloadedmetadata = () => {
-            video.play()
-              .then(() => {
-                console.log('Video started playing successfully')
-              })
-              .catch((error) => {
-                console.error('Error playing video:', error)
-                alert('Video playback failed. Please try again.')
-              })
-          }
-          
-          if (video.readyState >= 2) {
-            video.play().catch((error) => {
-              console.error('Error playing video:', error)
-            })
-          }
-        }
-      }, 200)
     } catch (error) {
-      console.error('Error accessing webcam:', error)
-      alert('Failed to access webcam. Please ensure you have granted camera and microphone permissions.')
+      console.error('Error starting embedded call:', error)
+      alert(error?.message || 'Failed to start the call. Please try again.')
       setIsLoading(false)
     }
   }
 
   const handleEndCall = () => {
     if (window.confirm('Are you sure you want to end this session?')) {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop())
-        streamRef.current = null
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = null
+      try {
+        if (callObjectRef.current) {
+          callObjectRef.current.leave()
+        }
+      } catch (e) {
+        // ignore
       }
 
       setIsCallStarted(false)
@@ -263,43 +250,13 @@ const ProviderActiveSession = ({ selectedAppointment }) => {
               <span>Earnings: ${calculateEarnings(sessionTime)}</span>
             </div>
 
-            <div className="provider-video-call-interface">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted={false}
-                className="provider-user-video"
-              />
-              {isVideoOff && (
-                <div className="provider-video-off-overlay">
-                  <div className="provider-video-icon">📹</div>
-                  <p className="provider-video-status">Video is off</p>
-                </div>
-              )}
+            <div className="provider-video-call-interface" style={{ height: '520px' }}>
+              <div ref={callContainerRef} style={{ width: '100%', height: '100%' }} />
             </div>
 
             <div className="provider-call-controls">
-              <button
-                className={`provider-control-btn provider-mic-btn ${isMuted ? 'active' : ''}`}
-                onClick={toggleMute}
-                aria-label="Toggle microphone"
-              >
-                🎤
-              </button>
-              <button
-                className={`provider-control-btn provider-video-btn ${isVideoOff ? 'active' : ''}`}
-                onClick={toggleVideo}
-                aria-label="Toggle video"
-              >
-                📹
-              </button>
-              <button
-                className="provider-control-btn provider-end-call-btn"
-                onClick={handleEndCall}
-                aria-label="End call"
-              >
-                📞
+              <button className="provider-control-btn provider-end-call-btn" onClick={handleEndCall} aria-label="Leave call">
+                Leave
               </button>
             </div>
           </>

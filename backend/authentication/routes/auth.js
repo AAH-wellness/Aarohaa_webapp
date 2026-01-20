@@ -23,6 +23,8 @@ const {
   getUpcomingBookings,
   getProviderBookings,
   cancelBooking,
+  joinVideoSession,
+  completeVideoSession,
   requestPasswordReset,
   resetPassword,
   submitSupportTicket
@@ -99,6 +101,11 @@ router.get('/provider/bookings', authenticateToken, getProviderBookings);
 
 // Cancel booking (requires authentication)
 router.post('/bookings/cancel', authenticateToken, cancelBooking);
+
+// Video session (embedded) routes (requires authentication)
+router.post('/bookings/:bookingId/video/join', authenticateToken, joinVideoSession);
+// Provider-only: mark session completed (updates DB)
+router.post('/bookings/:bookingId/video/complete', authenticateToken, completeVideoSession);
 
 // Password reset routes (public - no authentication required)
 router.post('/password/reset-request', requestPasswordReset);

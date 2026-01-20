@@ -1,0 +1,232 @@
+.pg-onboard-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  backdrop-filter: blur(6px);
+}
+
+.pg-onboard-overlay.visible {
+  opacity: 1;
+}
+
+.pg-onboard-content {
+  width: min(720px, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 215, 0, 0.45);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 215, 0, 0.25);
+  transform: translateY(14px) scale(0.98);
+  opacity: 0;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+.pg-onboard-content.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.pg-onboard-content::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.12), transparent);
+  transform: rotate(45deg);
+  animation: pgshine 3s infinite;
+  pointer-events: none;
+}
+
+@keyframes pgshine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+.pg-onboard-header {
+  padding: 28px 28px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.pg-onboard-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  background: rgba(14, 72, 38, 0.08);
+  color: #0e4826;
+}
+
+.pg-onboard-title {
+  margin: 14px 0 8px;
+  font-size: 26px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #0e4826 0%, #16a34a 60%, #0e4826 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pg-onboard-subtitle {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.pg-onboard-loading {
+  padding: 26px 28px 30px;
+  color: #374151;
+}
+
+.pg-onboard-error {
+  margin: 18px 28px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 59, 48, 0.08);
+  border: 1px solid rgba(255, 59, 48, 0.25);
+  color: #b42318;
+  position: relative;
+  z-index: 1;
+}
+
+.pg-onboard-readonly {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 18px 28px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.pg-onboard-ro-item {
+  border: 1px solid rgba(14, 72, 38, 0.12);
+  border-radius: 14px;
+  padding: 12px 12px;
+  background: linear-gradient(135deg, rgba(14, 72, 38, 0.04) 0%, rgba(255, 215, 0, 0.05) 100%);
+}
+
+.pg-onboard-ro-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #0e4826;
+  text-transform: uppercase;
+}
+
+.pg-onboard-ro-value {
+  display: block;
+  margin-top: 6px;
+  color: #111827;
+  font-weight: 650;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.pg-onboard-grid {
+  padding: 18px 28px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.pg-onboard-field.full {
+  grid-column: 1 / -1;
+}
+
+.pg-onboard-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 750;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.pg-onboard-field .muted {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.pg-onboard-field input,
+.pg-onboard-field textarea {
+  width: 100%;
+  border: 1px solid rgba(14, 72, 38, 0.18);
+  border-radius: 12px;
+  padding: 11px 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pg-onboard-field input:focus,
+.pg-onboard-field textarea:focus {
+  border-color: rgba(22, 163, 74, 0.65);
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
+}
+
+.pg-onboard-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 28px 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.pg-onboard-primary,
+.pg-onboard-secondary {
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 750;
+  min-width: 160px;
+}
+
+.pg-onboard-primary {
+  background: linear-gradient(135deg, #0e4826 0%, #16a34a 65%, #0e4826 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(14, 72, 38, 0.25);
+}
+
+.pg-onboard-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pg-onboard-secondary {
+  background: rgba(17, 24, 39, 0.06);
+  color: #111827;
+}
+
+@media (max-width: 720px) {
+  .pg-onboard-readonly {
+    grid-template-columns: 1fr;
+  }
+  .pg-onboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
