@@ -63,6 +63,26 @@ function App() {
   const [providerNeedsOnboarding, setProviderNeedsOnboarding] = useState(false)
 
   useEffect(() => {
+    const logError = (message, stack) => {
+      try {
+        localStorage.setItem('lastAppCrash', JSON.stringify({
+          message,
+          stack,
+          time: new Date().toISOString()
+        }))
+      } catch (error) {
+        console.warn('Unable to persist crash info:', error)
+      }
+    }
+
+    const handleWindowError = (event) => {
+      logError(event.message || 'Unknown error', event.error?.stack || '')
+    }
+
+    const handleUnhandledRejection = (event) => {
+      logError(event.reason?.message || 'Unhandled rejection', event.reason?.stack || '')
+    }
+
     // Check maintenance mode status
     const checkMaintenanceMode = () => {
       const platformSettings = JSON.parse(localStorage.getItem('platformSettings') || '{}')
@@ -154,10 +174,15 @@ function App() {
     
     // Also check periodically for changes (in case settings are changed in same tab)
     const interval = setInterval(checkMaintenanceMode, 1000)
+
+    window.addEventListener('error', handleWindowError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
     
     return () => {
       window.removeEventListener('auth:logout', handleAuthLogout)
       window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('error', handleWindowError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
       clearInterval(interval)
     }
   }, [])
@@ -306,62 +331,8 @@ function App() {
     setShowForgotPassword(true)
   }
 
-  const disconnectWallet = async () => {
-    try {
-      // Get wallet data to identify which wallet was connected
-      const savedWallet = localStorage.getItem('walletData')
-      if (savedWallet) {
-        const walletData = JSON.parse(savedWallet)
-        const walletName = walletData.walletName || ''
-
-        // Disconnect from Phantom wallet
-        if ((walletName === 'Phantom' || !walletName) && window.solana && window.solana.isPhantom) {
-          try {
-            if (window.solana.isConnected) {
-              await window.solana.disconnect()
-            }
-          } catch (error) {
-            console.error('Error disconnecting Phantom wallet:', error)
-          }
-        }
-
-        // Disconnect from Solflare wallet
-        if (walletName === 'Solflare' && window.solflare) {
-          try {
-            if (window.solflare.isConnected) {
-              await window.solflare.disconnect()
-            }
-          } catch (error) {
-            console.error('Error disconnecting Solflare wallet:', error)
-          }
-        }
-
-        // Disconnect from Backpack wallet
-        if (walletName === 'Backpack' && window.backpack) {
-          try {
-            if (window.backpack.isConnected) {
-              await window.backpack.disconnect()
-            }
-          } catch (error) {
-            console.error('Error disconnecting Backpack wallet:', error)
-          }
-        }
-      }
-
-      // Clear wallet data from localStorage
-      localStorage.removeItem('walletData')
-    } catch (error) {
-      console.error('Error during wallet disconnect:', error)
-      // Still remove from localStorage even if disconnect fails
-      localStorage.removeItem('walletData')
-    }
-  }
-
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     if (window.confirm('Are you sure you want to sign out?')) {
-      // Disconnect wallet first
-      await disconnectWallet()
-
       // Clear all auth data using centralized service
       authService.clearAuthData()
       
@@ -398,13 +369,41 @@ function App() {
       case 'Profile':
         return (
           <ProviderProfile
-            onNavigateToAvailability={() => setProviderActiveView('Availability')}
+            onNavigateToAvailability={() => {
+              // Debounce rapid navigation and defer to next frame to prevent crashes
+              const now = Date.now()
+              if (!window.lastNavigationTime || now - window.lastNavigationTime > 500) {
+                window.lastNavigationTime = now
+                // Use setTimeout to allow current render cycle to complete
+                setTimeout(() => {
+                  try {
+                    setProviderActiveView('Availability')
+                  } catch (error) {
+                    console.error('Error navigating to availability:', error)
+                  }
+                }, 0)
+              }
+            }}
             onNavigateToNotifications={() => setProviderActiveView('Notifications')}
             onNavigateToPaymentMethods={() => setProviderActiveView('Payment Methods')}
           />
         )
       case 'Availability':
-        return <ProviderAvailability onBack={() => setProviderActiveView('Profile')} />
+        return (
+          <ProviderAvailability 
+            key="provider-availability-view"
+            onBack={() => {
+              // Prevent rapid navigation that could cause crashes
+              setTimeout(() => {
+                try {
+                  setProviderActiveView('Profile')
+                } catch (error) {
+                  console.error('Error navigating back from availability:', error)
+                }
+              }, 0)
+            }} 
+          />
+        )
       case 'Notifications':
         return <ProviderNotifications onBack={() => setProviderActiveView('Profile')} />
       case 'Payment Methods':

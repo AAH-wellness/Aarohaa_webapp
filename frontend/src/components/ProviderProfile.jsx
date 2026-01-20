@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import WalletConnect from './WalletConnect'
 import { userService } from '../services'
 import './ProviderProfile.css'
 
@@ -17,19 +16,17 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const [walletData, setWalletData] = useState({
-    address: '',
-    balance: '',
-    network: 'Solana',
-    isConnected: false,
-  })
-
   useEffect(() => {
+    let isMounted = true
+    
     // Fetch provider profile from backend
     const fetchProviderProfile = async () => {
       try {
+        if (!isMounted) return
         setIsLoading(true)
         const response = await userService.getProviderProfile()
+        
+        if (!isMounted) return
         
         if (response.provider) {
           setProfileData({
@@ -42,49 +39,28 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
             hourlyRate: response.provider.hourlyRate || 0,
           })
         }
-        setError(null)
+        if (isMounted) {
+          setError(null)
+        }
       } catch (error) {
         console.error('Error fetching provider profile:', error)
-        setError('Failed to load provider profile. Please try again.')
+        if (isMounted) {
+          setError('Failed to load provider profile. Please try again.')
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
     fetchProviderProfile()
-
-    // Load wallet data
-    const savedWallet = localStorage.getItem('walletData')
-    if (savedWallet) {
-      try {
-        const wallet = JSON.parse(savedWallet)
-        if (wallet.address && wallet.isConnected) {
-          if (window.solana && window.solana.isConnected) {
-            setWalletData(wallet)
-          } else {
-            localStorage.removeItem('walletData')
-            setWalletData({
-              address: '',
-              balance: '',
-              network: 'Solana',
-              isConnected: false,
-            })
-          }
-        }
-      } catch (error) {
-        console.error('Error loading wallet data:', error)
-      }
+    
+    // Cleanup function
+    return () => {
+      isMounted = false
     }
   }, [])
-
-  const handleWalletConnected = (walletData) => {
-    setWalletData(walletData)
-  }
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text)
-    alert('Copied to clipboard!')
-  }
 
   if (isLoading) {
     return (
@@ -156,34 +132,14 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
           <div className="provider-wallet-info">
             <div className="provider-wallet-field">
               <label>Connected Network</label>
-              <div className="provider-field-value">{walletData.network}</div>
+              <div className="provider-field-value">Solana</div>
             </div>
-            {walletData.isConnected && walletData.address ? (
-              <>
-                <div className="provider-wallet-field">
-                  <label>Wallet Address</label>
-                  <div className="provider-field-value provider-wallet-address">
-                    {walletData.address}
-                    <button
-                      className="provider-copy-btn"
-                      onClick={() => copyToClipboard(walletData.address)}
-                      title="Copy address"
-                    >
-                      📋
-                    </button>
-                  </div>
-                </div>
-                <div className="provider-wallet-field">
-                  <label>Balance</label>
-                  <div className="provider-field-value provider-balance-value">{walletData.balance || '0.0000 SOL'}</div>
-                </div>
-              </>
-            ) : (
-              <div className="provider-wallet-not-connected">
-                <p>Wallet not connected. Connect your Solana wallet to receive payments.</p>
-                <WalletConnect onWalletConnected={handleWalletConnected} />
-              </div>
-            )}
+            <div className="provider-wallet-not-connected">
+              <p>Wallet not connected. Connect your Solana wallet to receive payments.</p>
+              <button className="connect-wallet-btn">
+                Connect Wallet
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -191,6 +147,21 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
       {/* Settings Section */}
       <div className="provider-profile-section">
         <h2 className="provider-section-title">Settings</h2>
+        {(() => {
+          try {
+            const raw = localStorage.getItem('lastAppCrash')
+            if (!raw) return null
+            const crash = JSON.parse(raw)
+            if (!crash?.message) return null
+            return (
+              <p style={{ color: '#dc2626', marginBottom: '12px' }}>
+                Last crash: {crash.message}
+              </p>
+            )
+          } catch {
+            return null
+          }
+        })()}
         <div className="provider-profile-card">
           <div className="provider-settings-list">
             <div className="provider-setting-item">
@@ -198,7 +169,36 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
                 <h3 className="provider-setting-title">Availability</h3>
                 <p className="provider-setting-description">Manage your working hours and availability</p>
               </div>
-              <button className="provider-setting-btn" onClick={onNavigateToAvailability}>Manage</button>
+              <button 
+                className="provider-setting-btn" 
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  // Debounce rapid clicks - check timestamp
+                  const now = Date.now()
+                  const lastClick = e.currentTarget.dataset.lastClick
+                  if (lastClick && now - parseInt(lastClick, 10) < 500) {
+                    return // Ignore rapid clicks
+                  }
+                  e.currentTarget.dataset.lastClick = now.toString()
+                  try {
+                    localStorage.setItem('lastAvailabilityNav', new Date().toISOString())
+                    localStorage.setItem('availabilitySafeMode', 'true')
+                  } catch (storageError) {
+                    console.warn('Unable to persist navigation attempt:', storageError)
+                  }
+                  
+                  if (onNavigateToAvailability && typeof onNavigateToAvailability === 'function') {
+                    try {
+                      onNavigateToAvailability()
+                    } catch (error) {
+                      console.error('Error navigating to availability:', error)
+                    }
+                  }
+                }}
+              >
+                Manage
+              </button>
             </div>
             <div className="provider-setting-item">
               <div className="provider-setting-info">

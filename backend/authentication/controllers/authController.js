@@ -14,6 +14,86 @@ const dailyVideoService = require('../services/dailyVideoService');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
+const AVAILABILITY_DAYS = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday'
+];
+
+const DEFAULT_AVAILABILITY = {
+  monday: { enabled: true, start: '09:00', end: '17:00' },
+  tuesday: { enabled: true, start: '09:00', end: '17:00' },
+  wednesday: { enabled: true, start: '09:00', end: '17:00' },
+  thursday: { enabled: true, start: '09:00', end: '17:00' },
+  friday: { enabled: true, start: '09:00', end: '17:00' },
+  saturday: { enabled: false, start: '10:00', end: '14:00' },
+  sunday: { enabled: false, start: '10:00', end: '14:00' }
+};
+
+function normalizeTimeValue(value, fallback) {
+  if (!value || typeof value !== 'string') {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+
+  // Handle ISO datetime values (timezone fixes may have stored full timestamps)
+  if (trimmed.includes('T') || trimmed.endsWith('Z')) {
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      const hours = String(parsed.getHours()).padStart(2, '0');
+      const minutes = String(parsed.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+  }
+
+  const parts = trimmed.split(':');
+  if (parts.length >= 2) {
+    const hours = Number(parts[0]);
+    const minutes = Number(parts[1]);
+    if (Number.isInteger(hours) && Number.isInteger(minutes) &&
+        hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+  }
+
+  return fallback;
+}
+
+function normalizeAvailability(inputAvailability) {
+  if (!inputAvailability || typeof inputAvailability !== 'object') {
+    return {};
+  }
+
+  const normalized = {};
+  AVAILABILITY_DAYS.forEach((day) => {
+    const dayInput = inputAvailability[day];
+    const defaults = DEFAULT_AVAILABILITY[day];
+
+    if (dayInput && typeof dayInput === 'object') {
+      const enabledValue = dayInput.enabled;
+      normalized[day] = {
+        enabled: typeof enabledValue === 'boolean'
+          ? enabledValue
+          : enabledValue === 'true' || enabledValue === 1,
+        start: normalizeTimeValue(dayInput.start, defaults.start),
+        end: normalizeTimeValue(dayInput.end, defaults.end)
+      };
+    } else if (defaults) {
+      normalized[day] = { ...defaults };
+    }
+  });
+
+  return normalized;
+}
+
 // Initialize Google OAuth client
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
@@ -865,9 +945,10 @@ async function getProviderAvailability(req, res, next) {
     }
 
     const availability = await Provider.getAvailability(provider.id);
+    const normalizedAvailability = normalizeAvailability(availability);
     
     res.json({
-      availability: availability || {},
+      availability: Object.keys(normalizedAvailability).length > 0 ? normalizedAvailability : (availability || {}),
       providerId: provider.id
     });
   } catch (error) {
@@ -915,7 +996,8 @@ async function updateProviderAvailability(req, res, next) {
       });
     }
 
-    const updatedProvider = await Provider.updateAvailability(provider.id, availability);
+    const normalizedAvailability = normalizeAvailability(availability);
+    const updatedProvider = await Provider.updateAvailability(provider.id, normalizedAvailability);
     
     console.log(`✅ Provider ${provider.id} availability updated. Status set to 'ready', verified: true`);
     
@@ -1007,8 +1089,16 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
     return [];
   }
   
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Parse dates as local dates (YYYY-MM-DD format) to avoid timezone issues
+  // When you do new Date("2026-01-15"), it's interpreted as UTC midnight
+  // Instead, parse the date components directly
+  const parseLocalDate = (dateStr) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight
+  };
+  
+  const start = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate);
   
   // Validate dates
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
@@ -1073,7 +1163,8 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
     
     // Log when day is enabled (for debugging)
     if (dayAvailability.enabled === true || dayAvailability.enabled === undefined) {
-      console.log(`Processing ${dayName} ${date.toISOString().split('T')[0]} - enabled: ${dayAvailability.enabled !== false}`);
+      const dateKeyForLog = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      console.log(`Processing ${dayName} ${dateKeyForLog} - enabled: ${dayAvailability.enabled !== false}, start: ${dayAvailability.start}, end: ${dayAvailability.end}`);
     }
     
     // Validate and parse start/end times
@@ -1107,10 +1198,9 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
     }
     
     // Create date objects for start and end times
-    // IMPORTANT: Availability times (startHour, endHour) are stored as local time (EST)
-    // We need to treat them as local time, not UTC
-    // Extract the date components from the UTC date and create a new date in local timezone
-    const localDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    // IMPORTANT: Availability times (startHour, endHour) are stored as local time
+    // Extract the date components from the date (which is already in local time)
+    const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const dayStart = new Date(localDate);
     dayStart.setHours(startHour, startMin, 0, 0);
     
@@ -1127,11 +1217,23 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
     const now = new Date();
     const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour buffer
     
+    // Debug logging for Thursday
+    const dateKeyForLog = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    if (dayName === 'thursday') {
+      console.log(`[Thursday Debug] Date: ${dateKeyForLog}, dayStart: ${dayStart.toLocaleString()}, dayEnd: ${dayEnd.toLocaleString()}, now: ${now.toLocaleString()}, oneHourFromNow: ${oneHourFromNow.toLocaleString()}`);
+    }
+    
     // Generate slots using local time, then convert to UTC for storage
     let currentTime = new Date(dayStart);
+    let slotCountForDay = 0;
     
     while (currentTime < dayEnd) {
-      const dateKey = date.toISOString().split('T')[0];
+      // Generate dateKey from the date object (already in local time)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateKey = `${year}-${month}-${day}`;
+      
       // Extract time in local timezone (HH:MM format)
       const hours = String(currentTime.getHours()).padStart(2, '0');
       const minutes = String(currentTime.getMinutes()).padStart(2, '0');
@@ -1141,12 +1243,56 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
       const slotBookings = bookingsByDate[dateKey]?.filter(b => b.time === timeKey) || [];
       const isBooked = slotBookings.length > 0;
       
-      // Include all future slots (more than 1 hour away)
+      // Include all future slots (at least 1 hour away)
       // Include ALL slots (even if booked) so frontend can grey out the current user's booked slots
       // Compare in local time to match availability times
-      if (currentTime.getTime() > oneHourFromNow.getTime()) {
-        // Convert to UTC ISO string for datetime field
-        const utcDateTime = new Date(currentTime.toISOString());
+      // For today, only include slots that are at least 1 hour in the future (>= oneHourFromNow)
+      // For future days, include all slots that are in the future
+      // Compare dates in local time to avoid timezone issues
+      const todayLocal = new Date();
+      const todayYear = todayLocal.getFullYear();
+      const todayMonth = String(todayLocal.getMonth() + 1).padStart(2, '0');
+      const todayDay = String(todayLocal.getDate()).padStart(2, '0');
+      const todayKey = `${todayYear}-${todayMonth}-${todayDay}`;
+      const isToday = dateKey === todayKey;
+      
+      // For today: include slots >= oneHourFromNow (at least 1 hour away)
+      // For future days: include slots >= now (any future time)
+      const shouldInclude = isToday 
+        ? currentTime.getTime() >= oneHourFromNow.getTime()  // Changed from > to >= to include slots exactly 1 hour away
+        : currentTime.getTime() >= now.getTime(); // Changed from > to >= for consistency
+      
+      // Debug logging for 11:00 and 11:30 slots on Thursday
+      if (dayName === 'thursday' && (timeKey === '11:00' || timeKey === '11:30')) {
+        console.log(`[Slot Debug] ${timeKey} on ${dateKeyForLog}:`, {
+          currentTime: currentTime.toLocaleString(),
+          currentTimeMs: currentTime.getTime(),
+          now: now.toLocaleString(),
+          nowMs: now.getTime(),
+          oneHourFromNow: oneHourFromNow.toLocaleString(),
+          oneHourFromNowMs: oneHourFromNow.getTime(),
+          isToday,
+          shouldInclude,
+          timeDiffMinutes: isToday ? Math.round((currentTime.getTime() - oneHourFromNow.getTime()) / (60 * 1000)) : Math.round((currentTime.getTime() - now.getTime()) / (60 * 1000))
+        });
+      }
+      
+      if (shouldInclude) {
+        // Convert local time to UTC for datetime field
+        // currentTime is in local time, so we need to convert it to UTC
+        // The easiest way is to create a new Date with the local time components
+        // and then get its ISO string (which will be in UTC)
+        const localYear = currentTime.getFullYear();
+        const localMonth = currentTime.getMonth();
+        const localDate = currentTime.getDate();
+        const localHours = currentTime.getHours();
+        const localMinutes = currentTime.getMinutes();
+        
+        // Create a date string that represents this local time, then parse it
+        // This ensures the UTC conversion is correct
+        const localTimeStr = `${localYear}-${String(localMonth + 1).padStart(2, '0')}-${String(localDate).padStart(2, '0')}T${String(localHours).padStart(2, '0')}:${String(localMinutes).padStart(2, '0')}:00`;
+        const utcDateTime = new Date(localTimeStr);
+        
         slots.push({
           date: dateKey,
           time: timeKey,
@@ -1155,6 +1301,7 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
           booked: isBooked, // Explicitly mark as booked
           bookedBy: slotBookings.map(b => b.userId) // Array of user IDs who booked this slot
         });
+        slotCountForDay++;
       }
       
       // Move to next slot (in local time)
@@ -1165,6 +1312,11 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
         console.warn('Too many slots generated, stopping');
         break;
       }
+    }
+    
+    // Debug logging for Thursday
+    if (dayName === 'thursday') {
+      console.log(`[Thursday Debug] Generated ${slotCountForDay} slots for ${dateKeyForLog}`);
     }
   }
   

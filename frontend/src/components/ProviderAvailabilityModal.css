@@ -103,6 +103,22 @@
   color: #9ca3af;
 }
 
+/* Today indicator - make it more visible */
+.calendar-day.is-today {
+  border-width: 2px;
+}
+
+.calendar-day.is-today.enabled-no-slots {
+  border-color: #10b981 !important;
+  background-color: #f0fdf4 !important;
+}
+
+.calendar-day.is-today.enabled-no-slots .day-name,
+.calendar-day.is-today.enabled-no-slots .day-date {
+  color: #065f46 !important;
+  font-weight: 700 !important;
+}
+
 .day-name {
   font-size: 10px;
   font-weight: 600;
