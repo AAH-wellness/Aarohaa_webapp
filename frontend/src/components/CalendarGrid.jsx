@@ -43,14 +43,19 @@ const CalendarGrid = ({ slots, selectedDate, onDateSelect, providerAvailability 
     // Check if the day is enabled - explicitly check for false, default to true if not set
     const dayAvailability = providerAvailability?.[dayKey]
     // Explicitly check: if enabled is false, day is unavailable; otherwise it's available
-    const isDayAvailable = dayAvailability?.enabled !== false
+    // BUT: if there are slots for this date, the day should be available regardless of availability setting
+    // This handles cases where availability might be misconfigured but slots exist
+    const hasSlotsForDate = slotsByDate[dateKey]?.length > 0
+    const isDayAvailable = hasSlotsForDate || (dayAvailability?.enabled !== false)
     
-    // Debug logging for Monday and Wednesday specifically
-    if ((dayKey === 'monday' || dayKey === 'wednesday') && providerAvailability) {
-      console.log(`${dayNameFull} availability check:`, {
+    // Debug logging for Thursday specifically (the problematic day)
+    if (dayKey === 'thursday' && providerAvailability) {
+      console.log(`Thursday availability check:`, {
         dayKey,
         dayAvailability,
         enabled: dayAvailability?.enabled,
+        hasSlotsForDate,
+        slotCount: slotsByDate[dateKey]?.length || 0,
         isDayAvailable,
         dateKey,
         isToday: dateKey === today.toISOString().split('T')[0],
@@ -59,7 +64,7 @@ const CalendarGrid = ({ slots, selectedDate, onDateSelect, providerAvailability 
     }
     
     // Debug logging for unavailable days
-    if (providerAvailability && !isDayAvailable) {
+    if (providerAvailability && !isDayAvailable && !hasSlotsForDate) {
       console.log(`Day ${dayNameFull} (${dayKey}) is unavailable:`, dayAvailability)
     }
     
@@ -85,9 +90,15 @@ const CalendarGrid = ({ slots, selectedDate, onDateSelect, providerAvailability 
         {calendarDays.map((day) => (
           <div
             key={day.date}
-            className={`calendar-day ${selectedDate === day.date ? 'selected' : ''} ${day.slotCount > 0 ? 'has-slots' : 'no-slots'} ${!day.isAvailable ? 'unavailable' : ''} ${day.isAvailable && day.slotCount === 0 ? 'enabled-no-slots' : ''}`}
-            onClick={() => day.isAvailable ? onDateSelect(day.date) : null}
-            style={{ cursor: day.isAvailable ? 'pointer' : 'not-allowed' }}
+            className={`calendar-day ${selectedDate === day.date ? 'selected' : ''} ${day.slotCount > 0 ? 'has-slots' : 'no-slots'} ${!day.isAvailable && day.slotCount === 0 ? 'unavailable' : ''} ${day.isAvailable && day.slotCount === 0 ? 'enabled-no-slots' : ''} ${day.isToday ? 'is-today' : ''}`}
+            onClick={() => {
+              // Allow clicking if day is available OR if there are slots for this date
+              // This ensures days with slots are always clickable even if availability is misconfigured
+              if (day.isAvailable || day.slotCount > 0) {
+                onDateSelect(day.date)
+              }
+            }}
+            style={{ cursor: (day.isAvailable || day.slotCount > 0) ? 'pointer' : 'not-allowed' }}
           >
             <div className="day-name">{day.dayName}</div>
             <div className="day-date">{day.monthDay}</div>

@@ -7,41 +7,69 @@ const WalletConnect = ({ onWalletConnected }) => {
   const [showWalletModal, setShowWalletModal] = useState(false)
 
   useEffect(() => {
+    let isMounted = true
+    
+    const checkAvailableWallets = () => {
+      if (typeof window === 'undefined') {
+        if (isMounted) {
+          setAvailableWallets([])
+        }
+        return
+      }
+      
+      const wallets = []
+      
+      try {
+        // Check for Phantom wallet - safely access window.solana
+        if (window.solana && typeof window.solana === 'object' && window.solana.isPhantom) {
+          wallets.push({
+            name: 'Phantom',
+            icon: '👻',
+            provider: window.solana,
+          })
+        }
+      } catch (error) {
+        console.error('Error checking Phantom wallet:', error)
+      }
+      
+      try {
+        // Check for Solflare
+        if (window.solflare && typeof window.solflare === 'object') {
+          wallets.push({
+            name: 'Solflare',
+            icon: '🔥',
+            provider: window.solflare,
+          })
+        }
+      } catch (error) {
+        console.error('Error checking Solflare wallet:', error)
+      }
+      
+      try {
+        // Check for Backpack
+        if (window.backpack && typeof window.backpack === 'object') {
+          wallets.push({
+            name: 'Backpack',
+            icon: '🎒',
+            provider: window.backpack,
+          })
+        }
+      } catch (error) {
+        console.error('Error checking Backpack wallet:', error)
+      }
+      
+      if (isMounted) {
+        setAvailableWallets(wallets)
+      }
+    }
+    
     checkAvailableWallets()
+    
+    // Cleanup
+    return () => {
+      isMounted = false
+    }
   }, [])
-
-  const checkAvailableWallets = () => {
-    const wallets = []
-    
-    // Check for Phantom wallet
-    if (window.solana && window.solana.isPhantom) {
-      wallets.push({
-        name: 'Phantom',
-        icon: '👻',
-        provider: window.solana,
-      })
-    }
-    
-    // Check for Solflare
-    if (window.solflare) {
-      wallets.push({
-        name: 'Solflare',
-        icon: '🔥',
-        provider: window.solflare,
-      })
-    }
-    
-    // Check for Backpack
-    if (window.backpack) {
-      wallets.push({
-        name: 'Backpack',
-        icon: '🎒',
-        provider: window.backpack,
-      })
-    }
-    
-    setAvailableWallets(wallets)
-  }
 
   const fetchWalletBalance = async (publicKey) => {
     try {
@@ -77,12 +105,28 @@ const WalletConnect = ({ onWalletConnected }) => {
   }
 
   const connectWallet = async (wallet) => {
+    if (!wallet || !wallet.provider) {
+      console.error('Invalid wallet object')
+      alert('Invalid wallet. Please try again.')
+      return
+    }
+    
     setIsConnecting(true)
     try {
       const provider = wallet.provider
       
+      // Validate provider before connecting
+      if (typeof provider.connect !== 'function') {
+        throw new Error('Wallet provider does not support connection')
+      }
+      
       // Connect to wallet
       const response = await provider.connect()
+      
+      if (!response || !response.publicKey) {
+        throw new Error('Invalid wallet response')
+      }
+      
       const publicKey = response.publicKey.toString()
       
       // Fetch SOL balance from wallet
@@ -96,8 +140,13 @@ const WalletConnect = ({ onWalletConnected }) => {
         walletName: wallet.name,
       }
       
-      // Save to localStorage
-      localStorage.setItem('walletData', JSON.stringify(walletData))
+      // Save to localStorage safely
+      try {
+        localStorage.setItem('walletData', JSON.stringify(walletData))
+      } catch (storageError) {
+        console.error('Error saving wallet data to localStorage:', storageError)
+        // Continue even if localStorage fails
+      }
       
       // Update parent component
       if (onWalletConnected) {

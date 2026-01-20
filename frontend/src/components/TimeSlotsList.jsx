@@ -17,13 +17,23 @@ const TimeSlotsList = ({ slots, selectedDate, onSlotSelect, isSlotBooked }) => {
   }
 
   // Format date label
+  // Use date string comparison to avoid timezone issues
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const selectedDateObj = new Date(selectedDate)
+  const todayStr = today.toISOString().split('T')[0]
+  
+  // Parse selectedDate as a date string (YYYY-MM-DD) to avoid timezone issues
+  // Create date in local timezone by parsing the date components
+  const [year, month, day] = selectedDate.split('-').map(Number)
+  const selectedDateObj = new Date(year, month - 1, day)
   selectedDateObj.setHours(0, 0, 0, 0)
   
-  const isToday = selectedDateObj.getTime() === today.getTime()
-  const isTomorrow = selectedDateObj.getTime() === today.getTime() + 24 * 60 * 60 * 1000
+  // Compare date strings to avoid timezone issues
+  const isToday = selectedDate === todayStr
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
+  const isTomorrow = selectedDate === tomorrowStr
   
   let dateLabel = ''
   if (isToday) {

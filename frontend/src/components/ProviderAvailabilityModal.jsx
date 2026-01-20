@@ -50,8 +50,38 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
       const slotsArray = response.slots || []
       setSlots(slotsArray)
       
-      // Auto-select first date with slots if available
-      if (slotsArray.length > 0) {
+      // Debug: Log slots by date to understand slot distribution
+      const slotsByDate = slotsArray.reduce((acc, slot) => {
+        acc[slot.date] = (acc[slot.date] || 0) + 1
+        return acc
+      }, {})
+      console.log(`[Provider ${provider.id}] Slots loaded:`, {
+        totalSlots: slotsArray.length,
+        slotsByDate,
+        dateRange: { start: startDateStr, end: endDateStr }
+      })
+      
+      // Auto-select today if it's available (even if no slots yet), otherwise first date with slots
+      // Reuse the existing today variable, but reset hours for date comparison
+      const todayForSelection = new Date(today)
+      todayForSelection.setHours(0, 0, 0, 0)
+      const todayStr = todayForSelection.toISOString().split('T')[0]
+      
+      // Check if today is available in provider's availability
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const todayDayName = dayNames[todayForSelection.getDay()]
+      const todayAvailability = provider?.availability 
+        ? (typeof provider.availability === 'string' 
+          ? JSON.parse(provider.availability) 
+          : provider.availability)[todayDayName]
+        : null
+      const isTodayAvailable = todayAvailability?.enabled !== false
+      
+      if (isTodayAvailable) {
+        // Auto-select today if it's available
+        setSelectedDate(todayStr)
+      } else if (slotsArray.length > 0) {
+        // Otherwise select first date with slots
         const firstDate = slotsArray[0].date
         setSelectedDate(firstDate)
       } else {
