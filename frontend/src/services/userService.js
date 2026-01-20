@@ -648,7 +648,14 @@ class UserService {
     await new Promise(resolve => setTimeout(resolve, 300))
     const stored = localStorage.getItem('providerAvailability')
     if (stored) {
-      return { availability: JSON.parse(stored) }
+      try {
+        const parsed = JSON.parse(stored)
+        if (parsed && typeof parsed === 'object') {
+          return { availability: parsed }
+        }
+      } catch (error) {
+        console.error('Invalid providerAvailability in localStorage, resetting:', error)
+      }
     }
     return { availability: {} }
   }

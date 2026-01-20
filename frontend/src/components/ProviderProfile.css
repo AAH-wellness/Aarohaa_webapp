@@ -123,6 +123,24 @@
   font-size: 14px;
 }
 
+.provider-wallet-not-connected .connect-wallet-btn {
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.3);
+}
+
+.provider-wallet-not-connected .connect-wallet-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.4);
+}
+
 .provider-settings-list {
   display: flex;
   flex-direction: column;
