@@ -3221,10 +3221,105 @@ async function joinVideoSession(req, res, next) {
       displayName = user?.name || booking.user_name || 'User';
     }
 
-    const { roomName, roomUrl } = await dailyVideoService.ensureRoomForBooking({
-      bookingId,
-      expiresAt,
-    });
+    const tokensDisabled =
+      String(process.env.DAILY_DISABLE_TOKENS || '').toLowerCase() === 'true' ||
+      String(process.env.DAILY_USE_TOKENS || '').toLowerCase() === 'false';
+
+    const looksLikeBillingError = (err) => {
+      const statusCode = err?.status;
+      const msg = String(err?.message || '').toLowerCase();
+      return (
+        statusCode === 402 ||
+        msg.includes('payment method') ||
+        msg.includes('billing') ||
+        msg.includes('add a payment') ||
+        msg.includes('card') ||
+        msg.includes('payment')
+      );
+    };
+
+    let roomName = null;
+    let roomUrl = null;
+    let token = null;
+
+    // If tokens are disabled/unavailable, enforce "provider starts first" by requiring
+    // an existing started video_meeting for user joins (prevents users entering first).
+    if (tokensDisabled && isUser) {
+      try {
+        const existingMeeting = await VideoMeeting.findByBookingId(bookingId);
+        const started =
+          existingMeeting &&
+          (String(existingMeeting.status || '').toLowerCase() === 'in_progress' || !!existingMeeting.started_at);
+
+        if (!started) {
+          return res.status(403).json({
+            error: {
+              message: 'Waiting for provider to start the session',
+              code: 'WAITING_FOR_PROVIDER',
+              status: 403,
+            },
+          });
+        }
+
+        roomName = existingMeeting.room_name;
+        roomUrl = existingMeeting.room_url;
+        token = null;
+      } catch (e) {
+        return res.status(403).json({
+          error: {
+            message: 'Waiting for provider to start the session',
+            code: 'WAITING_FOR_PROVIDER',
+            status: 403,
+          },
+        });
+      }
+    }
+
+    // Prefer private rooms + tokens (provider as host). If Daily billing is not set up,
+    // fallback to a public room without token so sessions can run smoothly.
+    try {
+      if (roomUrl) {
+        // Already resolved (tokensDisabled + user path)
+        throw new Error('ROOM_ALREADY_RESOLVED');
+      }
+      if (tokensDisabled) {
+        throw new Error('DAILY_TOKENS_DISABLED');
+      }
+
+      const privateRoom = await dailyVideoService.ensureRoomForBooking({
+        bookingId,
+        expiresAt,
+        privacy: 'private',
+      });
+      roomName = privateRoom.roomName;
+      roomUrl = privateRoom.roomUrl;
+
+      token = await dailyVideoService.createMeetingToken({
+        roomName,
+        userName: displayName,
+        isOwner: isProvider, // provider is always host
+        expiresAt,
+      });
+    } catch (e) {
+      if (String(e?.message || '') === 'ROOM_ALREADY_RESOLVED') {
+        // no-op: user already has roomUrl without token
+      } else {
+      // If tokens are disabled or Daily requires billing, use a public "open" room with no token.
+      if (tokensDisabled || looksLikeBillingError(e) || String(e?.message || '') === 'DAILY_TOKENS_DISABLED') {
+        const openRoom = await dailyVideoService.ensureRoomForBooking({
+          bookingId,
+          expiresAt,
+          privacy: 'public',
+          roomNameSuffix: 'open',
+        });
+        roomName = openRoom.roomName;
+        roomUrl = openRoom.roomUrl;
+        token = null;
+      } else {
+        throw e;
+      }
+      }
+    }
 
     // Persist metadata for audit/debugging (best-effort)
     try {
@@ -3245,13 +3340,6 @@ async function joinVideoSession(req, res, next) {
     } catch (e) {
       console.warn('joinVideoSession: failed to upsert video_meetings:', e?.message || e);
     }
-
-    const token = await dailyVideoService.createMeetingToken({
-      roomName,
-      userName: displayName,
-      isOwner: isProvider, // provider is always host
-      expiresAt,
-    });
 
     res.json({
       vendor: 'daily',

@@ -232,7 +232,9 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
         setSessionTime(0)
       })
 
-      await callObject.join({ url: joinInfo.roomUrl, token: joinInfo.token })
+      const joinParams = { url: joinInfo.roomUrl }
+      if (joinInfo?.token) joinParams.token = joinInfo.token
+      await callObject.join(joinParams)
 
       setIsCallStarted(true)
       setIsLoading(false)

@@ -10,6 +10,12 @@
  */
 const DAILY_API_BASE_URL = 'https://api.daily.co/v1';
 
+function sanitizeDailyErrorMessage(message) {
+  if (!message) return message;
+  // Strip URLs (Daily sometimes returns billing links in errors).
+  return String(message).replace(/https?:\/\/\S+/gi, '').replace(/\s+/g, ' ').trim();
+}
+
 function requireEnv(name) {
   const value = process.env[name];
   if (!value) {
@@ -51,11 +57,18 @@ async function dailyRequest(path, { method = 'GET', body } = {}) {
   });
 
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (e) {
+    data = null;
+  }
 
   if (!res.ok) {
-    const msg = data?.error || data?.info || data?.message || `Daily API error (${res.status})`;
-    const err = new Error(msg);
+    const msg = sanitizeDailyErrorMessage(
+      data?.error || data?.info || data?.message || `Daily API error (${res.status})`
+    );
+    const err = new Error(msg || `Daily API error (${res.status})`);
     err.status = res.status;
     err.data = data;
     throw err;
@@ -68,9 +81,10 @@ async function dailyRequest(path, { method = 'GET', body } = {}) {
  * Create (or get) a Daily room for a booking.
  * We use a deterministic room name so we can be idempotent without DB state.
  */
-async function ensureRoomForBooking({ bookingId, expiresAt }) {
+async function ensureRoomForBooking({ bookingId, expiresAt, privacy = 'private', roomNameSuffix = '' }) {
   const { domain } = getDailyConfig();
-  const roomName = safeRoomName(`aarohaa-booking-${bookingId}`);
+  const suffix = roomNameSuffix ? `-${roomNameSuffix}` : '';
+  const roomName = safeRoomName(`aarohaa-booking-${bookingId}${suffix}`);
   const roomUrl = `https://${domain}/${roomName}`;
 
   // Try to get the room first (fast path).
@@ -92,7 +106,7 @@ async function ensureRoomForBooking({ bookingId, expiresAt }) {
     method: 'POST',
     body: {
       name: roomName,
-      privacy: 'private', // token-required
+      privacy, // 'private' (token recommended) or 'public' (no token)
       properties: {
         // Keep access controlled via short-lived tokens minted by backend.
         exp,

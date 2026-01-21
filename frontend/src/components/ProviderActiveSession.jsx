@@ -148,7 +148,9 @@ const ProviderActiveSession = ({ selectedAppointment }) => {
         setSessionTime(0)
       })
 
-      await callObject.join({ url: joinInfo.roomUrl, token: joinInfo.token })
+      const joinParams = { url: joinInfo.roomUrl }
+      if (joinInfo?.token) joinParams.token = joinInfo.token
+      await callObject.join(joinParams)
       setIsCallStarted(true)
       setIsLoading(false)
     } catch (error) {
@@ -226,7 +228,8 @@ const ProviderActiveSession = ({ selectedAppointment }) => {
   const sessionDate = new Date(activeAppointment.dateTime)
   const now = new Date()
   const diffInMinutes = (sessionDate - now) / (1000 * 60)
-  const isSessionActive = diffInMinutes <= 5 && diffInMinutes >= -30
+  // Provider can enter slightly earlier (matches backend join window).
+  const isSessionActive = diffInMinutes <= 15 && diffInMinutes >= -30
 
   return (
     <div className="provider-active-session">
