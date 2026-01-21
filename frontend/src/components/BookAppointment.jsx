@@ -22,6 +22,11 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [existingBookings, setExistingBookings] = useState([])
 
+  const formatLocalDateTimeInput = (date) => {
+    const pad = (value) => String(value).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+
   useEffect(() => {
     // Load available providers from backend
     const loadProviders = async () => {
@@ -119,8 +124,11 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
       // Check if selected time is in the future
       const selectedDate = new Date(formData.dateTime)
       const now = new Date()
-      if (selectedDate <= now) {
+      const diffMs = selectedDate.getTime() - now.getTime()
+      if (diffMs <= 0) {
         newErrors.dateTime = 'Please select a future date and time'
+      } else if (diffMs < 5 * 60 * 1000) {
+        newErrors.dateTime = 'Please select a time at least 5 minutes from now'
       } else if (providerAvailability) {
         // Validate against provider availability
         const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
@@ -238,6 +246,12 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
       // Ensure the date is in the future
       if (diffMs <= 0) {
         setErrors({ dateTime: 'Please select a future date and time' })
+        setLoading(false)
+        return
+      }
+
+      if (diffMs < 5 * 60 * 1000) {
+        setErrors({ dateTime: 'Please select a time at least 5 minutes from now' })
         setLoading(false)
         return
       }
@@ -406,13 +420,10 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
                 onChange={handleInputChange}
                 className={`form-input ${errors.dateTime ? 'error' : ''}`}
                 min={(() => {
-                  // Set min to start of today (00:00) to allow selecting any time today
-                  // Our custom validation will handle:
-                  // 1. Ensuring time is in the future
-                  // 2. Ensuring time is within provider availability window
+                  // Set min to 5 minutes from now to enforce lead time in the UI
                   const now = new Date()
-                  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
-                  return startOfToday.toISOString().slice(0, 16)
+                  const minTime = new Date(now.getTime() + 5 * 60 * 1000)
+                  return formatLocalDateTimeInput(minTime)
                 })()}
                 required
               />

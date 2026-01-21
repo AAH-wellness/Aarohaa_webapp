@@ -1075,7 +1075,8 @@ async function getProviderAvailabilityById(req, res, next) {
 /**
  * Helper function to generate available time slots
  */
-function generateAvailableSlots({ availability, bookings, startDate, endDate, slotDuration = 30 }) {
+function generateAvailableSlots({ availability, bookings, startDate, endDate, slotDuration = 15 }) {
+  const sessionDurationMinutes = 60;
   const slots = [];
   
   // Validate inputs
@@ -1215,12 +1216,12 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
     
     // Get current time in local timezone
     const now = new Date();
-    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour buffer
+    const minLeadTime = new Date(now.getTime() + 5 * 60 * 1000); // 5 minute buffer
     
     // Debug logging for Thursday
     const dateKeyForLog = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     if (dayName === 'thursday') {
-      console.log(`[Thursday Debug] Date: ${dateKeyForLog}, dayStart: ${dayStart.toLocaleString()}, dayEnd: ${dayEnd.toLocaleString()}, now: ${now.toLocaleString()}, oneHourFromNow: ${oneHourFromNow.toLocaleString()}`);
+      console.log(`[Thursday Debug] Date: ${dateKeyForLog}, dayStart: ${dayStart.toLocaleString()}, dayEnd: ${dayEnd.toLocaleString()}, now: ${now.toLocaleString()}, minLeadTime: ${minLeadTime.toLocaleString()}`);
     }
     
     // Generate slots using local time, then convert to UTC for storage
@@ -1240,13 +1241,21 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
       const timeKey = `${hours}:${minutes}`;
       
       // Check if this slot is already booked (by any user)
-      const slotBookings = bookingsByDate[dateKey]?.filter(b => b.time === timeKey) || [];
+      const slotBookings = bookingsByDate[dateKey]?.filter(b => {
+        if (!b.time) return false;
+        const [bookingHours, bookingMinutes] = b.time.split(':').map(Number);
+        const bookingStart = bookingHours * 60 + bookingMinutes;
+        const slotStart = currentTime.getHours() * 60 + currentTime.getMinutes();
+        const bookingEnd = bookingStart + sessionDurationMinutes;
+        const slotEnd = slotStart + sessionDurationMinutes;
+        return slotStart < bookingEnd && bookingStart < slotEnd;
+      }) || [];
       const isBooked = slotBookings.length > 0;
       
       // Include all future slots (at least 1 hour away)
       // Include ALL slots (even if booked) so frontend can grey out the current user's booked slots
       // Compare in local time to match availability times
-      // For today, only include slots that are at least 1 hour in the future (>= oneHourFromNow)
+      // For today, only include slots that are at least 5 minutes in the future (>= minLeadTime)
       // For future days, include all slots that are in the future
       // Compare dates in local time to avoid timezone issues
       const todayLocal = new Date();
@@ -1256,10 +1265,10 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
       const todayKey = `${todayYear}-${todayMonth}-${todayDay}`;
       const isToday = dateKey === todayKey;
       
-      // For today: include slots >= oneHourFromNow (at least 1 hour away)
+      // For today: include slots >= minLeadTime (at least 5 minutes away)
       // For future days: include slots >= now (any future time)
       const shouldInclude = isToday 
-        ? currentTime.getTime() >= oneHourFromNow.getTime()  // Changed from > to >= to include slots exactly 1 hour away
+        ? currentTime.getTime() >= minLeadTime.getTime()  // Changed from > to >= to include slots exactly 5 minutes away
         : currentTime.getTime() >= now.getTime(); // Changed from > to >= for consistency
       
       // Debug logging for 11:00 and 11:30 slots on Thursday
@@ -1269,11 +1278,11 @@ function generateAvailableSlots({ availability, bookings, startDate, endDate, sl
           currentTimeMs: currentTime.getTime(),
           now: now.toLocaleString(),
           nowMs: now.getTime(),
-          oneHourFromNow: oneHourFromNow.toLocaleString(),
-          oneHourFromNowMs: oneHourFromNow.getTime(),
+          minLeadTime: minLeadTime.toLocaleString(),
+          minLeadTimeMs: minLeadTime.getTime(),
           isToday,
           shouldInclude,
-          timeDiffMinutes: isToday ? Math.round((currentTime.getTime() - oneHourFromNow.getTime()) / (60 * 1000)) : Math.round((currentTime.getTime() - now.getTime()) / (60 * 1000))
+          timeDiffMinutes: isToday ? Math.round((currentTime.getTime() - minLeadTime.getTime()) / (60 * 1000)) : Math.round((currentTime.getTime() - now.getTime()) / (60 * 1000))
         });
       }
       
@@ -1418,7 +1427,7 @@ async function getProviderAvailableSlots(req, res, next) {
         bookings,
         startDate,
         endDate,
-        slotDuration: 30 // 30-minute slots
+        slotDuration: 15 // 15-minute slots
       });
     } catch (slotError) {
       console.error('Error generating slots:', slotError);
@@ -1651,6 +1660,19 @@ async function createBooking(req, res, next) {
       formattedDate = appointmentDateTime.toISOString();
     }
 
+    // Enforce minimum lead time (at least 5 minutes from now)
+    const now = new Date();
+    const minLeadTimeMs = 5 * 60 * 1000;
+    if (appointmentDateTime.getTime() < now.getTime() + minLeadTimeMs) {
+      return res.status(400).json({
+        error: {
+          message: 'Please select a time at least 5 minutes from now.',
+          code: 'INSUFFICIENT_LEAD_TIME',
+          status: 400
+        }
+      });
+    }
+
     // Validate booking time is within provider's availability
     if (provider.availability && typeof provider.availability === 'object') {
       const availability = typeof provider.availability === 'string' 
@@ -1747,12 +1769,15 @@ async function createBooking(req, res, next) {
       dateKey
     );
     
-    // Check if there's a booking at the same time (within 30 minutes)
+    const sessionDurationMinutes = 60;
+    // Check if this slot overlaps an existing 1-hour booking
     const slotConflict = existingBookings.find(booking => {
       const bookingDate = new Date(booking.appointment_date);
-      const bookingTimeKey = bookingDate.toTimeString().slice(0, 5);
-      // Check if times match exactly or are within 30 minutes
-      return bookingTimeKey === timeKey;
+      const bookingStart = bookingDate.getHours() * 60 + bookingDate.getMinutes();
+      const slotStart = appointmentDateObj.getHours() * 60 + appointmentDateObj.getMinutes();
+      const bookingEnd = bookingStart + sessionDurationMinutes;
+      const slotEnd = slotStart + sessionDurationMinutes;
+      return slotStart < bookingEnd && bookingStart < slotEnd;
     });
     
     if (slotConflict) {
