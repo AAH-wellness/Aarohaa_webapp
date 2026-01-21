@@ -61,9 +61,6 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
         }, Math.max(0, diffInMinutes * 60 * 1000))
       }
       
-      if (onActiveSessionChange) {
-        onActiveSessionChange(activeBookingData)
-      }
       return
     }
     
@@ -345,79 +342,72 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
           )}
         </div>
 
-        {isCallStarted ? (
-          <>
-            <div className="session-info-bar">
-              <span>Session Time: {formatTime(sessionTime)}</span>
-              <span>|</span>
-              <span>Cost: ${calculateCost(sessionTime)}</span>
-            </div>
-
-            <div className="video-call-interface" style={{ height: '520px' }}>
-              <div ref={callContainerRef} style={{ width: '100%', height: '100%' }} />
-            </div>
-
-            <div className="call-controls">
-              <button className="control-btn end-call-btn" onClick={handleEndCall} aria-label="Leave call">
-                Leave
-              </button>
-            </div>
-          </>
-        ) : isSessionUpcoming ? (
-          <div className="pre-call-section">
-            <div className="video-call-interface pre-call">
-              <div className="video-placeholder">
-                <div className="video-icon">⏰</div>
-                <p className="video-status">
-                  Your session with {providerName} is scheduled for<br />
-                  {sessionDate.toLocaleString()}
-                  <br />
-                  <br />
-                  <span style={{ fontSize: '16px', fontWeight: 600, color: '#0e4826' }}>
-                    {formatCountdown()}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <button
-              className="start-call-btn"
-              onClick={handleStartCall}
-              disabled={true}
-              style={{ opacity: 0.5, cursor: 'not-allowed' }}
-            >
-              Session Not Yet Active
-            </button>
+        {isCallStarted && (
+          <div className="session-info-bar">
+            <span>Session Time: {formatTime(sessionTime)}</span>
+            <span>|</span>
+            <span>Cost: ${calculateCost(sessionTime)}</span>
           </div>
-        ) : isSessionPast ? (
-          <div className="pre-call-section">
-            <div className="video-call-interface pre-call">
-              <div className="video-placeholder">
-                <div className="video-icon">📋</div>
-                <p className="video-status">
-                  Session with {providerName} has ended<br />
-                  <br />
-                  You can view session notes below
-                </p>
-              </div>
+        )}
+
+        <div className={`video-call-interface ${isCallStarted ? '' : 'pre-call'}`} style={{ height: '520px', position: 'relative' }}>
+          <div ref={callContainerRef} style={{ width: '100%', height: '100%' }} />
+          {!isCallStarted && (
+            <div className="video-placeholder" style={{ position: 'absolute', inset: 0 }}>
+              {isSessionUpcoming ? (
+                <>
+                  <div className="video-icon">⏰</div>
+                  <p className="video-status">
+                    Your session with {providerName} is scheduled for<br />
+                    {sessionDate.toLocaleString()}
+                    <br />
+                    <br />
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: '#0e4826' }}>
+                      {formatCountdown()}
+                    </span>
+                  </p>
+                </>
+              ) : isSessionPast ? (
+                <>
+                  <div className="video-icon">📋</div>
+                  <p className="video-status">
+                    Session with {providerName} has ended<br />
+                    <br />
+                    You can view session notes below
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="video-icon">📹</div>
+                  <p className="video-status">
+                    Ready to start your session with<br />
+                    {providerName}
+                  </p>
+                </>
+              )}
             </div>
+          )}
+        </div>
+
+        {isCallStarted ? (
+          <div className="call-controls">
+            <button className="control-btn end-call-btn" onClick={handleEndCall} aria-label="Leave call">
+              Leave
+            </button>
           </div>
         ) : (
           <div className="pre-call-section">
-            <div className="video-call-interface pre-call">
-              <div className="video-placeholder">
-                <div className="video-icon">📹</div>
-                <p className="video-status">
-                  Ready to start your session with<br />
-                  {providerName}
-                </p>
-              </div>
-            </div>
             <button
               className="start-call-btn"
               onClick={handleStartCall}
-              disabled={isLoading}
+              disabled={isSessionUpcoming || isSessionPast || isLoading}
+              style={isSessionUpcoming ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
             >
-              {isLoading ? 'Starting Call...' : 'Start Call'}
+              {isSessionUpcoming
+                ? 'Session Not Yet Active'
+                : isLoading
+                  ? 'Starting Call...'
+                  : 'Start Call'}
             </button>
           </div>
         )}
