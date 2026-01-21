@@ -134,24 +134,19 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
   }, [])
   
   // Check if a slot is booked by the current user
-  // Sessions are 1 hour long, so we grey out the booked slot and the next slot (30 min later)
+  // Sessions are 1 hour long, so block any slot that overlaps the 1-hour window
   const isSlotBooked = (slotDatetime) => {
     if (!slotDatetime || existingBookings.length === 0) return false
     
     const slotTime = new Date(slotDatetime).getTime()
     
-    // Check if any active booking matches this slot or the slot 30 minutes after it
-    // (since sessions are 1 hour, booking 4:00 PM greys out both 4:00 PM and 4:30 PM)
+    const sessionDurationMs = 60 * 60 * 1000
+    // Check if any active booking overlaps this slot (1-hour sessions)
     return existingBookings.some(booking => {
       const bookingTime = new Date(booking.appointmentDate || booking.dateTime).getTime()
-      const timeDifference = slotTime - bookingTime
-      
-      // Match if:
-      // 1. It's the exact booked slot (within 1 minute tolerance)
-      // 2. OR it's the slot 30 minutes after the booking (the next slot in the session)
-      // Example: If 4:00 PM is booked, grey out both 4:00 PM (timeDifference ≈ 0) and 4:30 PM (timeDifference = 30 min)
-      return (Math.abs(timeDifference) < 60 * 1000) || 
-             (timeDifference > 0 && timeDifference <= 31 * 60 * 1000)
+      const bookingEnd = bookingTime + sessionDurationMs
+      const slotEnd = slotTime + sessionDurationMs
+      return slotTime < bookingEnd && bookingTime < slotEnd
     })
   }
 

@@ -688,9 +688,9 @@ class UserService {
       const dayOfWeek = date.getDay()
       // Only generate slots for weekdays (Mon-Fri)
       if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-        // Generate slots from 9 AM to 5 PM, every 30 minutes
+        // Generate slots from 9 AM to 5 PM, every 15 minutes
         for (let hour = 9; hour < 17; hour++) {
-          for (let minute = 0; minute < 60; minute += 30) {
+          for (let minute = 0; minute < 60; minute += 15) {
             const slotDate = new Date(date)
             slotDate.setHours(hour, minute, 0, 0)
             if (slotDate > new Date()) {
