@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import BookingRequiredModal from './BookingRequiredModal'
 import { userService, apiClient, API_CONFIG } from '../services'
-import DailyIframe from '@daily-co/daily-js'
 import './ActiveSession.css'
 
 const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionChange, selectedAppointment }) => {
@@ -21,10 +20,15 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
     // If selectedAppointment is passed, use it directly
     if (selectedAppointment) {
       // Check if the selected appointment is cancelled or completed
-      const status = selectedAppointment.status?.toLowerCase() || ''
+      const status = String(selectedAppointment.status || '').toLowerCase()
       if (status === 'cancelled' || status === 'completed') {
+        // Completed/cancelled sessions are not accessible
         setActiveBooking(null)
         setShowModal(true)
+        // Clear active session in parent
+        if (onActiveSessionChange) {
+          onActiveSessionChange(null)
+        }
         // Don't call onActiveSessionChange - let the modal show on the Active Session page
         return
       }
@@ -49,17 +53,8 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
         }
       })
       
-      // Check if it's time to auto-start (within 5 minutes of scheduled time)
-      const appointmentTime = new Date(selectedAppointment.dateTime)
-      const now = new Date()
-      const diffInMinutes = (appointmentTime - now) / (1000 * 60)
-      
-      if (diffInMinutes <= 5 && diffInMinutes >= -30) {
-        // Auto-start video if within 5 minutes before or 30 minutes after
-        setTimeout(() => {
-          handleStartCall()
-        }, Math.max(0, diffInMinutes * 60 * 1000))
-      }
+      // Note: Auto-start removed to prevent race conditions
+      // User can manually start the call when ready
       
       return
     }
@@ -94,8 +89,8 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
         const upcomingBookings = bookings
           .filter(booking => {
             const aptDate = new Date(booking.appointmentDate)
-            const status = booking.status?.toLowerCase() || ''
-            // Exclude completed and cancelled bookings
+            const status = String(booking.status || '').toLowerCase()
+            // Exclude completed and cancelled bookings - these should not be accessible
             // Only include bookings that are in the future or within the last 30 minutes (active session window)
             const isNotCompletedOrCancelled = status !== 'completed' && status !== 'cancelled'
             const isFutureOrRecent = aptDate >= new Date(now.getTime() - 30 * 60 * 1000) // Within last 30 min or future
@@ -162,8 +157,8 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
   useEffect(() => {
     return () => {
       try {
-        if (callObjectRef.current) {
-          callObjectRef.current.destroy()
+        if (callObjectRef.current && callObjectRef.current.cleanup) {
+          callObjectRef.current.cleanup()
           callObjectRef.current = null
         }
       } catch (e) {
@@ -189,12 +184,23 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
   const handleStartCall = async () => {
     setIsLoading(true)
     try {
-      if (!activeBooking?.id) {
+      // Use activeBooking if available, otherwise fallback to selectedAppointment
+      const bookingToUse = activeBooking || (selectedAppointment ? {
+        id: selectedAppointment.id,
+        providerId: selectedAppointment.providerId,
+        providerName: selectedAppointment.providerName || 'Provider',
+        dateTime: selectedAppointment.dateTime,
+        sessionType: selectedAppointment.sessionType || 'Video Consultation',
+        notes: selectedAppointment.notes,
+        status: selectedAppointment.status
+      } : null)
+
+      if (!bookingToUse?.id) {
         throw new Error('No active booking found')
       }
 
       const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
-      const joinInfo = await apiClient.post(`${apiBaseUrl}/users/bookings/${activeBooking.id}/video/join`, {})
+      const joinInfo = await apiClient.post(`${apiBaseUrl}/users/bookings/${bookingToUse.id}/video/join`, {})
 
       if (!callContainerRef.current) {
         throw new Error('Call container not available')
@@ -202,42 +208,78 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
 
       // Clean up existing call if any
       if (callObjectRef.current) {
-        callObjectRef.current.destroy()
+        callContainerRef.current.innerHTML = ''
         callObjectRef.current = null
       }
 
-      const callObject = DailyIframe.createFrame(callContainerRef.current, {
-        showLeaveButton: true,
-        iframeStyle: {
-          width: '100%',
-          height: '100%',
-          border: '0',
-          borderRadius: '16px',
-        },
-      })
-
-      callObjectRef.current = callObject
-
-      callObject.on('left-meeting', () => {
-        try {
-          callObject.destroy()
-        } catch (e) {
-          // ignore
+      // Create Jitsi iframe
+      const iframe = document.createElement('iframe')
+      // Ensure English language - add lang parameter if not already in URL
+      let roomUrl = joinInfo.roomUrl
+      if (!roomUrl.includes('lang=')) {
+        const separator = roomUrl.includes('?') ? '&' : '?'
+        roomUrl = `${roomUrl}${separator}lang=en&config.lang=en&interfaceConfig.lang=en`
+      }
+      iframe.src = roomUrl
+      iframe.allow = 'camera; microphone; fullscreen; speaker; display-capture'
+      iframe.style.width = '100%'
+      iframe.style.height = '100%'
+      iframe.style.border = '0'
+      iframe.style.borderRadius = '16px'
+      iframe.title = 'Video Call'
+      
+      // Listen for Jitsi events via postMessage (optional, for better UX)
+      const handleMessage = (event) => {
+        // Jitsi sends messages from meet.jit.si domain
+        if (event.origin.includes('meet.jit.si') || event.origin.includes('jitsi')) {
+          if (event.data && event.data.type === 'video-conference-left') {
+            setIsCallStarted(false)
+            setSessionTime(0)
+            window.removeEventListener('message', handleMessage)
+          }
         }
-        callObjectRef.current = null
-        setIsCallStarted(false)
-        setSessionTime(0)
-      })
+      }
+      window.addEventListener('message', handleMessage)
 
-      const joinParams = { url: joinInfo.roomUrl }
-      if (joinInfo?.token) joinParams.token = joinInfo.token
-      await callObject.join(joinParams)
+      callContainerRef.current.appendChild(iframe)
+      callObjectRef.current = { iframe, cleanup: () => {
+        window.removeEventListener('message', handleMessage)
+        if (callContainerRef.current) {
+          callContainerRef.current.innerHTML = ''
+        }
+      }}
 
       setIsCallStarted(true)
       setIsLoading(false)
     } catch (error) {
       console.error('Error starting embedded call:', error)
-      alert(error?.message || 'Failed to start the call. Please try again.')
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        data: error.data,
+        errorCode: error.data?.error?.code
+      })
+      
+      // Extract detailed error message from backend response
+      let errorMessage = 'Failed to start the call. Please try again.'
+      if (error.data?.error?.message) {
+        errorMessage = error.data.error.message
+      } else if (error.message && error.message !== `HTTP ${error.status}`) {
+        errorMessage = error.message
+      }
+      
+      // Provide helpful messages for common error codes
+      if (error.data?.error?.code === 'WAITING_FOR_PROVIDER') {
+        errorMessage = 'Please wait for the provider to start the session first.'
+      } else if (error.data?.error?.code === 'SESSION_NOT_ACTIVE') {
+        errorMessage = 'The session is not yet active. Please wait until the scheduled time.'
+      } else if (error.data?.error?.code === 'SESSION_EXPIRED') {
+        errorMessage = 'The session join window has ended.'
+      } else if (error.data?.error?.code === 'ACCESS_DENIED') {
+        errorMessage = 'You do not have permission to join this session.'
+      }
+      
+      alert(errorMessage)
       setIsLoading(false)
     }
   }
@@ -245,9 +287,8 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
   const handleEndCall = () => {
     if (window.confirm('Are you sure you want to end this session?')) {
       try {
-        if (callObjectRef.current) {
-          callObjectRef.current.leave()
-          callObjectRef.current.destroy()
+        if (callObjectRef.current && callObjectRef.current.cleanup) {
+          callObjectRef.current.cleanup()
           callObjectRef.current = null
         }
       } catch (e) {

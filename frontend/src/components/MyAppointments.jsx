@@ -463,9 +463,13 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
   }
 
   const handleJoinSession = (appointment) => {
-    if (onJoinSession) {
-      onJoinSession(appointment)
+    const status = String(appointment?.status || '').toLowerCase()
+    if (status === 'cancelled' || status === 'completed') {
+      alert(`This session is ${status} and cannot be joined.`)
+      return
     }
+
+    if (onJoinSession) onJoinSession(appointment)
   }
 
   return (
@@ -516,8 +520,16 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
                     <button 
                       className="join-session-btn"
                       onClick={() => handleJoinSession(appointment)}
+                      disabled={['cancelled', 'completed'].includes(String(appointment.status || '').toLowerCase())}
+                      style={
+                        ['cancelled', 'completed'].includes(String(appointment.status || '').toLowerCase())
+                          ? { opacity: 0.5, cursor: 'not-allowed' }
+                          : undefined
+                      }
                     >
-                      Join Session
+                      {['cancelled', 'completed'].includes(String(appointment.status || '').toLowerCase())
+                        ? 'Session Not Available'
+                        : 'Join Session'}
                     </button>
                     <button 
                       className="cancel-session-btn"

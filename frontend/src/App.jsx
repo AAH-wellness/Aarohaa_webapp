@@ -363,7 +363,17 @@ function App() {
           setProviderActiveView('Active Sessions')
         }} />
       case 'Active Sessions':
-        return <ProviderActiveSession selectedAppointment={providerActiveSession} />
+        return (
+          <ProviderActiveSession 
+            selectedAppointment={providerActiveSession}
+            onSessionCompleted={() => {
+              // Clear active session after completion
+              setProviderActiveSession(null)
+              // Optionally navigate back to dashboard
+              // setProviderActiveView('Dashboard')
+            }}
+          />
+        )
       case 'Earnings':
         return <ProviderEarnings />
       case 'Profile':

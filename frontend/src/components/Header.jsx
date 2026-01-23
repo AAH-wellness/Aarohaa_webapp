@@ -10,27 +10,10 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
   const dropdownRef = useRef(null)
   const profileRef = useRef(null)
 
-  // Determine if we should show provider name instead of user name
-  const shouldShowProviderName = activeView === 'Active Session' && activeSession && activeSession.providerName
+  // Always show user profile - don't replace with provider name
+  // Provider name is shown in the center header section instead
 
   useEffect(() => {
-    // If we have an active session, use provider name instead
-    if (shouldShowProviderName) {
-      const providerName = activeSession.providerName
-      setUserName(providerName)
-      
-      // Generate initials from provider name
-      const nameParts = providerName.split(' ').filter(part => part.length > 0)
-      if (nameParts.length >= 2) {
-        setUserInitials((nameParts[0][0] + nameParts[1][0]).toUpperCase())
-      } else if (nameParts.length === 1 && nameParts[0].length >= 2) {
-        setUserInitials(nameParts[0].substring(0, 2).toUpperCase())
-      } else {
-        setUserInitials(providerName.substring(0, 2).toUpperCase())
-      }
-      return
-    }
-
     // Fetch user profile from backend
     const loadUserInfo = async () => {
       try {
@@ -86,7 +69,7 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
       const interval = setInterval(loadUserInfo, 2000) // Refresh every 2 seconds when on profile page
       return () => clearInterval(interval)
     }
-  }, [activeView, shouldShowProviderName, activeSession])
+  }, [activeView, activeSession])
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -194,68 +177,60 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
         </div>
       )}
       <div className="header-right">
-        {shouldShowProviderName ? (
-          // Show provider name only during active session (no dropdown)
-          <div className="provider-name-display">
-            <div className="provider-avatar">{userInitials}</div>
-            <span className="provider-name">{userName}</span>
-          </div>
-        ) : (
-          // Show user profile with dropdown when not in active session
+        {/* Always show user profile with dropdown - user should always be able to access their profile */}
+        <div 
+          className="user-profile-container" 
+          ref={dropdownRef}
+          data-open={showDropdown}
+        >
           <div 
-            className="user-profile-container" 
-            ref={dropdownRef}
-            data-open={showDropdown}
-          >
-            <div 
-              ref={profileRef}
-              className="user-profile"
-              onClick={() => {
-                if (!showDropdown && profileRef.current) {
-                  const rect = profileRef.current.getBoundingClientRect()
-                  const dropdownHeight = 120
-                  const spaceBelow = window.innerHeight - rect.bottom
-                  const spaceAbove = rect.top
-                  
-                  let topPosition
-                  if (spaceBelow < dropdownHeight + 12 && spaceAbove > dropdownHeight + 12) {
-                    topPosition = rect.top - dropdownHeight - 12
-                  } else {
-                    topPosition = Math.min(rect.bottom + 12, window.innerHeight - dropdownHeight - 20)
-                  }
-                  
-                  setDropdownPosition({
-                    top: topPosition,
-                    right: window.innerWidth - rect.right
-                  })
+            ref={profileRef}
+            className="user-profile"
+            onClick={() => {
+              if (!showDropdown && profileRef.current) {
+                const rect = profileRef.current.getBoundingClientRect()
+                const dropdownHeight = 120
+                const spaceBelow = window.innerHeight - rect.bottom
+                const spaceAbove = rect.top
+                
+                let topPosition
+                if (spaceBelow < dropdownHeight + 12 && spaceAbove > dropdownHeight + 12) {
+                  topPosition = rect.top - dropdownHeight - 12
+                } else {
+                  topPosition = Math.min(rect.bottom + 12, window.innerHeight - dropdownHeight - 20)
                 }
-                setShowDropdown(!showDropdown)
+                
+                setDropdownPosition({
+                  top: topPosition,
+                  right: window.innerWidth - rect.right
+                })
+              }
+              setShowDropdown(!showDropdown)
+            }}
+          >
+            <div className="user-avatar">{userInitials}</div>
+            <span className="user-name">{userName}</span>
+            <span className="dropdown-arrow">▼</span>
+          </div>
+          {showDropdown && (
+            <div 
+              className="profile-dropdown"
+              style={{
+                top: `${dropdownPosition.top}px`,
+                right: `${dropdownPosition.right}px`
               }}
             >
-              <div className="user-avatar">{userInitials}</div>
-              <span className="user-name">{userName}</span>
-              <span className="dropdown-arrow">▼</span>
-            </div>
-            {showDropdown && (
-              <div 
-                className="profile-dropdown"
-                style={{
-                  top: `${dropdownPosition.top}px`,
-                  right: `${dropdownPosition.right}px`
-                }}
-              >
-                <div className="dropdown-item" onClick={handleProfileClick}>
-                  <span className="dropdown-icon">👤</span>
-                  <span>Profile</span>
-                </div>
-                <div className="dropdown-item" onClick={handleSignOut}>
-                  <span className="dropdown-icon">🚪</span>
-                  <span>Sign Out</span>
-                </div>
+              <div className="dropdown-item" onClick={handleProfileClick}>
+                <span className="dropdown-icon">👤</span>
+                <span>Profile</span>
               </div>
-            )}
-          </div>
-        )}
+              <div className="dropdown-item" onClick={handleSignOut}>
+                <span className="dropdown-icon">🚪</span>
+                <span>Sign Out</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

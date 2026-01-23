@@ -243,11 +243,8 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
         onBook(response.booking || bookingData)
       }
       
-      // Close modal and navigate to My Appointments immediately
-      handleClose()
-      if (onNavigateToAppointments) {
-        onNavigateToAppointments()
-      }
+      // Show success modal instead of immediately closing
+      setShowSuccessModal(true)
     } catch (err) {
       console.error('Error creating booking:', err)
       
@@ -306,6 +303,18 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
           setShowConflictModal(false)
           setConflictingAppointment(null)
         }}
+      />,
+      document.body
+    )
+  }
+
+  // Show success modal if booking was successful
+  if (showSuccessModal && bookedProvider) {
+    return createPortal(
+      <BookingSuccessModal
+        providerName={bookedProvider}
+        onClose={handleSuccessModalClose}
+        onNavigateToAppointments={onNavigateToAppointments}
       />,
       document.body
     )
