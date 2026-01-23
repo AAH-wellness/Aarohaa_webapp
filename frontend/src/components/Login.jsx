@@ -996,7 +996,27 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
         </div>
 
         <div className="login-illustration-section">
-          <div className="plant-decoration"></div>
+          <div className="plant-decoration">
+            <div className="wellness-illustration-content">
+              <div className="wellness-icon-large">🧘</div>
+              <h2 className="wellness-title">Aarohaa Wellness</h2>
+              <p className="wellness-subtitle">Your journey to holistic health and wellness</p>
+              <div className="wellness-features">
+                <div className="feature-item">
+                  <span className="feature-icon">✨</span>
+                  <span>Personalized Care</span>
+                </div>
+                <div className="feature-item">
+                  <span className="feature-icon">🌱</span>
+                  <span>Holistic Approach</span>
+                </div>
+                <div className="feature-item">
+                  <span className="feature-icon">💚</span>
+                  <span>Expert Providers</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

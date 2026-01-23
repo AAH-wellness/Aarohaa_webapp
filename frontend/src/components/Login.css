@@ -898,16 +898,17 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #0e4826;
+  background: linear-gradient(135deg, #0e4826 0%, #16a34a 100%);
 }
 
 .plant-decoration::before {
   content: '🌿';
   font-size: 400px;
-  opacity: 0.2;
+  opacity: 0.15;
   position: absolute;
   transform: rotate(-10deg);
   filter: grayscale(0.3) brightness(1.2);
+  z-index: 0;
 }
 
 .plant-decoration::after {
@@ -920,6 +921,84 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.wellness-illustration-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  color: #ffffff;
+  padding: 40px;
+  max-width: 500px;
+}
+
+.wellness-icon-large {
+  font-size: 120px;
+  margin-bottom: 24px;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.wellness-title {
+  font-size: 48px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  letter-spacing: -1px;
+}
+
+.wellness-subtitle {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 48px 0;
+  font-weight: 400;
+  line-height: 1.6;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.wellness-features {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 40px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.feature-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(5px);
+}
+
+.feature-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 @media (max-width: 968px) {
