@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import LoginSuccess from './LoginSuccess'
 import LoginErrorModal from './LoginErrorModal'
+import Modern3DScene from './Modern3DScene'
 import { userService } from '../services'
 import API_CONFIG from '../services/config.js'
 import './Login.css'
@@ -572,45 +574,51 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
 
   return (
     <div className="login-container">
+      <div className="login-particle-background" aria-hidden="true">
+        <Modern3DScene variant="background" />
+      </div>
       <div className="login-wrapper">
         <div className="login-form-section">
-          <div className="data-flow-animation"></div>
-          <div className="login-form-wrapper">
-            <div className="login-header">
-              <h1 className="login-title">
-                {isAdminMode ? 'Admin Portal' : isProviderMode ? 'Provider Portal' : 'Welcome back!'}
-              </h1>
-              <p className="login-subtitle">
-                {isAdminMode 
-                  ? 'Administrative access to platform control center' 
-                  : isProviderMode 
-                  ? 'Sign in to manage your wellness practice' 
-                  : 'Enter your Credentials to access your account'}
-              </p>
-              <div className="login-mode-toggle-container">
-                <button
-                  type="button"
-                  className={`mode-toggle-btn ${!isProviderMode && !isAdminMode ? 'active' : ''}`}
-                  onClick={() => onToggleMode && onToggleMode('user')}
-                >
-                  👤 User
-                </button>
-                <button
-                  type="button"
-                  className={`mode-toggle-btn ${isProviderMode ? 'active' : ''}`}
-                  onClick={() => onToggleMode && onToggleMode('provider')}
-                >
-                  🏥 Provider
-                </button>
-                <button
-                  type="button"
-                  className={`mode-toggle-btn ${isAdminMode ? 'active' : ''}`}
-                  onClick={() => onToggleMode && onToggleMode('admin')}
-                >
-                  🔐 Admin
-                </button>
-              </div>
-            </div>
+          <div className="login-form-container">
+            <div className="orbit-ornaments"></div>
+            <div className="data-flow-animation"></div>
+            <div className="login-form-content">
+              <div className="login-form-wrapper">
+                <div className="login-header">
+                  <h1 className="login-title">
+                    {isAdminMode ? 'Admin Portal' : isProviderMode ? 'Provider Portal' : 'Welcome back!'}
+                  </h1>
+                  <p className="login-subtitle">
+                    {isAdminMode 
+                      ? 'Administrative access to platform control center' 
+                      : isProviderMode 
+                      ? 'Sign in to manage your wellness practice' 
+                      : 'Enter your Credentials to access your account'}
+                  </p>
+                  <div className="login-mode-toggle-container">
+                    <button
+                      type="button"
+                      className={`mode-toggle-btn ${!isProviderMode && !isAdminMode ? 'active' : ''}`}
+                      onClick={() => onToggleMode && onToggleMode('user')}
+                    >
+                      👤 User
+                    </button>
+                    <button
+                      type="button"
+                      className={`mode-toggle-btn ${isProviderMode ? 'active' : ''}`}
+                      onClick={() => onToggleMode && onToggleMode('provider')}
+                    >
+                      🏥 Provider
+                    </button>
+                    <button
+                      type="button"
+                      className={`mode-toggle-btn ${isAdminMode ? 'active' : ''}`}
+                      onClick={() => onToggleMode && onToggleMode('admin')}
+                    >
+                      🔐 Admin
+                    </button>
+                  </div>
+                </div>
 
             {/* Conditionally render different forms based on mode */}
             {isProviderMode ? (
@@ -992,13 +1000,21 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
                 </p>
               </>
             )}
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="login-illustration-section">
-          <div className="plant-decoration">
-            <div className="wellness-illustration-content">
-              <div className="wellness-icon-large">🧘</div>
+          <div className="wellness-content-overlay">
+            <div className="wellness-content">
+              <div className="wellness-circle" aria-hidden="true">
+                <DotLottieReact
+                  src="https://lottie.host/975e7c1c-6823-4b67-9810-c2608fec06d9/D6nLGKy42R.lottie"
+                  loop
+                  autoplay
+                />
+              </div>
               <h2 className="wellness-title">Aarohaa Wellness</h2>
               <p className="wellness-subtitle">Your journey to holistic health and wellness</p>
               <div className="wellness-features">
