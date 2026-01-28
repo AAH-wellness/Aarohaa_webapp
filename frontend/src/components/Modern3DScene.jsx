@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import * as THREE from 'three'
 import './Modern3DScene.css'
 
@@ -6,6 +7,7 @@ const Modern3DScene = ({ variant = 'panel' }) => {
   const containerRef = useRef(null)
   const animationIdRef = useRef(null)
   const isBackground = variant === 'background'
+  const lottieSrc = 'https://lottie.host/18c3a0ee-5865-4a7a-8afd-751bf9463c64/HoxcAwToVM.lottie'
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -229,6 +231,28 @@ const Modern3DScene = ({ variant = 'panel' }) => {
   return (
     <div className={`modern-3d-scene-container ${isBackground ? 'modern-3d-scene-background' : ''}`}>
       <div ref={containerRef} className="modern-3d-canvas" />
+      {isBackground && (
+        <div className="modern-3d-lottie-field" aria-hidden="true">
+          <div className="modern-3d-lottie modern-3d-lottie--one">
+            <DotLottieReact src={lottieSrc} loop autoplay />
+          </div>
+          <div className="modern-3d-lottie modern-3d-lottie--two">
+            <DotLottieReact src={lottieSrc} loop autoplay />
+          </div>
+          <div className="modern-3d-lottie modern-3d-lottie--three">
+            <DotLottieReact src={lottieSrc} loop autoplay />
+          </div>
+          <div className="modern-3d-lottie modern-3d-lottie--four">
+            <DotLottieReact src={lottieSrc} loop autoplay />
+          </div>
+          <div className="modern-3d-lottie modern-3d-lottie--five">
+            <DotLottieReact src={lottieSrc} loop autoplay />
+          </div>
+          <div className="modern-3d-lottie modern-3d-lottie--six">
+            <DotLottieReact src={lottieSrc} loop autoplay />
+          </div>
+        </div>
+      )}
       {!isBackground && (
         <div className="wellness-content-overlay">
           <div className="wellness-content">
