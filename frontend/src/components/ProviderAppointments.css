@@ -208,6 +208,12 @@
   border-left: 3px solid rgba(14, 72, 38, 0.2);
 }
 
+.provider-appointment-rescheduled {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.7);
+  margin: 6px 0 0;
+}
+
 .provider-appointment-actions {
   display: flex;
   gap: 12px;
@@ -250,6 +256,24 @@
 .provider-view-details-btn:hover {
   background: rgba(14, 72, 38, 0.1);
   border-color: rgba(14, 72, 38, 0.3);
+}
+
+.provider-reschedule-btn {
+  flex: 1;
+  padding: 12px 24px;
+  background: rgba(14, 72, 38, 0.08);
+  color: #0e4826;
+  border: 1px solid rgba(14, 72, 38, 0.25);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.provider-reschedule-btn:hover {
+  background: rgba(14, 72, 38, 0.16);
+  border-color: rgba(14, 72, 38, 0.35);
 }
 
 @media (max-width: 768px) {

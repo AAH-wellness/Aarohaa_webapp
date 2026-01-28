@@ -2044,6 +2044,21 @@ async function getUserBookings(req, res, next) {
 
     const bookings = await Booking.findByUserId(userId);
     
+    const toISOString = (dateValue) => {
+      if (!dateValue) return null
+      if (dateValue instanceof Date) {
+        return dateValue.toISOString()
+      }
+      if (typeof dateValue === 'string') {
+        if (dateValue.includes('Z') || dateValue.includes('+') || dateValue.match(/-\d{2}:\d{2}$/)) {
+          return dateValue
+        }
+        const parsed = new Date(dateValue + 'Z')
+        return isNaN(parsed.getTime()) ? dateValue : parsed.toISOString()
+      }
+      return new Date(dateValue).toISOString()
+    }
+
     res.json({
       bookings: bookings.map(booking => {
         // Ensure appointment_date is returned as ISO string with 'Z' suffix for consistent parsing
@@ -2093,6 +2108,10 @@ async function getUserBookings(req, res, next) {
           notes: booking.notes,
           status: booking.status,
           reason: booking.reason || null,
+          rescheduledFrom: toISOString(booking.rescheduled_from),
+          rescheduledAt: toISOString(booking.rescheduled_at),
+          rescheduledBy: booking.rescheduled_by || null,
+          rescheduleCount: booking.reschedule_count || 0,
           createdAt: booking.created_at
         }
       })
@@ -2247,6 +2266,10 @@ async function getProviderBookings(req, res, next) {
         notes: booking.notes,
         status: booking.status || 'confirmed',
         reason: booking.reason || null,
+        rescheduledFrom: toISOString(booking.rescheduled_from),
+        rescheduledAt: toISOString(booking.rescheduled_at),
+        rescheduledBy: booking.rescheduled_by || null,
+        rescheduleCount: booking.reschedule_count || 0,
         createdAt: booking.created_at || booking.createdAt
       }))
     });
@@ -2827,6 +2850,302 @@ async function cancelBooking(req, res, next) {
   } catch (error) {
     console.error('cancelBooking error:', error);
     console.error('Error stack:', error.stack);
+    next(error);
+  }
+}
+
+/**
+ * Reschedule a booking (auto-accept if available)
+ */
+async function rescheduleBooking(req, res, next) {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const role = req.user?.role || 'user';
+    const { bookingId, newAppointmentDate } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: {
+          message: 'User not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    if (!bookingId || !newAppointmentDate) {
+      return res.status(400).json({
+        error: {
+          message: 'bookingId and newAppointmentDate are required',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+
+    const bookingIdNum = parseInt(bookingId);
+    if (isNaN(bookingIdNum)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid booking ID',
+          code: 'INVALID_BOOKING_ID',
+          status: 400
+        }
+      });
+    }
+
+    const booking = await Booking.findById(bookingIdNum);
+    if (!booking) {
+      return res.status(404).json({
+        error: {
+          message: 'Booking not found',
+          code: 'BOOKING_NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+
+    if (role === 'provider' && booking.provider_id !== userId) {
+      return res.status(403).json({
+        error: {
+          message: 'Access denied for this booking',
+          code: 'FORBIDDEN',
+          status: 403
+        }
+      });
+    }
+
+    if (role === 'user' && booking.user_id !== userId) {
+      return res.status(403).json({
+        error: {
+          message: 'Access denied for this booking',
+          code: 'FORBIDDEN',
+          status: 403
+        }
+      });
+    }
+
+    const appointmentDateTime = new Date(newAppointmentDate);
+    if (isNaN(appointmentDateTime.getTime())) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid appointment date format',
+          code: 'INVALID_DATE',
+          status: 400
+        }
+      });
+    }
+
+    const formattedDate = appointmentDateTime.toISOString();
+    const oldDateIso = new Date(booking.appointment_date).toISOString();
+
+    const formatDateKey = (dateValue) => {
+      const pad = (value) => String(value).padStart(2, '0');
+      return `${dateValue.getFullYear()}-${pad(dateValue.getMonth() + 1)}-${pad(dateValue.getDate())}`;
+    };
+
+    const bookingDate = new Date(booking.appointment_date);
+    if (isNaN(bookingDate.getTime())) {
+      return res.status(400).json({
+        error: {
+          message: 'Original booking date is invalid.',
+          code: 'INVALID_BOOKING_DATE',
+          status: 400
+        }
+      });
+    }
+
+    const newDateKey = formatDateKey(appointmentDateTime);
+    const weekStart = new Date(bookingDate);
+    const weekDay = weekStart.getDay();
+    const diffToMonday = weekDay === 0 ? -6 : 1 - weekDay;
+    weekStart.setDate(weekStart.getDate() + diffToMonday);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const weekStartKey = formatDateKey(weekStart);
+    const weekEndKey = formatDateKey(weekEnd);
+
+    if (appointmentDateTime < weekStart || appointmentDateTime > weekEnd) {
+      return res.status(400).json({
+        error: {
+          message: 'Reschedules are limited to the same calendar week as the original appointment.',
+          code: 'OUTSIDE_WEEK_WINDOW',
+          status: 400
+        }
+      });
+    }
+
+    const now = new Date();
+    const minLeadTimeMs = 5 * 60 * 1000;
+    if (appointmentDateTime.getTime() < now.getTime() + minLeadTimeMs) {
+      return res.status(400).json({
+        error: {
+          message: 'Please select a time at least 5 minutes from now.',
+          code: 'INSUFFICIENT_LEAD_TIME',
+          status: 400
+        }
+      });
+    }
+
+    const provider = await Provider.findById(booking.provider_id);
+    if (!provider) {
+      return res.status(404).json({
+        error: {
+          message: 'Provider not found',
+          code: 'PROVIDER_NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+
+    let availability = provider.availability || {};
+    if (typeof availability === 'string') {
+      try {
+        availability = JSON.parse(availability);
+      } catch (error) {
+        availability = {};
+      }
+    }
+
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[appointmentDateTime.getDay()];
+    const dayAvailability = availability[dayName];
+
+    const buildAlternatives = async () => {
+      const existingBookings = await Booking.getByProviderAndDateRange(
+        provider.id,
+        weekStartKey,
+        weekEndKey
+      );
+      const filteredBookings = existingBookings.filter(entry => entry.id !== bookingIdNum);
+      const slots = generateAvailableSlots({
+        availability,
+        bookings: filteredBookings,
+        startDate: weekStartKey,
+        endDate: weekEndKey,
+        slotDuration: 15
+      });
+      return slots.filter(slot => slot.available);
+    };
+
+    if (!dayAvailability || !dayAvailability.enabled) {
+      const alternatives = await buildAlternatives();
+      return res.status(409).json({
+        error: {
+          message: `Provider is not available on ${dayName}. Please select a different time.`,
+          code: 'OUTSIDE_AVAILABILITY',
+          status: 409
+        },
+        alternatives
+      });
+    }
+
+    const appointmentHours = appointmentDateTime.getHours();
+    const appointmentMinutes = appointmentDateTime.getMinutes();
+    const appointmentTimeMinutes = appointmentHours * 60 + appointmentMinutes;
+
+    const [startHours, startMinutes] = dayAvailability.start.split(':').map(Number);
+    const [endHours, endMinutes] = dayAvailability.end.split(':').map(Number);
+    const startTimeMinutes = startHours * 60 + startMinutes;
+    const endTimeMinutes = endHours * 60 + endMinutes;
+
+    if (appointmentTimeMinutes < startTimeMinutes || appointmentTimeMinutes > endTimeMinutes) {
+      const alternatives = await buildAlternatives();
+      return res.status(409).json({
+        error: {
+          message: `Provider is only available between ${dayAvailability.start} and ${dayAvailability.end} on ${dayName}.`,
+          code: 'OUTSIDE_AVAILABILITY',
+          status: 409
+        },
+        alternatives
+      });
+    }
+
+    const conflicts = await Booking.getConflicts(provider.id, formattedDate, bookingIdNum);
+    if (conflicts.length > 0) {
+      const alternatives = await buildAlternatives();
+      return res.status(409).json({
+        error: {
+          message: 'This time slot is already booked. Please select another time.',
+          code: 'SLOT_ALREADY_BOOKED',
+          status: 409
+        },
+        alternatives
+      });
+    }
+
+    const updatedBooking = await Booking.reschedule({
+      bookingId: bookingIdNum,
+      newAppointmentDate: formattedDate,
+      rescheduledBy: role
+    });
+
+    if (!updatedBooking) {
+      return res.status(500).json({
+        error: {
+          message: 'Failed to reschedule booking',
+          code: 'RESCHEDULE_FAILED',
+          status: 500
+        }
+      });
+    }
+
+    const toISOString = (dateValue) => {
+      if (!dateValue) return null;
+      if (dateValue instanceof Date) {
+        return dateValue.toISOString();
+      }
+      if (typeof dateValue === 'string') {
+        if (dateValue.includes('Z') || dateValue.includes('+') || dateValue.match(/-\d{2}:\d{2}$/)) {
+          return dateValue;
+        }
+        const parsed = new Date(dateValue + 'Z');
+        return isNaN(parsed.getTime()) ? dateValue : parsed.toISOString();
+      }
+      return new Date(dateValue).toISOString();
+    };
+
+    const formattedResponse = {
+      id: updatedBooking.id,
+      userId: updatedBooking.user_id,
+      providerId: updatedBooking.provider_id,
+      providerName: booking.provider_name,
+      userName: booking.user_name,
+      appointmentDate: toISOString(updatedBooking.appointment_date),
+      dateTime: toISOString(updatedBooking.appointment_date),
+      sessionType: updatedBooking.session_type,
+      notes: updatedBooking.notes,
+      status: updatedBooking.status,
+      rescheduledFrom: toISOString(updatedBooking.rescheduled_from),
+      rescheduledAt: toISOString(updatedBooking.rescheduled_at),
+      rescheduledBy: updatedBooking.rescheduled_by,
+      rescheduleCount: updatedBooking.reschedule_count,
+      createdAt: updatedBooking.created_at
+    };
+
+    emailService.sendBookingRescheduleEmail(
+      booking.user_email,
+      booking.user_name || 'User',
+      booking.provider_name || 'Provider',
+      oldDateIso,
+      formattedDate,
+      booking.session_type
+    ).catch(() => {});
+
+    emailService.sendProviderRescheduleNotificationEmail(
+      booking.provider_email,
+      booking.provider_name || 'Provider',
+      booking.user_name || 'User',
+      oldDateIso,
+      formattedDate,
+      booking.session_type
+    ).catch(() => {});
+
+    res.json({
+      booking: formattedResponse,
+      message: 'Booking rescheduled successfully'
+    });
+  } catch (error) {
     next(error);
   }
 }
@@ -3420,6 +3739,7 @@ module.exports = {
   getUpcomingBookings,
   getProviderBookings,
   cancelBooking,
+  rescheduleBooking,
   joinVideoSession,
   completeVideoSession,
   requestPasswordReset,

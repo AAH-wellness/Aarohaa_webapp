@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import './MyAppointments.css'
 import AppointmentReminder from './AppointmentReminder'
 import CancelBookingModal from './CancelBookingModal'
+import RescheduleBookingModal from './RescheduleBookingModal'
 import { appointmentService, userService, apiClient, API_CONFIG } from '../services'
 
 const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
@@ -10,6 +11,10 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [cancelSuccess, setCancelSuccess] = useState(false)
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false)
+  const [rescheduleAlternatives, setRescheduleAlternatives] = useState([])
+  const [rescheduleSuccess, setRescheduleSuccess] = useState(false)
+  const [rescheduleSuccessDate, setRescheduleSuccessDate] = useState(null)
   const cancelTimeoutRef = useRef(null)
   const isMountedRef = useRef(true)
   const intervalRef = useRef(null)
@@ -78,6 +83,10 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         notes: booking.notes,
         status: booking.status || 'confirmed',
         reason: booking.reason || null,
+        rescheduledFrom: booking.rescheduledFrom || null,
+        rescheduledAt: booking.rescheduledAt || null,
+        rescheduledBy: booking.rescheduledBy || null,
+        rescheduleCount: booking.rescheduleCount || 0,
         createdAt: booking.createdAt
       }))
       
@@ -330,6 +339,47 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
     }
   }
 
+  const handleRescheduleSession = (appointmentId) => {
+    const appointment = appointments.find(apt => apt.id === appointmentId)
+    if (appointment) {
+      setSelectedAppointment(appointment)
+      setRescheduleAlternatives([])
+      setRescheduleSuccess(false)
+      setRescheduleSuccessDate(null)
+      setShowRescheduleModal(true)
+    }
+  }
+
+  const handleConfirmReschedule = async (newDateTime) => {
+    if (!selectedAppointment) return
+    try {
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      const response = await apiClient.post(`${apiBaseUrl}/users/bookings/reschedule`, {
+        bookingId: selectedAppointment.id,
+        newAppointmentDate: newDateTime
+      })
+      setRescheduleSuccess(true)
+      setRescheduleSuccessDate(response?.booking?.appointmentDate || newDateTime)
+      debouncedReload()
+    } catch (error) {
+      if (error?.status === 409 && error?.data?.alternatives) {
+        setRescheduleAlternatives(error.data.alternatives)
+      } else {
+        const message = error?.data?.error?.message || error?.message || 'Failed to reschedule appointment.'
+        alert(message)
+        setShowRescheduleModal(false)
+      }
+    }
+  }
+
+  const handleRescheduleClose = () => {
+    setShowRescheduleModal(false)
+    setSelectedAppointment(null)
+    setRescheduleAlternatives([])
+    setRescheduleSuccess(false)
+    setRescheduleSuccessDate(null)
+  }
+
   const handleConfirmCancel = useCallback(async (cancelReason) => {
     if (!selectedAppointment) return
     
@@ -508,6 +558,11 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
                       {appointment.sessionType && (
                         <p className="appointment-type">{appointment.sessionType}</p>
                       )}
+                      {appointment.rescheduledFrom && (
+                        <p className="appointment-rescheduled">
+                          Rescheduled from {formatDateTime(appointment.rescheduledFrom)}
+                        </p>
+                      )}
                       {appointment.status === 'cancelled' && appointment.reason && (
                         <div className="appointment-cancellation-reason">
                           <span className="cancellation-label">Cancellation Reason:</span>
@@ -537,6 +592,13 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
                     >
                       {isWithinTwoHours(appointment.dateTime) ? 'Cancel: -10AAH' : 'Cancel Session (Free)'}
                     </button>
+                    <button
+                      className="reschedule-session-btn"
+                      onClick={() => handleRescheduleSession(appointment.id)}
+                      disabled={['cancelled', 'completed'].includes(String(appointment.status || '').toLowerCase())}
+                    >
+                      Reschedule
+                    </button>
                   </div>
                 </div>
               ))}
@@ -551,6 +613,17 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
           onConfirm={handleConfirmCancel}
           onCancel={handleCancelModalClose}
           showSuccess={cancelSuccess}
+        />
+      )}
+
+      {showRescheduleModal && (
+        <RescheduleBookingModal
+          appointment={selectedAppointment}
+          alternatives={rescheduleAlternatives}
+          onConfirm={handleConfirmReschedule}
+          onCancel={handleRescheduleClose}
+          showSuccess={rescheduleSuccess}
+          successDateTime={rescheduleSuccessDate}
         />
       )}
     </div>

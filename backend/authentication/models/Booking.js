@@ -23,6 +23,51 @@ class Booking {
 
         ALTER TABLE provider_bookings
         ADD COLUMN IF NOT EXISTS appointment_day VARCHAR(20);
+
+        ALTER TABLE user_bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_from TIMESTAMPTZ;
+
+        ALTER TABLE user_bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_at TIMESTAMPTZ;
+
+        ALTER TABLE user_bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_by VARCHAR(30);
+
+        ALTER TABLE user_bookings
+        ADD COLUMN IF NOT EXISTS reschedule_history JSONB;
+
+        ALTER TABLE user_bookings
+        ADD COLUMN IF NOT EXISTS reschedule_count INTEGER DEFAULT 0;
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_from TIMESTAMPTZ;
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_at TIMESTAMPTZ;
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_by VARCHAR(30);
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS reschedule_history JSONB;
+
+        ALTER TABLE provider_bookings
+        ADD COLUMN IF NOT EXISTS reschedule_count INTEGER DEFAULT 0;
+
+        ALTER TABLE bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_from TIMESTAMPTZ;
+
+        ALTER TABLE bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_at TIMESTAMPTZ;
+
+        ALTER TABLE bookings
+        ADD COLUMN IF NOT EXISTS rescheduled_by VARCHAR(30);
+
+        ALTER TABLE bookings
+        ADD COLUMN IF NOT EXISTS reschedule_history JSONB;
+
+        ALTER TABLE bookings
+        ADD COLUMN IF NOT EXISTS reschedule_count INTEGER DEFAULT 0;
       `);
       console.log('✅ Bookings tables (user_bookings, provider_bookings) verified (+ provider_bookings columns)');
     } catch (e) {
@@ -638,6 +683,141 @@ class Booking {
       console.error('Error getting bookings by provider and date range:', error);
       throw error;
     }
+  }
+
+  /**
+   * Check if a provider has conflicts near a proposed time
+   */
+  static async getConflicts(providerId, appointmentDate, bookingId = null) {
+    const query = `
+      SELECT id, appointment_date
+      FROM user_bookings
+      WHERE provider_id = $1
+        AND status NOT IN ('cancelled', 'completed')
+        AND appointment_date BETWEEN ($2::timestamptz - interval '60 minutes')
+                               AND ($2::timestamptz + interval '60 minutes')
+        ${bookingId ? 'AND id != $3' : ''}
+    `;
+
+    const params = bookingId
+      ? [parseInt(providerId), appointmentDate, bookingId]
+      : [parseInt(providerId), appointmentDate];
+
+    const result = await pool.query(query, params);
+    return result.rows || [];
+  }
+
+  /**
+   * Reschedule an existing booking
+   */
+  static async reschedule({ bookingId, newAppointmentDate, rescheduledBy }) {
+    const existingQuery = `
+      SELECT * FROM user_bookings WHERE id = $1
+    `;
+    const existingResult = await pool.query(existingQuery, [bookingId]);
+    if (!existingResult.rows[0]) {
+      return null;
+    }
+
+    const existing = existingResult.rows[0];
+    const oldDate = existing.appointment_date;
+    const now = new Date().toISOString();
+
+    let history = [];
+    if (existing.reschedule_history) {
+      try {
+        history = Array.isArray(existing.reschedule_history)
+          ? existing.reschedule_history
+          : JSON.parse(existing.reschedule_history);
+      } catch (error) {
+        history = [];
+      }
+    }
+
+    const historyEntry = {
+      from: oldDate,
+      to: newAppointmentDate,
+      by: rescheduledBy,
+      at: now
+    };
+
+    history = [...history, historyEntry];
+    const historyJson = JSON.stringify(history);
+
+    const updateQuery = `
+      UPDATE user_bookings
+      SET appointment_date = $1::timestamptz,
+          rescheduled_from = $2::timestamptz,
+          rescheduled_at = $3::timestamptz,
+          rescheduled_by = $4,
+          reschedule_history = $5::jsonb,
+          reschedule_count = COALESCE(reschedule_count, 0) + 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6
+      RETURNING *
+    `;
+
+    const updatedResult = await pool.query(updateQuery, [
+      newAppointmentDate,
+      oldDate,
+      now,
+      rescheduledBy,
+      historyJson,
+      bookingId
+    ]);
+
+    const updatedBooking = updatedResult.rows[0];
+
+    try {
+      const providerUpdateQuery = `
+        UPDATE provider_bookings
+        SET appointment_date = $1::timestamptz,
+            appointment_day = to_char(($1::timestamptz AT TIME ZONE 'UTC'), 'FMDay'),
+            rescheduled_from = $2::timestamptz,
+            rescheduled_at = $3::timestamptz,
+            rescheduled_by = $4,
+            reschedule_history = $5::jsonb,
+            reschedule_count = COALESCE(reschedule_count, 0) + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $6
+      `;
+      await pool.query(providerUpdateQuery, [
+        newAppointmentDate,
+        oldDate,
+        now,
+        rescheduledBy,
+        historyJson,
+        bookingId
+      ]);
+    } catch (providerBookingError) {
+      console.warn('Booking.reschedule - Could not update provider_bookings:', providerBookingError.message);
+    }
+
+    try {
+      const legacyUpdateQuery = `
+        UPDATE bookings
+        SET appointment_date = ($1::timestamptz AT TIME ZONE 'UTC'),
+            rescheduled_from = $2::timestamptz,
+            rescheduled_at = $3::timestamptz,
+            rescheduled_by = $4,
+            reschedule_history = $5::jsonb,
+            reschedule_count = COALESCE(reschedule_count, 0) + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $6
+      `;
+      await pool.query(legacyUpdateQuery, [
+        newAppointmentDate,
+        oldDate,
+        now,
+        rescheduledBy,
+        historyJson,
+        bookingId
+      ]);
+    } catch (legacyUpdateError) {
+      console.warn('Booking.reschedule - Could not update legacy bookings table:', legacyUpdateError.message);
+    }
+
+    return updatedBooking;
   }
 }
 

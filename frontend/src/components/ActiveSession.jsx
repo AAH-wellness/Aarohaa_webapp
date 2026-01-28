@@ -45,6 +45,36 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
       setActiveBooking(activeBookingData)
       setShowModal(false)
       loadProviderNotes(selectedAppointment.id)
+      let statusInterval = null
+      const checkStatus = async () => {
+        try {
+          const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+          const response = await apiClient.get(`${apiBaseUrl}/users/bookings`)
+          const bookings = response.bookings || []
+          const updated = bookings.find((booking) => booking.id === selectedAppointment.id)
+          if (!updated) {
+            setActiveBooking(null)
+            setShowModal(true)
+            if (onActiveSessionChange) {
+              onActiveSessionChange(null)
+            }
+            return
+          }
+          const updatedStatus = String(updated.status || '').toLowerCase()
+          if (updatedStatus === 'completed' || updatedStatus === 'cancelled') {
+            setActiveBooking(null)
+            setShowModal(true)
+            if (onActiveSessionChange) {
+              onActiveSessionChange(null)
+            }
+          }
+        } catch (error) {
+          // If status check fails, keep the current session UI
+        }
+      }
+
+      checkStatus()
+      statusInterval = setInterval(checkStatus, 60000)
       
       // Get current user name
       userService.getProfile().then(profile => {
@@ -56,7 +86,11 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
       // Note: Auto-start removed to prevent race conditions
       // User can manually start the call when ready
       
-      return
+      return () => {
+        if (statusInterval) {
+          clearInterval(statusInterval)
+        }
+      }
     }
     
     // Otherwise, check for active booking from backend API

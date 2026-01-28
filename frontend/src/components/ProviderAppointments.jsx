@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react'
 import './ProviderAppointments.css'
 import { apiClient, API_CONFIG } from '../services'
+import RescheduleBookingModal from './RescheduleBookingModal'
 
 const ProviderAppointments = ({ onJoinSession }) => {
   const [appointments, setAppointments] = useState([])
   const [filter, setFilter] = useState('today') // 'upcoming', 'today', 'all'
   const [loading, setLoading] = useState(true)
+  const [selectedAppointment, setSelectedAppointment] = useState(null)
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false)
+  const [rescheduleAlternatives, setRescheduleAlternatives] = useState([])
+  const [rescheduleSuccess, setRescheduleSuccess] = useState(false)
+  const [rescheduleSuccessDate, setRescheduleSuccessDate] = useState(null)
+  const [refreshTick, setRefreshTick] = useState(0)
 
   useEffect(() => {
     const loadAppointments = async () => {
@@ -25,6 +32,10 @@ const ProviderAppointments = ({ onJoinSession }) => {
           sessionType: booking.sessionType || 'Video Consultation',
           notes: booking.notes,
           status: booking.status || 'scheduled',
+          rescheduledFrom: booking.rescheduledFrom || null,
+          rescheduledAt: booking.rescheduledAt || null,
+          rescheduledBy: booking.rescheduledBy || null,
+          rescheduleCount: booking.rescheduleCount || 0,
           createdAt: booking.createdAt
         }))
         
@@ -70,7 +81,7 @@ const ProviderAppointments = ({ onJoinSession }) => {
     const interval = setInterval(loadAppointments, 60000)
     
     return () => clearInterval(interval)
-  }, [filter])
+  }, [filter, refreshTick])
 
   const formatDateTime = (dateTimeString) => {
     const date = new Date(dateTimeString)
@@ -150,6 +161,50 @@ const ProviderAppointments = ({ onJoinSession }) => {
     return name.substring(0, 2).toUpperCase()
   }
 
+  const handleRescheduleSession = (appointmentId) => {
+    const appointment = appointments.find(apt => apt.id === appointmentId)
+    if (appointment) {
+      setSelectedAppointment(appointment)
+      setRescheduleAlternatives([])
+      setRescheduleSuccess(false)
+      setRescheduleSuccessDate(null)
+      setShowRescheduleModal(true)
+    }
+  }
+
+  const handleConfirmReschedule = async (newDateTime) => {
+    if (!selectedAppointment) return
+    try {
+      const apiBaseUrl = API_CONFIG.USER_SERVICE || 'http://localhost:3001/api'
+      const response = await apiClient.post(`${apiBaseUrl}/users/bookings/reschedule`, {
+        bookingId: selectedAppointment.id,
+        newAppointmentDate: newDateTime
+      })
+      setRescheduleSuccess(true)
+      setRescheduleSuccessDate(response?.booking?.appointmentDate || newDateTime)
+      setRefreshTick((value) => value + 1)
+      setTimeout(() => {
+        setShowRescheduleModal(false)
+      }, 1200)
+    } catch (error) {
+      if (error?.status === 409 && error?.data?.alternatives) {
+        setRescheduleAlternatives(error.data.alternatives)
+      } else {
+        const message = error?.data?.error?.message || error?.message || 'Failed to reschedule appointment.'
+        alert(message)
+        setShowRescheduleModal(false)
+      }
+    }
+  }
+
+  const handleRescheduleClose = () => {
+    setShowRescheduleModal(false)
+    setSelectedAppointment(null)
+    setRescheduleAlternatives([])
+    setRescheduleSuccess(false)
+    setRescheduleSuccessDate(null)
+  }
+
   return (
     <div className="provider-appointments">
       <div className="provider-appointments-header">
@@ -221,6 +276,11 @@ const ProviderAppointments = ({ onJoinSession }) => {
                           {appointment.sessionType}
                         </p>
                       )}
+                      {appointment.rescheduledFrom && (
+                        <p className="provider-appointment-rescheduled">
+                          Rescheduled from {formatDateTime(appointment.rescheduledFrom)}
+                        </p>
+                      )}
                       {appointment.notes && (
                         <p className="provider-appointment-notes">{appointment.notes}</p>
                       )}
@@ -250,6 +310,12 @@ const ProviderAppointments = ({ onJoinSession }) => {
                     <button className="provider-view-details-btn">
                       View Details
                     </button>
+                    <button
+                      className="provider-reschedule-btn"
+                      onClick={() => handleRescheduleSession(appointment.id)}
+                    >
+                      Reschedule
+                    </button>
                   </div>
                 </div>
               )
@@ -257,6 +323,16 @@ const ProviderAppointments = ({ onJoinSession }) => {
           </div>
         )}
       </div>
+      {showRescheduleModal && (
+        <RescheduleBookingModal
+          appointment={selectedAppointment}
+          alternatives={rescheduleAlternatives}
+          onConfirm={handleConfirmReschedule}
+          onCancel={handleRescheduleClose}
+          showSuccess={rescheduleSuccess}
+          successDateTime={rescheduleSuccessDate}
+        />
+      )}
     </div>
   )
 }

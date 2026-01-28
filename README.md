@@ -93,3 +93,10 @@ Open: `http://localhost:5173`
     - `POST /api/users/bookings/:bookingId/video/join`
     - `POST /api/users/bookings/:bookingId/video/complete` (provider-only)
 
+### Reschedule test checklist
+- Reschedule by user succeeds when slot is available (same calendar week).
+- Reschedule by provider succeeds when slot is available (same calendar week).
+- Reschedule returns alternatives when slot is unavailable.
+- Reschedule blocked if time is within 5 minutes of now.
+- Reschedule blocked when booking is cancelled/completed.
+

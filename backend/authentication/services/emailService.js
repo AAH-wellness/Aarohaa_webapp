@@ -707,6 +707,130 @@ async function sendProviderBookingNotificationEmail(providerEmail, providerName,
   return await sendEmail(providerEmail, subject, html);
 }
 
+function getRescheduleEmailTemplate({ title, header, recipientName, providerName, userName, oldDate, newDate, sessionType }) {
+  const formattedOld = new Date(oldDate).toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+  const formattedNew = new Date(newDate).toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <title>${title}</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+              <tr>
+                <td style="background: linear-gradient(135deg, #0e4826 0%, #16a34a 50%, #0e4826 100%); padding: 50px 40px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">${header}</h1>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 40px;">
+                  <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 22px;">Hello ${recipientName}!</h2>
+                  <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                    Your session has been rescheduled. Here are the updated details.
+                  </p>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f8fafc; border-radius: 12px; padding: 24px; border: 1px solid rgba(14, 72, 38, 0.1);">
+                    <tr>
+                      <td style="padding: 10px 0; border-bottom: 1px solid rgba(14, 72, 38, 0.08);">
+                        <p style="margin: 0 0 6px 0; color: #0e4826; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Provider</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${providerName}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; border-bottom: 1px solid rgba(14, 72, 38, 0.08);">
+                        <p style="margin: 0 0 6px 0; color: #0e4826; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Patient</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${userName}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; border-bottom: 1px solid rgba(14, 72, 38, 0.08);">
+                        <p style="margin: 0 0 6px 0; color: #0e4826; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Previous Time</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${formattedOld}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0; border-bottom: 1px solid rgba(14, 72, 38, 0.08);">
+                        <p style="margin: 0 0 6px 0; color: #0e4826; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">New Time</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${formattedNew}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px 0;">
+                        <p style="margin: 0 0 6px 0; color: #0e4826; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Session Type</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${sessionType}</p>
+                      </td>
+                    </tr>
+                  </table>
+                  <p style="margin: 24px 0 0 0; color: #4b5563; font-size: 14px; line-height: 1.6;">
+                    If you have any questions, please contact our support team.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 0 40px 40px;">
+                  ${getEmailSignature()}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+async function sendBookingRescheduleEmail(userEmail, userName, providerName, oldDate, newDate, sessionType) {
+  const subject = 'Appointment Rescheduled - Aarohaa Wellness';
+  const html = getRescheduleEmailTemplate({
+    title: subject,
+    header: 'Appointment Rescheduled',
+    recipientName: userName,
+    providerName,
+    userName,
+    oldDate,
+    newDate,
+    sessionType
+  });
+  return await sendEmail(userEmail, subject, html);
+}
+
+async function sendProviderRescheduleNotificationEmail(providerEmail, providerName, userName, oldDate, newDate, sessionType) {
+  const subject = 'Session Rescheduled - Aarohaa Wellness';
+  const html = getRescheduleEmailTemplate({
+    title: subject,
+    header: 'Session Rescheduled',
+    recipientName: providerName,
+    providerName,
+    userName,
+    oldDate,
+    newDate,
+    sessionType
+  });
+  return await sendEmail(providerEmail, subject, html);
+}
+
 // Send booking cancellation email to user
 async function sendBookingCancellationEmail(userEmail, userName, providerName, appointmentDate, sessionType, reason) {
   const subject = 'Appointment Cancelled - Aarohaa Wellness';
@@ -1049,6 +1173,8 @@ module.exports = {
   sendPasswordResetEmail,
   sendBookingConfirmationEmail,
   sendProviderBookingNotificationEmail,
+  sendBookingRescheduleEmail,
+  sendProviderRescheduleNotificationEmail,
   sendBookingCancellationEmail,
   sendProviderCancellationNotificationEmail,
   sendSupportTicketEmail,
