@@ -99,4 +99,3 @@ Open: `http://localhost:5173`
 - Reschedule returns alternatives when slot is unavailable.
 - Reschedule blocked if time is within 5 minutes of now.
 - Reschedule blocked when booking is cancelled/completed.
-
