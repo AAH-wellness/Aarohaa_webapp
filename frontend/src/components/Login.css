@@ -20,7 +20,7 @@
 .login-wrapper {
   background-color: transparent;
   display: grid;
-  grid-template-columns: 50% 50%;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   width: 100%;
   min-height: 100vh;
   overflow: hidden;
@@ -32,31 +32,34 @@
   background: transparent;
   display: flex;
   flex-direction: column;
-  justify-content: stretch;
-  align-items: stretch;
+  justify-content: flex-start;
+  align-items: center;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 100vh;
   max-width: 100%;
   position: relative;
-  overflow: hidden;
   z-index: 0;
-  padding: 40px;
-  padding-top: 80px;
+  padding: 40px 24px;
+  padding-top: 60px;
+  box-sizing: border-box;
 }
 
 .login-form-container {
-  width: 650px;
-  height: 800px;
-  padding: 32px;
+  width: 100%;
+  max-width: 650px;
+  min-height: 560px;
+  height: auto;
+  padding: 32px 28px;
   box-sizing: border-box;
   border: 1px solid rgba(0, 0, 0, 0.12);
   box-shadow:
     0 25px 60px rgba(0, 0, 0, 0.25),
     0 18px 50px rgba(0, 0, 0, 0.18),
     0 6px 16px rgba(0, 0, 0, 0.12);
-  position: absolute;
-  top: 80px;
-  left: 150px;
+  position: relative;
+  top: 0;
+  left: 0;
   z-index: 13;
   pointer-events: auto;
   display: flex;
@@ -134,31 +137,35 @@
 }
 
 .login-form-wrapper {
-  width: 520px;
-  max-width: none;
-  height: 956px;
-  margin: 0;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 0;
+  height: auto;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
-  overflow: hidden;
+  overflow: visible;
 }
 
+/* Floating orbs – contained within form card background only */
 .orbit-ornaments {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
+  border-radius: 50px;
+  overflow: hidden;
 }
 
 .orbit-ornaments::before {
   content: '';
   position: absolute;
-  top: -100px;
-  left: -100px;
-  width: 200px;
-  height: 200px;
+  top: 10%;
+  left: 5%;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   border: 2px solid rgba(14, 72, 38, 0.25);
   background:
@@ -173,10 +180,10 @@
 .orbit-ornaments::after {
   content: '';
   position: absolute;
-  bottom: -150px;
-  right: -150px;
-  width: 300px;
-  height: 300px;
+  bottom: 10%;
+  right: 5%;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
   border: 2px solid rgba(14, 72, 38, 0.2);
   background:
@@ -657,7 +664,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   width: 100%;
+  min-width: 0;
 }
 
 .checkbox-label {
@@ -669,6 +679,8 @@
   color: #666666;
   user-select: none;
   margin: 0;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .checkbox-input {
@@ -685,10 +697,12 @@
   font-size: 14px;
   cursor: pointer;
   text-decoration: none;
-  padding: 0;
+  padding: 0 4px;
   font-weight: 500;
   transition: color 0.2s ease;
   text-transform: lowercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .forgot-password-link:hover {
@@ -1038,6 +1052,113 @@
 }
 
 
+/* Medium screens (e.g. 14" laptop) - keep two columns but scale content */
+@media (max-width: 1400px) {
+  .login-form-section {
+    padding: 32px 20px;
+    padding-top: 48px;
+  }
+
+  .login-form-container {
+    max-width: 100%;
+    padding: 28px 24px;
+    border-radius: 40px;
+  }
+
+  .login-title {
+    font-size: 32px;
+  }
+
+  .login-subtitle {
+    font-size: 14px;
+  }
+
+  .login-illustration-section .wellness-circle {
+    width: 420px;
+    height: 420px;
+    left: calc(50% - 210px);
+  }
+
+  .login-illustration-section .wellness-circle > div,
+  .login-illustration-section .wellness-circle canvas,
+  .login-illustration-section .wellness-circle svg {
+    width: 380px !important;
+    height: 380px !important;
+    max-width: 380px !important;
+    max-height: 380px !important;
+  }
+
+  .login-illustration-section .wellness-title {
+    font-size: 42px;
+    margin-top: 60px;
+  }
+
+  .login-illustration-section .feature-item {
+    flex: 0 0 160px;
+    min-width: 140px;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .login-form-section {
+    padding: 24px 16px;
+    padding-top: 40px;
+  }
+
+  .login-form-container {
+    padding: 24px 20px;
+    border-radius: 32px;
+  }
+
+  .login-title {
+    font-size: 28px;
+  }
+
+  .login-mode-toggle-container {
+    margin-top: 14px;
+    padding: 3px;
+  }
+
+  .mode-toggle-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .login-illustration-section .wellness-circle {
+    width: 360px;
+    height: 360px;
+    top: -380px;
+    left: calc(50% - 180px);
+  }
+
+  .login-illustration-section .wellness-circle > div,
+  .login-illustration-section .wellness-circle canvas,
+  .login-illustration-section .wellness-circle svg {
+    width: 320px !important;
+    height: 320px !important;
+    max-width: 320px !important;
+    max-height: 320px !important;
+  }
+
+  .login-illustration-section .wellness-title {
+    font-size: 36px;
+    margin-top: 50px;
+  }
+
+  .login-illustration-section .wellness-features {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .login-illustration-section .feature-item {
+    flex: 0 0 auto;
+    min-width: 120px;
+  }
+}
+
 @media (max-width: 968px) {
   .login-wrapper {
     grid-template-columns: 1fr;
@@ -1053,6 +1174,7 @@
 
   .login-form-container {
     width: 100%;
+    max-width: 520px;
   }
 
   .login-title {
