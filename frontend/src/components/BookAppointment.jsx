@@ -3,8 +3,10 @@ import './BookAppointment.css'
 import BookingSuccessModal from './BookingSuccessModal'
 import BookingConflictModal from './BookingConflictModal'
 import { userService, apiClient, API_CONFIG } from '../services'
+import { useUserNotification } from '../contexts/UserNotificationContext'
 
 const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToAppointments }) => {
+  const { addNotification } = useUserNotification()
   const [formData, setFormData] = useState({
     provider: selectedProvider || '',
     dateTime: '',
@@ -288,8 +290,9 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
         setExistingBookings(prev => [...prev, response.booking])
       }
       
-      // Show success modal
+      // Show success modal and headline ticker notification
       setShowSuccessModal(true)
+      addNotification('Appointment booked successfully.', { type: 'success' })
 
       // Call the callback to mark session as booked
       if (onBookingConfirmed) {
@@ -350,9 +353,9 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
         errorMessage = `${error.data.error.message || 'Error'}: ${error.data.error.detail}`
       }
       
-      // Show error in a more user-friendly way
+      // Show error in headline ticker below header
       console.error('Full error object:', error)
-      alert(`Booking Error: ${errorMessage}`)
+      addNotification(`Booking Error: ${errorMessage}`, { type: 'error' })
     } finally {
       setLoading(false)
     }

@@ -1029,6 +1029,7 @@
   margin-bottom: 32px;
   color: rgba(255, 255, 255, 0.95);
   z-index: 2;
+  transform: translateX(-24px);
 }
 
 .login-illustration-section .wellness-features {

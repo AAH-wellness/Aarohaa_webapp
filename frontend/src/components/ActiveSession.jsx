@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import BookingRequiredModal from './BookingRequiredModal'
 import { userService, apiClient, API_CONFIG } from '../services'
+import { useUserNotification } from '../contexts/UserNotificationContext'
 import './ActiveSession.css'
 
 const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionChange, selectedAppointment }) => {
+  const { addNotification } = useUserNotification()
   const [showModal, setShowModal] = useState(false)
   const [isCallStarted, setIsCallStarted] = useState(false)
   const [sessionTime, setSessionTime] = useState(0)
@@ -313,7 +315,7 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
         errorMessage = 'You do not have permission to join this session.'
       }
       
-      alert(errorMessage)
+      addNotification(errorMessage, { type: 'error' })
       setIsLoading(false)
     }
   }
@@ -334,7 +336,7 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
       setIsMuted(false)
       setIsVideoOff(false)
       
-      alert('Call ended.')
+      addNotification('Call ended.', { type: 'info' })
     }
   }
 

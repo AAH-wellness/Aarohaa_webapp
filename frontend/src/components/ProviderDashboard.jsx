@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import './ProviderDashboard.css'
 import { apiClient, API_CONFIG } from '../services'
 
-const ProviderDashboard = ({ onJoinSession, onNavigateToSchedule }) => {
+const ProviderDashboard = ({ onJoinSession, onNavigateToSchedule, onNavigateToEarnings, onNavigateToProfile }) => {
   const [stats, setStats] = useState({
     upcomingAppointments: 0,
     activeSessions: 0,
@@ -156,24 +156,63 @@ const ProviderDashboard = ({ onJoinSession, onNavigateToSchedule }) => {
       </div>
 
       <div className="dashboard-sections">
-        <div className="dashboard-section">
+        <div className="dashboard-section quick-actions-section">
           <h2 className="section-title">Quick Actions</h2>
-          <div className="quick-actions">
-            <button className="action-btn">
-              <span className="action-icon">📅</span>
-              <span className="action-label">View Schedule</span>
+          <div className="quick-actions-grid">
+            <button
+              type="button"
+              className="quick-action-card quick-action-schedule"
+              onClick={onNavigateToSchedule}
+            >
+              <span className="quick-action-icon-wrap">
+                <span className="quick-action-icon">📅</span>
+              </span>
+              <span className="quick-action-label">View Schedule</span>
+              <span className="quick-action-desc">Manage your calendar</span>
             </button>
-            <button className="action-btn">
-              <span className="action-icon">💻</span>
-              <span className="action-label">Start Session</span>
+            <button
+              type="button"
+              className="quick-action-card quick-action-session"
+              onClick={() => todayAppointments.length > 0 && onJoinSession?.({
+                id: todayAppointments[0].id,
+                userId: todayAppointments[0].userId,
+                userName: todayAppointments[0].patientName,
+                dateTime: todayAppointments[0].dateTime,
+                sessionType: todayAppointments[0].sessionType,
+                notes: todayAppointments[0].notes,
+                status: todayAppointments[0].status
+              }) || onNavigateToSchedule?.()}
+              disabled={loading || todayAppointments.length === 0}
+            >
+              <span className="quick-action-icon-wrap">
+                <span className="quick-action-icon">💻</span>
+              </span>
+              <span className="quick-action-label">Start Session</span>
+              <span className="quick-action-desc">
+                {todayAppointments.length > 0 ? 'Join next appointment' : 'No sessions today'}
+              </span>
             </button>
-            <button className="action-btn">
-              <span className="action-icon">📊</span>
-              <span className="action-label">View Analytics</span>
+            <button
+              type="button"
+              className="quick-action-card quick-action-analytics"
+              onClick={() => onNavigateToEarnings?.()}
+            >
+              <span className="quick-action-icon-wrap">
+                <span className="quick-action-icon">📊</span>
+              </span>
+              <span className="quick-action-label">Earnings</span>
+              <span className="quick-action-desc">View analytics</span>
             </button>
-            <button className="action-btn">
-              <span className="action-icon">⚙️</span>
-              <span className="action-label">Settings</span>
+            <button
+              type="button"
+              className="quick-action-card quick-action-settings"
+              onClick={() => onNavigateToProfile?.()}
+            >
+              <span className="quick-action-icon-wrap">
+                <span className="quick-action-icon">⚙️</span>
+              </span>
+              <span className="quick-action-label">Profile & Settings</span>
+              <span className="quick-action-desc">Account & availability</span>
             </button>
           </div>
         </div>

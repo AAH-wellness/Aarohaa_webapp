@@ -39,6 +39,8 @@ import AdminProfile from './components/AdminProfile'
 import MaintenanceMode from './components/MaintenanceMode'
 import ForgotPasswordModal from './components/ForgotPasswordModal'
 import ResetPassword from './components/ResetPassword'
+import NotificationTicker from './components/NotificationTicker'
+import { UserNotificationProvider } from './contexts/UserNotificationContext'
 import { authService } from './services'
 import './App.css'
 
@@ -356,6 +358,8 @@ function App() {
             setProviderActiveView('Active Sessions')
           }}
           onNavigateToSchedule={() => setProviderActiveView('My Schedule')}
+          onNavigateToEarnings={() => setProviderActiveView('Earnings')}
+          onNavigateToProfile={() => setProviderActiveView('Profile')}
         />
       case 'My Schedule':
         return <ProviderAppointments onJoinSession={(appointment) => {
@@ -666,22 +670,24 @@ function App() {
 
   // Render user dashboard
   return (
-    <div className="app">
-      <Header 
-        onNavigateToProfile={handleNavigateToProfile}
-        onSignOut={handleSignOut}
-        activeView={activeView}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-        activeSession={activeSession}
-      />
-      {isSidebarOpen && (
-        <div 
-          className="sidebar-overlay"
-          onClick={() => setIsSidebarOpen(false)}
-        ></div>
-      )}
-      <div className="app-body">
+    <UserNotificationProvider>
+      <div className="app">
+        <Header 
+          onNavigateToProfile={handleNavigateToProfile}
+          onSignOut={handleSignOut}
+          activeView={activeView}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          isSidebarOpen={isSidebarOpen}
+          activeSession={activeSession}
+        />
+        <NotificationTicker />
+        {isSidebarOpen && (
+          <div 
+            className="sidebar-overlay"
+            onClick={() => setIsSidebarOpen(false)}
+          ></div>
+        )}
+        <div className="app-body">
         <Sidebar 
           activeView={activeView} 
           setActiveView={setActiveView}
@@ -734,6 +740,7 @@ function App() {
         </main>
       </div>
     </div>
+    </UserNotificationProvider>
   )
 }
 

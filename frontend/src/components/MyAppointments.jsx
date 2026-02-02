@@ -4,8 +4,10 @@ import AppointmentReminder from './AppointmentReminder'
 import CancelBookingModal from './CancelBookingModal'
 import RescheduleBookingModal from './RescheduleBookingModal'
 import { appointmentService, userService, apiClient, API_CONFIG } from '../services'
+import { useUserNotification } from '../contexts/UserNotificationContext'
 
 const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
+  const { addNotification } = useUserNotification()
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCancelModal, setShowCancelModal] = useState(false)
@@ -366,7 +368,7 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         setRescheduleAlternatives(error.data.alternatives)
       } else {
         const message = error?.data?.error?.message || error?.message || 'Failed to reschedule appointment.'
-        alert(message)
+        addNotification(message, { type: 'error' })
         setShowRescheduleModal(false)
       }
     }
@@ -417,9 +419,10 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         reason: cancelReason.trim()
       })
       
-      // Show success state in modal immediately (don't close and reopen)
+      // Show success state in modal and headline ticker
       if (isMountedRef.current) {
         setCancelSuccess(true)
+        addNotification('Appointment cancelled successfully.', { type: 'success' })
       }
       
       // Reload appointments after successful cancellation using debounced reload
@@ -478,7 +481,7 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
       }
       
       if (isMountedRef.current) {
-        alert(`Cancel Error: ${errorMessage}`)
+        addNotification(`Cancel Error: ${errorMessage}`, { type: 'error' })
         setShowCancelModal(false)
         setSelectedAppointment(null)
       }
@@ -515,7 +518,7 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
   const handleJoinSession = (appointment) => {
     const status = String(appointment?.status || '').toLowerCase()
     if (status === 'cancelled' || status === 'completed') {
-      alert(`This session is ${status} and cannot be joined.`)
+      addNotification(`This session is ${status} and cannot be joined.`, { type: 'warning' })
       return
     }
 
