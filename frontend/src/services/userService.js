@@ -272,6 +272,24 @@ class UserService {
   }
 
   /**
+   * Submit session review (rating + review text) - mandatory after session ends
+   * @param {number} bookingId - Booking ID
+   * @param {Object} reviewData - { rating: 1-5, reviewText: string (min 10 chars) }
+   * @returns {Promise<Object>} Success message
+   */
+  async submitSessionReview(bookingId, reviewData) {
+    if (this.useMock) {
+      return this.mockSubmitSessionReview(bookingId, reviewData)
+    }
+    try {
+      return await apiClient.post(`${this.baseUrl}/bookings/${bookingId}/review`, reviewData)
+    } catch (error) {
+      console.error('Submit session review error:', error)
+      throw error
+    }
+  }
+
+  /**
    * Submit support ticket
    * @param {Object} supportData - { name, email, subject, messageType, message }
    * @returns {Promise<Object>} Success message with ticket ID
@@ -543,6 +561,14 @@ class UserService {
     return { 
       message: 'Support ticket submitted successfully',
       ticketId: Date.now()
+    }
+  }
+
+  async mockSubmitSessionReview(bookingId, reviewData) {
+    await new Promise(resolve => setTimeout(resolve, 800))
+    return {
+      message: 'Thank you for your review!',
+      review: { id: Date.now(), rating: reviewData.rating, reviewText: reviewData.reviewText }
     }
   }
 

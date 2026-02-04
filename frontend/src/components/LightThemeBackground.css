@@ -1,0 +1,128 @@
+/* Premium light theme background – fixed, full viewport, no pointer events */
+.light-theme-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.light-theme-bg-canvas {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0.92;
+}
+
+/* Soft floating orbs (CSS) – layered over canvas for depth */
+.light-theme-bg-shapes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.light-theme-bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+  animation: lightOrbFloat 18s ease-in-out infinite;
+}
+
+.light-theme-bg-orb-1 {
+  width: 55vw;
+  height: 55vw;
+  max-width: 600px;
+  max-height: 600px;
+  top: -15%;
+  left: -10%;
+  background: radial-gradient(circle, rgba(232, 245, 233, 0.7) 0%, rgba(200, 230, 210, 0.3) 50%, transparent 70%);
+  animation-delay: 0s;
+  animation-duration: 20s;
+}
+
+.light-theme-bg-orb-2 {
+  width: 45vw;
+  height: 45vw;
+  max-width: 480px;
+  max-height: 480px;
+  bottom: -10%;
+  right: -5%;
+  background: radial-gradient(circle, rgba(255, 254, 247, 0.6) 0%, rgba(245, 235, 220, 0.25) 50%, transparent 70%);
+  animation-delay: -5s;
+  animation-duration: 22s;
+}
+
+.light-theme-bg-orb-3 {
+  width: 35vw;
+  height: 35vw;
+  max-width: 380px;
+  max-height: 380px;
+  top: 40%;
+  right: 10%;
+  background: radial-gradient(circle, rgba(240, 249, 244, 0.55) 0%, rgba(220, 237, 230, 0.2) 50%, transparent 70%);
+  animation-delay: -10s;
+  animation-duration: 16s;
+}
+
+.light-theme-bg-orb-4 {
+  width: 40vw;
+  height: 40vw;
+  max-width: 420px;
+  max-height: 420px;
+  bottom: 20%;
+  left: -5%;
+  background: radial-gradient(circle, rgba(245, 230, 200, 0.35) 0%, rgba(235, 220, 190, 0.15) 50%, transparent 70%);
+  animation-delay: -7s;
+  animation-duration: 19s;
+}
+
+@keyframes lightOrbFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(3%, -2%) scale(1.05);
+  }
+  50% {
+    transform: translate(-2%, 3%) scale(0.98);
+  }
+  75% {
+    transform: translate(2%, 2%) scale(1.02);
+  }
+}
+
+/* Soft flowing rays from center */
+.light-theme-bg-rays {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+}
+
+.light-theme-bg-ray {
+  fill: none;
+  stroke: url(#light-ray-grad);
+  stroke-width: 0.5;
+  stroke-linecap: round;
+  animation: lightRayPulse 6s ease-in-out infinite;
+}
+
+@keyframes lightRayPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform-origin: 50% 50%;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}

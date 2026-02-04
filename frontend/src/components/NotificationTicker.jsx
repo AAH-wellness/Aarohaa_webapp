@@ -17,10 +17,10 @@ export default function NotificationTicker() {
     <div className="notification-ticker" role="region" aria-label="Notifications">
       <div className="notification-ticker-inner">
         <span className="notification-ticker-label">📢</span>
-        <div className="notification-ticker-revolver" data-scroll={notifications.length > 1}>
+        <div className="notification-ticker-revolver">
           <div className="notification-ticker-track">
             {/* Duplicate set for seamless scroll when multiple items */}
-            {(notifications.length > 1 ? [...notifications, ...notifications] : notifications).map((n, i) => (
+            {[...notifications, ...notifications].map((n, i) => (
               <div
                 key={n.id + String(i)}
                 className={`notification-ticker-item notification-ticker-item--${n.type || 'info'}`}

@@ -7,6 +7,7 @@ const Booking = require('../models/Booking');
 const UserLoginEvent = require('../models/UserLoginEvent');
 const Support = require('../models/Support');
 const VideoMeeting = require('../models/VideoMeeting');
+const Review = require('../models/Review');
 const { pool } = require('../config/database');
 const JWT_CONFIG = require('../config/jwt');
 const emailService = require('../services/emailService');
@@ -3662,6 +3663,81 @@ async function joinVideoSession(req, res, next) {
 }
 
 /**
+ * User submits a review after session (rating + review text)
+ * Requires authentication, user must own the booking
+ */
+async function submitSessionReview(req, res, next) {
+  try {
+    const bookingId = parseInt(req.params.bookingId);
+    const userId = req.user?.userId || req.user?.id;
+    const { rating, reviewText } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: { message: 'User not authenticated', code: 'UNAUTHORIZED', status: 401 },
+      });
+    }
+
+    if (!bookingId || isNaN(bookingId)) {
+      return res.status(400).json({
+        error: { message: 'Invalid booking ID', code: 'INVALID_BOOKING_ID', status: 400 },
+      });
+    }
+
+    const ratingNum = parseFloat(rating);
+    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({
+        error: { message: 'Rating must be between 1 and 5', code: 'INVALID_RATING', status: 400 },
+      });
+    }
+
+    const text = (reviewText || '').trim();
+    if (!text || text.length < 10) {
+      return res.status(400).json({
+        error: { message: 'Review text must be at least 10 characters', code: 'INVALID_REVIEW', status: 400 },
+      });
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({
+        error: { message: 'Booking not found', code: 'BOOKING_NOT_FOUND', status: 404 },
+      });
+    }
+
+    if (parseInt(booking.user_id) !== parseInt(userId)) {
+      return res.status(403).json({
+        error: { message: 'You can only review your own sessions', code: 'ACCESS_DENIED', status: 403 },
+      });
+    }
+
+    const providerId = parseInt(booking.provider_id);
+    const review = await Review.create({
+      userId,
+      providerId,
+      bookingId,
+      rating: ratingNum,
+      reviewText: text,
+    });
+
+    const stats = await Review.getProviderStats(providerId);
+    await pool.query(
+      'UPDATE providers SET rating = $1, reviews_count = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+      [stats.avgRating, stats.count, providerId]
+    );
+
+    await Booking.updateStatus(bookingId, 'completed');
+
+    res.json({
+      message: 'Thank you for your review!',
+      review: { id: review.id, rating: review.rating, reviewText: review.review_text },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Provider completes a session (marks booking + video meeting completed)
  */
 async function completeVideoSession(req, res, next) {
@@ -3742,6 +3818,7 @@ module.exports = {
   rescheduleBooking,
   joinVideoSession,
   completeVideoSession,
+  submitSessionReview,
   requestPasswordReset,
   resetPassword,
   submitSupportTicket

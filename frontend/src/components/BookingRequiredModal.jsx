@@ -31,8 +31,8 @@ const BookingRequiredModal = ({ onClose, onNavigateToBooking }) => {
   }
 
   return (
-    <div className={`modal-overlay ${isVisible ? 'visible' : ''}`} onClick={handleClose}>
-      <div className={`modal-content ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
+    <div className={`booking-required-modal-overlay modal-overlay ${isVisible ? 'visible' : ''}`} onClick={handleClose}>
+      <div className={`booking-required-modal-content modal-content ${isVisible ? 'visible' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal-icon">
           <div className="icon-bounce">📅</div>
         </div>
@@ -44,9 +44,6 @@ const BookingRequiredModal = ({ onClose, onNavigateToBooking }) => {
           Book a session now to start your wellness journey!
         </p>
         <div className="modal-buttons">
-          <button className="modal-btn secondary" onClick={handleClose}>
-            Close
-          </button>
           <button className="modal-btn primary" onClick={handleBookNow}>
             Book Session
           </button>

@@ -15,9 +15,8 @@ const API_CONFIG = {
   NOTIFICATION_SERVICE: import.meta.env.VITE_NOTIFICATION_SERVICE_URL || 'http://localhost:3006/api',
   ANALYTICS_SERVICE: import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3007/api',
   
-  // Use mock services in development (set to false when backend is ready)
-  // Default to false to use real backend API
-  USE_MOCK_SERVICES: import.meta.env.VITE_USE_MOCK_SERVICES === 'true',
+  // Use mock services - DISABLED: always use real backend API and database
+  USE_MOCK_SERVICES: false,
   
   // Google OAuth Configuration
   GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',

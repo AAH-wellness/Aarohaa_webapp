@@ -1,5 +1,89 @@
-/* FindProviders component styles - Most styling now handled by Tailwind */
-/* Keep this file minimal or remove if not needed */
+/* FindProviders - Theme-aware: light (default) + dark (crypto) */
 
-/* Custom animations if needed can go here */
-/* Most styles have been migrated to Tailwind classes */
+.find-providers-page {
+  position: relative;
+  min-height: 100%;
+  border: none;
+}
+
+/* Dark theme (crypto) - transparent so parent CryptoBackground3D shows through */
+.find-providers-page--dark {
+  background: transparent;
+}
+
+.find-providers-page--dark .find-providers-title {
+  color: #e8eaf0;
+  background: linear-gradient(135deg, #e8eaf0 0%, #4fc3f7 50%, #ff6b9d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.find-providers-page--dark .find-providers-subtitle { color: #a0a8b8; }
+.find-providers-page--dark .find-providers-empty-inline p { color: #a0a8b8; }
+.find-providers-page--dark .find-providers-error-card {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.find-providers-page--dark .find-providers-error-card p { color: #fca5a5; }
+
+/* Light theme – no background */
+.find-providers-page--light {
+  background: transparent;
+}
+
+.find-providers-page--light .find-providers-title {
+  color: #0a3620;
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+}
+
+.find-providers-page--light .find-providers-subtitle { color: #4b5563; }
+.find-providers-page--light .find-providers-empty-inline p { color: #6b7280; }
+.find-providers-page--light .find-providers-error-card {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+.find-providers-page--light .find-providers-error-card p { color: #b91c1c; }
+
+.find-providers-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.find-providers-header { margin-bottom: 2rem; }
+
+.find-providers-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.find-providers-subtitle {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.find-providers-search-wrap { margin-bottom: 1.5rem; }
+
+.find-providers-empty-inline {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.find-providers-error-card {
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.find-providers-page .space-y-4 {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

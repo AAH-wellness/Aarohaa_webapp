@@ -15,7 +15,7 @@
 .calendar-day {
   background-color: #f9fafb;
   border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 10px 8px;
   text-align: center;
   cursor: pointer;
@@ -34,19 +34,19 @@
 }
 
 .calendar-day.has-slots {
-  background-color: #fef3c7;
-  border-color: #fbbf24;
+  background-color: rgba(79, 195, 247, 0.15);
+  border-color: #4fc3f7;
 }
 
 .calendar-day.has-slots:hover {
-  background-color: #fde68a;
-  border-color: #f59e0b;
+  background-color: rgba(79, 195, 247, 0.25);
+  border-color: #00d4ff;
 }
 
 .calendar-day.selected {
-  background-color: #fef3c7;
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+  background-color: rgba(79, 195, 247, 0.2);
+  border-color: #4fc3f7;
+  box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.3);
 }
 
 .calendar-day.no-slots {
@@ -109,13 +109,13 @@
 }
 
 .calendar-day.is-today.enabled-no-slots {
-  border-color: #10b981 !important;
-  background-color: #f0fdf4 !important;
+  border-color: #4fc3f7 !important;
+  background-color: rgba(79, 195, 247, 0.12) !important;
 }
 
 .calendar-day.is-today.enabled-no-slots .day-name,
 .calendar-day.is-today.enabled-no-slots .day-date {
-  color: #065f46 !important;
+  color: #0a1628 !important;
   font-weight: 700 !important;
 }
 
@@ -151,7 +151,7 @@
 }
 
 .calendar-day.has-slots .day-count {
-  color: #92400e;
+  color: #0a1628;
 }
 
 .calendar-day.no-slots .day-count {
@@ -176,10 +176,10 @@
 }
 
 .time-slot-btn {
-  background-color: #fef3c7;
-  color: #92400e;
-  border: 1.5px solid #fbbf24;
-  border-radius: 8px;
+  background-color: rgba(79, 195, 247, 0.15);
+  color: #0a1628;
+  border: 1.5px solid #4fc3f7;
+  border-radius: 12px;
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
@@ -189,10 +189,10 @@
 }
 
 .time-slot-btn:hover {
-  background-color: #fde68a;
-  border-color: #f59e0b;
+  background-color: rgba(79, 195, 247, 0.3);
+  border-color: #00d4ff;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 2px 12px rgba(79, 195, 247, 0.35);
 }
 
 .time-slot-btn:active {

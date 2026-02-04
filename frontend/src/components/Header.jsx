@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { userService } from '../services'
+import { useTheme } from '../contexts/ThemeContext'
 import './Header.css'
 
-const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, isSidebarOpen, activeSession }) => {
+const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, isSidebarOpen, activeSession, showThemeToggle }) => {
+  const { theme, toggleTheme } = useTheme()
   const [showDropdown, setShowDropdown] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
   const [userName, setUserName] = useState('User')
@@ -177,6 +179,20 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
         </div>
       )}
       <div className="header-right">
+        {showThemeToggle && (
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+          >
+            <span className={`theme-toggle-track ${theme === 'dark' ? 'dark' : ''}`}>
+              <span className="theme-toggle-thumb" />
+              <span className="theme-toggle-icon sun">☀️</span>
+              <span className="theme-toggle-icon moon">🌙</span>
+            </span>
+          </button>
+        )}
         {/* Always show user profile with dropdown - user should always be able to access their profile */}
         <div 
           className="user-profile-container" 

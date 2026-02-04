@@ -1,5 +1,6 @@
 import React from 'react'
-import { Filter } from 'lucide-react'
+import { Filter, Sparkles } from 'lucide-react'
+import './FiltersBar.css'
 
 const FiltersBar = ({ 
   selectedSpecialty, 
@@ -14,19 +15,20 @@ const FiltersBar = ({
   const hasActiveFilters = selectedSpecialty || minRating || availableToday
 
   return (
-    <div className="sticky top-0 z-10 bg-white/70 backdrop-blur-sm border-b border-gray-100 py-4">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <Filter className="w-4 h-4" />
-            <span>Filters:</span>
-          </div>
-          
+    <div className="filters-bar">
+      <div className="filters-bar-inner">
+        <div className="filters-bar-label">
+          <Filter className="filters-bar-icon" />
+          <span>Categories</span>
+          <Sparkles className="filters-bar-sparkle" aria-hidden="true" />
+        </div>
+        
+        <div className="filters-bar-controls">
           {/* Specialty Dropdown */}
           <select
             value={selectedSpecialty || ''}
             onChange={(e) => onSpecialtyChange(e.target.value || null)}
-            className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-300 transition-all"
+            className="filters-bar-select filters-bar-select--specialty"
           >
             <option value="">All Specialties</option>
             {specialties.map((specialty) => (
@@ -38,9 +40,9 @@ const FiltersBar = ({
 
           {/* Min Rating Dropdown */}
           <select
-            value={minRating || ''}
+            value={minRating !== null ? String(minRating) : ''}
             onChange={(e) => onMinRatingChange(e.target.value ? parseFloat(e.target.value) : null)}
-            className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-300 transition-all"
+            className="filters-bar-select filters-bar-select--rating"
           >
             <option value="">Any Rating</option>
             <option value="4.5">4.5+ Stars</option>
@@ -49,21 +51,24 @@ const FiltersBar = ({
           </select>
 
           {/* Available Today Toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="filters-bar-toggle">
             <input
               type="checkbox"
               checked={availableToday}
               onChange={(e) => onAvailableTodayChange(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-2 focus:ring-green-200 focus:ring-offset-0"
+              className="filters-bar-checkbox"
             />
-            <span className="text-sm text-gray-700">Available Today</span>
+            <span className="filters-bar-toggle-track">
+              <span className="filters-bar-toggle-thumb" />
+            </span>
+            <span className="filters-bar-toggle-label">Available Today</span>
           </label>
 
           {/* Clear Button */}
           {hasActiveFilters && (
             <button
               onClick={onClear}
-              className="ml-auto px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="filters-bar-clear"
             >
               Clear Filters
             </button>
@@ -75,4 +80,3 @@ const FiltersBar = ({
 }
 
 export default FiltersBar
-

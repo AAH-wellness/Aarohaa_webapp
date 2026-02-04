@@ -1,0 +1,165 @@
+/* ProviderCard - Theme-aware: light + dark (crypto) */
+
+.provider-card {
+  border-radius: 20px;
+  padding: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme (crypto) - when inside find-providers-page--dark */
+.find-providers-page--dark .provider-card {
+  background: rgba(21, 29, 46, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(79, 195, 247, 0.2);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+.find-providers-page--dark .provider-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(79, 195, 247, 0.15);
+  border-color: rgba(79, 195, 247, 0.35);
+}
+
+.find-providers-page--dark .provider-card-avatar {
+  background: linear-gradient(135deg, #4fc3f7 0%, #ff6b9d 100%);
+  color: #0a1628;
+  box-shadow: 0 2px 12px rgba(79, 195, 247, 0.4);
+}
+
+.find-providers-page--dark .provider-card-name { color: #e8eaf0; }
+.find-providers-page--dark .provider-card-verified { color: #4fc3f7; }
+.find-providers-page--dark .provider-card .text-sm.text-gray-500,
+.find-providers-page--dark .provider-card .text-gray-600 { color: #a0a8b8 !important; }
+
+/* New Provider badge – base + theme-specific */
+.provider-card-new-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Light theme: gray text, white/light gray background */
+.find-providers-page--light .provider-card-new-badge {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Dark theme: neon green */
+.find-providers-page--dark .provider-card-new-badge {
+  background: rgba(57, 255, 20, 0.2);
+  color: #39ff14;
+  border: 1px solid rgba(57, 255, 20, 0.5);
+}
+.find-providers-page--dark .provider-card .text-gray-900 { color: #e8eaf0 !important; }
+
+.find-providers-page--dark .provider-card-pill {
+  background: linear-gradient(135deg, rgba(79, 195, 247, 0.25) 0%, rgba(255, 107, 157, 0.2) 100%);
+  color: #4fc3f7;
+  border: 1px solid rgba(79, 195, 247, 0.35);
+}
+
+.find-providers-page--dark .provider-card-pill--muted {
+  background: rgba(160, 168, 184, 0.2);
+  color: #a0a8b8;
+  border-color: rgba(160, 168, 184, 0.3);
+}
+
+.find-providers-page--dark .provider-card-cta {
+  background: linear-gradient(135deg, #4fc3f7 0%, #00d4ff 100%);
+  color: #0a1628;
+  box-shadow: 0 4px 16px rgba(79, 195, 247, 0.4);
+}
+
+.find-providers-page--dark .provider-card-cta:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 24px rgba(79, 195, 247, 0.5);
+}
+
+/* Light theme */
+.find-providers-page--light .provider-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.find-providers-page--light .provider-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
+}
+
+.find-providers-page--light .provider-card-avatar {
+  background: linear-gradient(135deg, #d0b6a8 0%, #c4a896 100%);
+  color: #0e4826;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.15);
+}
+
+.find-providers-page--light .provider-card-name { color: #0a3620; }
+.find-providers-page--light .provider-card-verified { color: #24664a; }
+.find-providers-page--light .provider-card .text-sm.text-gray-500,
+.find-providers-page--light .provider-card .text-gray-600 { color: #6b7280 !important; }
+.find-providers-page--light .provider-card .text-gray-900 { color: #111827 !important; }
+
+.find-providers-page--light .provider-card-pill {
+  background: #dcf4e6;
+  color: #24664a;
+  border: 1px solid #bce8d0;
+}
+
+.find-providers-page--light .provider-card-pill--muted {
+  background: #f3f4f6;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+.find-providers-page--light .provider-card-cta {
+  background: #0e4826;
+  color: white;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.25);
+}
+
+.find-providers-page--light .provider-card-cta:hover {
+  transform: scale(1.02);
+  background: #0a3620;
+  box-shadow: 0 4px 16px rgba(14, 72, 38, 0.3);
+}
+
+.provider-card-avatar {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.provider-card-name { font-size: 1.25rem; font-weight: 600; }
+.provider-card-pill {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.provider-card-cta {
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 14px;
+  border: none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  width: 100%;
+  cursor: pointer;
+}
+
+@media (min-width: 640px) {
+  .provider-card-cta { width: auto; }
+}
+
+.provider-card-cta:active { transform: scale(0.98); }

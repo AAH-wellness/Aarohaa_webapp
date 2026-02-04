@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import './BookingSuccessModal.css'
 
 const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [canClose, setCanClose] = useState(false)
 
   useEffect(() => {
-    setTimeout(() => setIsVisible(true), 10)
-    setTimeout(() => setShowConfetti(true), 300)
+    const visibleTimer = setTimeout(() => setIsVisible(true), 10)
+    const confettiTimer = setTimeout(() => setShowConfetti(true), 300)
+    const closeTimer = setTimeout(() => setCanClose(true), 300)
     
     // Add class to body when modal is visible to lower header z-index
     document.body.classList.add('modal-open')
@@ -15,15 +18,20 @@ const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }
     // Cleanup on unmount
     return () => {
       document.body.classList.remove('modal-open')
+      clearTimeout(visibleTimer)
+      clearTimeout(confettiTimer)
+      clearTimeout(closeTimer)
     }
   }, [])
 
   const handleClose = () => {
+    if (!canClose) return
     setIsVisible(false)
     setTimeout(() => onClose(), 300)
   }
 
   const handleViewAppointments = () => {
+    if (!canClose) return
     setIsVisible(false)
     setTimeout(() => {
       onClose()
@@ -33,7 +41,9 @@ const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }
     }, 300)
   }
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <div className={`success-modal-overlay ${isVisible ? 'visible' : ''}`} onClick={handleClose}>
       {showConfetti && (
         <div className="confetti-container">
@@ -83,7 +93,8 @@ const BookingSuccessModal = ({ providerName, onClose, onNavigateToAppointments }
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

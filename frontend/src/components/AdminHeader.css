@@ -335,7 +335,7 @@ body.modal-open .admin-header {
   }
 
   .admin-header {
-    padding: 12px 16px;
+    padding: 12px 4px 12px 16px;
     flex-wrap: nowrap;
     align-items: center;
   }
@@ -353,8 +353,7 @@ body.modal-open .admin-header {
   }
 
   .admin-logo-text {
-    font-size: 14px;
-    display: inline-block;
+    display: none;
   }
 
   .admin-logo-icon {
@@ -371,6 +370,7 @@ body.modal-open .admin-header {
 
   .admin-header-right {
     flex: 0 0 auto;
+    margin-left: auto;
   }
 
   .admin-user-info {
@@ -378,7 +378,7 @@ body.modal-open .admin-header {
   }
 
   .admin-user-profile {
-    padding: 6px 10px;
+    padding: 6px 4px;
   }
 
   .admin-user-avatar {

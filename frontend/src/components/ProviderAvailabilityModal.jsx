@@ -21,6 +21,7 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
   const [showConflictModal, setShowConflictModal] = useState(false)
   const [conflictingAppointment, setConflictingAppointment] = useState(null)
   const [bookedProvider, setBookedProvider] = useState(null)
+  const [bookedBooking, setBookedBooking] = useState(null)
   const [error, setError] = useState(null)
   const [existingBookings, setExistingBookings] = useState([])
   const timeoutRef = useRef(null)
@@ -226,9 +227,11 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
         throw new Error(response.error.message || 'Failed to create booking')
       }
       
-      // Set booked provider for success modal
+      // Set booked provider and booking for success modal
       const bookingProviderName = response.booking?.providerName || provider.name
+      const bookingPayload = response.booking || bookingData
       setBookedProvider(bookingProviderName)
+      setBookedBooking(bookingPayload)
       
       // Reload bookings to update the UI (so the booked slot shows as greyed out)
       const bookingsResponse = await apiClient.get(`${apiBaseUrl}/users/bookings`)
@@ -238,12 +241,7 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
       )
       setExistingBookings(activeBookings)
       
-      // Call the onBook callback if provided
-      if (onBook) {
-        onBook(response.booking || bookingData)
-      }
-      
-      // Show success modal instead of immediately closing
+      // Show success modal first - do NOT call onBook here (it would unmount before modal shows)
       setShowSuccessModal(true)
     } catch (err) {
       console.error('Error creating booking:', err)
@@ -287,6 +285,10 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false)
+    // Notify parent (e.g. to close availability modal) before clearing state
+    if (onBook && bookedBooking) {
+      onBook(bookedBooking)
+    }
     handleClose()
     // Navigate to My Appointments after closing success modal
     if (onNavigateToAppointments) {
@@ -327,11 +329,11 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
       style={{ zIndex: 9999 }}
     >
       <div 
-        className="bg-white rounded-lg max-w-4xl w-full h-[85vh] flex flex-col shadow-xl"
+        className="provider-availability-modal-panel bg-white rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex-shrink-0 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="provider-avail-modal-header flex-shrink-0 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Available Appointments</h2>
             <p className="text-xs text-gray-600">{provider.name}</p>
@@ -346,17 +348,17 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
         </div>
 
         {/* Content - Fixed height with scroll */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="provider-avail-modal-body flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="flex items-center justify-center h-full">
-              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-crypto-blue border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : error && !selectedSlot ? (
             <div className="flex flex-col items-center justify-center h-full">
               <p className="text-red-600 mb-4 text-sm">{error}</p>
               <button
                 onClick={loadAvailableSlots}
-                className="text-green-800 hover:text-green-900 font-medium text-sm"
+                className="text-crypto-blue hover:text-crypto-cyan font-medium text-sm"
               >
                 Try Again
               </button>
@@ -424,7 +426,7 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
         </div>
 
         {/* Booking Form - Always visible at bottom */}
-        <div className="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50">
+        <div className="provider-avail-modal-footer flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50">
           <div className="space-y-4">
             {/* Selected Time Display */}
             {selectedSlot ? (
@@ -458,7 +460,7 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
                 id="sessionType"
                 value={sessionType}
                 onChange={(e) => setSessionType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-crypto-blue focus:border-crypto-blue bg-white"
               >
                 <option value="Video Consultation">Video Consultation</option>
                 <option value="Phone Consultation">Phone Consultation</option>
@@ -476,7 +478,7 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Describe what you'd like to discuss..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none bg-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-crypto-blue focus:border-crypto-blue resize-none bg-white"
                 rows="3"
               />
             </div>
@@ -492,9 +494,9 @@ const ProviderAvailabilityModal = ({ provider, onClose, onBook, onNavigateToAppo
             <button
               onClick={handleConfirmBooking}
               disabled={!selectedSlot || booking}
-              className={`w-full text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`provider-avail-confirm-btn w-full text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
                 selectedSlot && !booking
-                  ? 'bg-green-800 hover:bg-green-900'
+                  ? 'bg-crypto-blue hover:bg-crypto-cyan text-gray-900'
                   : 'bg-gray-400 cursor-not-allowed'
               }`}
             >

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import BookingRequiredModal from './BookingRequiredModal'
+import SessionReviewModal from './SessionReviewModal'
 import { userService, apiClient, API_CONFIG } from '../services'
 import { useUserNotification } from '../contexts/UserNotificationContext'
 import './ActiveSession.css'
@@ -15,6 +16,7 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
   const [activeBooking, setActiveBooking] = useState(null)
   const [providerNotes, setProviderNotes] = useState([])
   const [currentUserName, setCurrentUserName] = useState('')
+  const [showReviewModal, setShowReviewModal] = useState(false)
   const callContainerRef = useRef(null)
   const callObjectRef = useRef(null)
 
@@ -269,9 +271,16 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
         // Jitsi sends messages from meet.jit.si domain
         if (event.origin.includes('meet.jit.si') || event.origin.includes('jitsi')) {
           if (event.data && event.data.type === 'video-conference-left') {
+            try {
+              if (callObjectRef.current && callObjectRef.current.cleanup) {
+                callObjectRef.current.cleanup()
+                callObjectRef.current = null
+              }
+            } catch (e) { /* ignore */ }
             setIsCallStarted(false)
             setSessionTime(0)
             window.removeEventListener('message', handleMessage)
+            setShowReviewModal(true)
           }
         }
       }
@@ -321,7 +330,7 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
   }
 
   const handleEndCall = () => {
-    if (window.confirm('Are you sure you want to end this session?')) {
+    if (window.confirm('Are you sure you want to end this session? You will need to rate and review the provider.')) {
       try {
         if (callObjectRef.current && callObjectRef.current.cleanup) {
           callObjectRef.current.cleanup()
@@ -335,9 +344,15 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
       setSessionTime(0)
       setIsMuted(false)
       setIsVideoOff(false)
-      
-      addNotification('Call ended.', { type: 'info' })
+      setShowReviewModal(true)
     }
+  }
+
+  const handleReviewComplete = () => {
+    setShowReviewModal(false)
+    setActiveBooking(null)
+    if (onActiveSessionChange) onActiveSessionChange(null)
+    if (onNavigateToBooking) onNavigateToBooking()
   }
 
   const toggleVideo = () => {
@@ -403,6 +418,13 @@ const ActiveSession = ({ hasBookedSession, onNavigateToBooking, onActiveSessionC
 
   return (
     <div className="active-session">
+      {showReviewModal && activeBooking && (
+        <SessionReviewModal
+          bookingId={activeBooking.id}
+          providerName={activeBooking.providerName || 'Provider'}
+          onComplete={handleReviewComplete}
+        />
+      )}
       <div className="session-container">
         <div className="session-header">
           <h1 className="session-title">Video Session with {providerName}</h1>

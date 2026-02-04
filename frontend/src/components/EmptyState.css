@@ -1,0 +1,67 @@
+/* EmptyState - Theme-aware: light + dark (crypto) */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem;
+}
+
+.empty-state-icon-wrap {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.empty-state-icon { width: 2rem; height: 2rem; }
+.empty-state-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+.empty-state-desc { text-align: center; margin-bottom: 1.5rem; max-width: 24rem; }
+.empty-state-btn {
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.empty-state-btn:hover { transform: scale(1.03); }
+
+/* Dark theme */
+.find-providers-page--dark .empty-state-icon-wrap {
+  background: rgba(79, 195, 247, 0.15);
+  border: 1px solid rgba(79, 195, 247, 0.3);
+}
+.find-providers-page--dark .empty-state-icon { color: #4fc3f7; }
+.find-providers-page--dark .empty-state-title { color: #e8eaf0; }
+.find-providers-page--dark .empty-state-desc { color: #a0a8b8; }
+.find-providers-page--dark .empty-state-btn {
+  background: linear-gradient(135deg, #4fc3f7 0%, #00d4ff 100%);
+  color: #0a1628;
+  box-shadow: 0 4px 16px rgba(79, 195, 247, 0.3);
+}
+.find-providers-page--dark .empty-state-btn:hover {
+  box-shadow: 0 6px 24px rgba(79, 195, 247, 0.4);
+}
+
+/* Light theme */
+.find-providers-page--light .empty-state-icon-wrap {
+  background: #dcf4e6;
+  border: 1px solid #bce8d0;
+}
+.find-providers-page--light .empty-state-icon { color: #24664a; }
+.find-providers-page--light .empty-state-title { color: #111827; }
+.find-providers-page--light .empty-state-desc { color: #6b7280; }
+.find-providers-page--light .empty-state-btn {
+  background: #0e4826;
+  color: white;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.25);
+}
+.find-providers-page--light .empty-state-btn:hover {
+  box-shadow: 0 4px 16px rgba(14, 72, 38, 0.3);
+}

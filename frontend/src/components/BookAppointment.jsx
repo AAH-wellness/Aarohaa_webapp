@@ -290,13 +290,13 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
         setExistingBookings(prev => [...prev, response.booking])
       }
       
-      // Show success modal and headline ticker notification
+      // Show success modal and ticker
       setShowSuccessModal(true)
       addNotification('Appointment booked successfully.', { type: 'success' })
 
       // Call the callback to mark session as booked
       if (onBookingConfirmed) {
-        onBookingConfirmed()
+        onBookingConfirmed(bookingProviderName)
       }
 
       // Reset form
@@ -479,7 +479,7 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
         </form>
       </div>
 
-      {showSuccessModal && (
+      {showSuccessModal && bookedProvider && (
         <BookingSuccessModal
           providerName={bookedProvider}
           onClose={handleSuccessModalClose}

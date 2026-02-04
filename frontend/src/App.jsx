@@ -40,7 +40,9 @@ import MaintenanceMode from './components/MaintenanceMode'
 import ForgotPasswordModal from './components/ForgotPasswordModal'
 import ResetPassword from './components/ResetPassword'
 import NotificationTicker from './components/NotificationTicker'
+import ThemeAwareBackground from './components/ThemeAwareBackground'
 import { UserNotificationProvider } from './contexts/UserNotificationContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import { authService } from './services'
 import './App.css'
 
@@ -670,8 +672,10 @@ function App() {
 
   // Render user dashboard
   return (
+    <ThemeProvider>
     <UserNotificationProvider>
-      <div className="app">
+      <div className="app theme-transition">
+        <ThemeAwareBackground />
         <Header 
           onNavigateToProfile={handleNavigateToProfile}
           onSignOut={handleSignOut}
@@ -679,8 +683,9 @@ function App() {
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           isSidebarOpen={isSidebarOpen}
           activeSession={activeSession}
+          showThemeToggle
         />
-        <NotificationTicker />
+        {(activeView === 'My Appointments' || activeView === 'Find Providers') && <NotificationTicker />}
         {isSidebarOpen && (
           <div 
             className="sidebar-overlay"
@@ -741,6 +746,7 @@ function App() {
       </div>
     </div>
     </UserNotificationProvider>
+    </ThemeProvider>
   )
 }
 

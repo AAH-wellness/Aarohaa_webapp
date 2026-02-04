@@ -1,0 +1,301 @@
+/* Session Review Modal - Mandatory rating + review after session */
+.session-review-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.session-review-overlay.visible {
+  opacity: 1;
+}
+
+.session-review-modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35);
+  transform: scale(0.9);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.session-review-modal.visible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.session-review-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0e4826;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.session-review-subtitle {
+  font-size: 15px;
+  color: #555;
+  margin: 0 0 28px 0;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.session-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.session-review-field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.session-review-stars {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.session-review-star-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.session-review-star-btn:hover {
+  transform: scale(1.15);
+}
+
+.session-review-star {
+  color: #ddd;
+  transition: color 0.2s ease;
+}
+
+.session-review-star.filled {
+  color: #FFD700;
+  fill: #FFD700;
+}
+
+.session-review-textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 120px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.session-review-textarea:focus {
+  outline: none;
+  border-color: #0e4826;
+  box-shadow: 0 0 0 3px rgba(14, 72, 38, 0.15);
+}
+
+.session-review-error {
+  color: #dc2626;
+  font-size: 14px;
+  margin: 0;
+}
+
+.session-review-submit {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(14, 72, 38, 0.3);
+  transition: all 0.2s ease;
+}
+
+.session-review-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(14, 72, 38, 0.4);
+}
+
+.session-review-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success state - circle with tick animation */
+.session-review-success {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.session-review-checkmark-wrapper {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 28px;
+  height: 120px;
+}
+
+.session-review-checkmark-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0e4826 0%, #28a745 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 10px 30px rgba(14, 72, 38, 0.4);
+  animation: sessionReviewCircleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes sessionReviewCircleIn {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.15); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.session-review-checkmark-svg {
+  width: 50px;
+  height: 50px;
+}
+
+.session-review-checkmark-bg {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 2;
+  fill: none;
+  stroke-dasharray: 157;
+  stroke-dashoffset: 157;
+  animation: sessionReviewCircleDraw 0.6s ease-out 0.2s forwards;
+}
+
+.session-review-checkmark-path {
+  stroke: #ffffff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: sessionReviewCheckDraw 0.5s ease-out 0.5s forwards;
+}
+
+@keyframes sessionReviewCircleDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes sessionReviewCheckDraw {
+  0% { stroke-dashoffset: 50; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.session-review-success-rings {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.session-review-ring {
+  position: absolute;
+  border: 3px solid rgba(14, 72, 38, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: sessionReviewRingPulse 2s ease-out infinite;
+}
+
+.session-review-ring-1 { width: 120px; height: 120px; animation-delay: 0s; }
+.session-review-ring-2 { width: 150px; height: 150px; animation-delay: 0.3s; }
+.session-review-ring-3 { width: 180px; height: 180px; animation-delay: 0.6s; }
+
+@keyframes sessionReviewRingPulse {
+  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+}
+
+.session-review-success-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0e4826;
+  margin: 0 0 12px 0;
+}
+
+.session-review-success-message {
+  font-size: 16px;
+  color: #555;
+  margin: 0;
+}
+
+/* Dark theme */
+[data-theme="dark"] .session-review-modal {
+  background: linear-gradient(135deg, #151d2e 0%, #1a2438 100%);
+  border: 1px solid rgba(79, 195, 247, 0.4);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(79, 195, 247, 0.3);
+}
+
+[data-theme="dark"] .session-review-title {
+  background: linear-gradient(135deg, #4fc3f7 0%, #ff6b9d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="dark"] .session-review-subtitle {
+  color: #a0a8b8;
+}
+
+[data-theme="dark"] .session-review-field label {
+  color: #e8eaf0;
+}
+
+[data-theme="dark"] .session-review-textarea {
+  background: rgba(10, 22, 40, 0.6);
+  border-color: rgba(79, 195, 247, 0.4);
+  color: #e8eaf0;
+}
+
+[data-theme="dark"] .session-review-textarea:focus {
+  border-color: #4fc3f7;
+  box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.2);
+}
+
+[data-theme="dark"] .session-review-submit {
+  background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
+  box-shadow: 0 4px 20px rgba(79, 195, 247, 0.5);
+}
+
+[data-theme="dark"] .session-review-checkmark-circle {
+  background: linear-gradient(135deg, #4fc3f7 0%, #39ff14 100%);
+}
+
+[data-theme="dark"] .session-review-ring {
+  border-color: rgba(79, 195, 247, 0.4);
+}
+
+[data-theme="dark"] .session-review-success-title {
+  background: linear-gradient(135deg, #4fc3f7 0%, #ff6b9d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="dark"] .session-review-success-message {
+  color: #a0a8b8;
+}

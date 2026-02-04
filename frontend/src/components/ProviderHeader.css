@@ -224,7 +224,7 @@ body.modal-open .provider-header {
   }
 
   .provider-header {
-    padding: 12px 16px;
+    padding: 12px 4px 12px 16px;
     flex-wrap: nowrap;
     align-items: center;
   }
@@ -242,8 +242,7 @@ body.modal-open .provider-header {
   }
 
   .provider-logo-text {
-    font-size: 14px;
-    display: inline-block;
+    display: none;
   }
 
   .provider-logo-icon {
@@ -260,6 +259,7 @@ body.modal-open .provider-header {
 
   .provider-header-right {
     flex: 0 0 auto;
+    margin-left: auto;
   }
 
   .provider-user-info {
@@ -267,7 +267,7 @@ body.modal-open .provider-header {
   }
 
   .provider-user-profile {
-    padding: 6px 10px;
+    padding: 6px 4px;
   }
 
   .provider-user-avatar {

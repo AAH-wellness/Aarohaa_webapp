@@ -26,6 +26,7 @@ const {
   rescheduleBooking,
   joinVideoSession,
   completeVideoSession,
+  submitSessionReview,
   requestPasswordReset,
   resetPassword,
   submitSupportTicket
@@ -110,6 +111,8 @@ router.post('/bookings/reschedule', authenticateToken, rescheduleBooking);
 router.post('/bookings/:bookingId/video/join', authenticateToken, joinVideoSession);
 // Provider-only: mark session completed (updates DB)
 router.post('/bookings/:bookingId/video/complete', authenticateToken, completeVideoSession);
+// User submits review after session (mandatory rating + review text)
+router.post('/bookings/:bookingId/review', authenticateToken, submitSessionReview);
 
 // Password reset routes (public - no authentication required)
 router.post('/password/reset-request', requestPasswordReset);

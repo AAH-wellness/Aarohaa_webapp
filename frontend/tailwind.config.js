@@ -7,6 +7,17 @@ export default {
   theme: {
     extend: {
       colors: {
+        /* Crypto palette */
+        crypto: {
+          blue: '#4fc3f7',
+          cyan: '#00d4ff',
+          pink: '#ff6b9d',
+          gold: '#f0b429',
+          neon: '#39ff14',
+          purple: '#9c6ade',
+          navy: '#0a1628',
+          dark: '#050c14',
+        },
         green: {
           50: '#f0f9f4',
           100: '#dcf4e6',

@@ -14,8 +14,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #ede9d0;
   overflow-x: hidden;
+}
+
+html[data-theme="light"] body {
+  background: linear-gradient(180deg, #f0f9f4 0%, #ffffff 40%, #ffffff 100%);
+  min-height: 100vh;
+}
+
+html[data-theme="dark"] body {
+  background-color: #0c1322;
+  color: #e8eaf0;
 }
 
 /* Mobile Optimizations */
