@@ -17,6 +17,7 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
     // Provider-specific fields
     specialty: '',
     title: '',
+    gender: '',
     bio: '',
     hourlyRate: '',
   })
@@ -33,6 +34,7 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
     phone: '',
     specialty: '',
     title: '',
+    gender: '',
     bio: '',
     hourlyRate: '',
   })
@@ -44,6 +46,7 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
     phone: false,
     specialty: false,
     title: false,
+    gender: false,
     bio: false,
     hourlyRate: false,
   })
@@ -57,6 +60,7 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
     phone: false,
     specialty: false,
     title: false,
+    gender: false,
     bio: false,
     hourlyRate: false,
   })
@@ -380,6 +384,7 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
           phone: fullPhoneNumber,
           specialty: formData.specialty || null,
           title: formData.title || null,
+          gender: formData.gender && ['male', 'female', 'other'].includes(formData.gender) ? formData.gender : null,
           bio: formData.bio || null,
           hourlyRate: parseFloat(formData.hourlyRate) || 0
         })
@@ -730,6 +735,33 @@ const Register = ({ onRegister, onNavigateToLogin, registrationMode = 'user' }) 
                   {touched.title && errors.title && (
                     <p className="error-message">{errors.title}</p>
                   )}
+                </div>
+
+                <div className="form-group">
+                  <div className="input-field-wrapper">
+                    <label className={`floating-label select-label ${formData.gender || focused.gender ? 'active' : ''}`}>
+                      Gender
+                    </label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      onBlur={(e) => {
+                        handleBlur(e)
+                        setFocused((f) => ({ ...f, gender: false }))
+                      }}
+                      onFocus={() => {
+                        setTouched((t) => ({ ...t, gender: true }))
+                        setFocused((f) => ({ ...f, gender: true }))
+                      }}
+                      className={`form-input form-select ${formData.gender || focused.gender ? 'has-value' : ''}`}
+                    >
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="form-group">

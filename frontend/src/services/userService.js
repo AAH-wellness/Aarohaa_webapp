@@ -633,6 +633,8 @@ class UserService {
           verified: user.verified || false,
           status: user.status || 'pending',
           availability: user.availability || {},
+          profilePhoto: user.profilePhoto || null,
+          gender: user.gender || null,
         }
       }
     }
@@ -644,6 +646,7 @@ class UserService {
         phone: '',
         specialty: '',
         title: '',
+        gender: null,
         bio: '',
         hourlyRate: 0,
         rating: 0,
@@ -755,6 +758,8 @@ class UserService {
         reviewsCount: 45,
         hourlyRate: 50,
         bio: 'Experienced yoga therapist specializing in stress management',
+        profilePhoto: null,
+        gender: 'female',
       },
       {
         id: 2,
@@ -768,6 +773,8 @@ class UserService {
         reviewsCount: 38,
         hourlyRate: 60,
         bio: 'Certified meditation instructor with 10+ years of experience',
+        profilePhoto: null,
+        gender: 'female',
       },
     ]
     

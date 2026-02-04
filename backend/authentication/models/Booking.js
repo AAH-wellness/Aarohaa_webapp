@@ -344,6 +344,8 @@ class Booking {
         p.email as provider_email,
         p.title as provider_title,
         p.specialty as provider_specialty,
+        p.profile_photo as provider_photo,
+        p.gender as provider_gender,
         b.appointment_date AT TIME ZONE 'UTC' as appointment_date_utc
       FROM user_bookings b
       JOIN providers p ON b.provider_id = p.id

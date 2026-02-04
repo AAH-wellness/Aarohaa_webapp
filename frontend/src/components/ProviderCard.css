@@ -136,6 +136,13 @@
   justify-content: center;
   font-weight: 700;
   font-size: 1.25rem;
+  overflow: hidden;
+}
+
+.provider-card-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .provider-card-name { font-size: 1.25rem; font-weight: 600; }

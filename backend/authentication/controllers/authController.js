@@ -199,7 +199,7 @@ async function register(req, res, next) {
  */
 async function registerProvider(req, res, next) {
   try {
-    const { email, password, name, phone, specialty, title, bio, hourlyRate } = req.body;
+    const { email, password, name, phone, specialty, title, bio, hourlyRate, gender } = req.body;
 
     // Validation
     if (!email || !password || !name || !phone) {
@@ -255,7 +255,8 @@ async function registerProvider(req, res, next) {
       specialty: specialty || null,
       title: title || null,
       bio: bio || null,
-      hourlyRate: hourlyRate || 0
+      hourlyRate: hourlyRate || 0,
+      gender: gender && ['male', 'female', 'other'].includes(gender) ? gender : null
     });
 
     console.log(`✅ Provider registered: ${provider.email} (ID: ${provider.id})`);
@@ -789,6 +790,8 @@ async function getProviderProfile(req, res, next) {
         verified: provider.verified,
         status: provider.status,
         availability: provider.availability || {},
+        profilePhoto: provider.profile_photo || null,
+        gender: provider.gender || null,
         createdAt: provider.created_at,
         updatedAt: provider.updated_at
       }
@@ -828,7 +831,7 @@ async function updateProviderProfile(req, res, next) {
       });
     }
 
-    const { name, phone, specialty, title, bio, hourlyRate } = req.body;
+    const { name, phone, specialty, title, bio, hourlyRate, profilePhoto, gender } = req.body;
     
     // Determine whether this update completes onboarding (Google providers only)
     const wasHourly = parseFloat(provider.hourly_rate ?? 0) || 0;
@@ -843,6 +846,21 @@ async function updateProviderProfile(req, res, next) {
     if (title !== undefined) updates.title = title;
     if (bio !== undefined) updates.bio = bio;
     if (hourlyRate !== undefined) updates.hourlyRate = parseFloat(hourlyRate);
+    if (profilePhoto !== undefined) updates.profilePhoto = profilePhoto;
+    if (gender !== undefined) {
+      const existingGender = provider.gender && ['male', 'female', 'other'].includes(provider.gender) ? provider.gender : null;
+      if (existingGender) {
+        return res.status(400).json({
+          error: {
+            message: 'Gender cannot be changed once set',
+            code: 'GENDER_PERMANENT',
+            status: 400
+          }
+        });
+      }
+      const newGender = gender && ['male', 'female', 'other'].includes(gender) ? gender : null;
+      if (newGender) updates.gender = newGender;
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
@@ -907,6 +925,8 @@ async function updateProviderProfile(req, res, next) {
         verified: updatedProvider.verified,
         status: updatedProvider.status,
         availability: updatedProvider.availability || {},
+        profilePhoto: updatedProvider.profile_photo || null,
+        gender: updatedProvider.gender || null,
         createdAt: updatedProvider.created_at,
         updatedAt: updatedProvider.updated_at
       },
@@ -1523,6 +1543,8 @@ async function getAllProviders(req, res, next) {
         verified: provider.verified,
         status: provider.status,
         availability: availability,
+        profilePhoto: provider.profile_photo || null,
+        gender: provider.gender || null,
         createdAt: provider.created_at,
         updatedAt: provider.updated_at
       };
@@ -2103,6 +2125,8 @@ async function getUserBookings(req, res, next) {
           providerName: booking.provider_name,
           providerTitle: booking.provider_title,
           providerSpecialty: booking.provider_specialty,
+          providerPhoto: booking.provider_photo || null,
+          providerGender: booking.provider_gender || null,
           appointmentDate: appointmentDateISO,
           dateTime: appointmentDateISO, // Also include as dateTime for compatibility
           sessionType: booking.session_type,

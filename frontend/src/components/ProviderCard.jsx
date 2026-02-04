@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Star, CheckCircle2 } from 'lucide-react'
 import ProviderAvailabilityModal from './ProviderAvailabilityModal'
+import { getProviderAvatarUrl } from '../utils/avatarUtils'
 import './ProviderCard.css'
 
 const ProviderCard = ({ provider, onBookSession, onNavigateToAppointments, getInitials }) => {
@@ -20,10 +21,14 @@ const ProviderCard = ({ provider, onBookSession, onNavigateToAppointments, getIn
   return (
     <div className="provider-card">
       <div className="flex flex-col sm:flex-row gap-6">
-        {/* Left: Avatar */}
+        {/* Left: Avatar (photo or default by gender) */}
         <div className="flex-shrink-0">
           <div className="provider-card-avatar">
-            {getInitials(provider.name)}
+            <img
+              src={getProviderAvatarUrl(provider.profilePhoto, provider.gender)}
+              alt={provider.name}
+              className="provider-card-avatar-img"
+            />
           </div>
         </div>
 

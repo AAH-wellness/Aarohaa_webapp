@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { userService } from '../services'
 import './ProviderProfile.css'
+
+import { getProviderAvatarUrl } from '../utils/avatarUtils'
+
+const MAX_PHOTO_SIZE_BYTES = 2 * 1024 * 1024 // 2MB
+const ACCEPT_IMAGE_TYPES = 'image/jpeg,image/png,image/webp,image/gif'
 
 const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, onNavigateToPaymentMethods }) => {
   const [profileData, setProfileData] = useState({
@@ -11,10 +16,40 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
     specialization: '',
     bio: '',
     hourlyRate: 0,
+    profilePhoto: null,
+    gender: null,
   })
 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoError, setPhotoError] = useState(null)
+  const [genderSaving, setGenderSaving] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const genderDisplayLabel = (value) => {
+    if (!value) return 'Not provided'
+    const labels = { male: 'Male', female: 'Female', other: 'Other' }
+    return labels[value] || value
+  }
+
+  const genderIsPermanent = profileData.gender && ['male', 'female', 'other'].includes(profileData.gender)
+
+  const handleGenderChange = async (e) => {
+    const value = e.target.value || null
+    const toSave = value && ['male', 'female', 'other'].includes(value) ? value : null
+    if (!toSave) return
+    setProfileData((prev) => ({ ...prev, gender: toSave }))
+    try {
+      setGenderSaving(true)
+      await userService.updateProviderProfile({ gender: toSave })
+    } catch (err) {
+      console.error('Failed to update gender:', err)
+      setProfileData((prev) => ({ ...prev, gender: profileData.gender }))
+    } finally {
+      setGenderSaving(false)
+    }
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -37,6 +72,8 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
             specialization: response.provider.specialty || '',
             bio: response.provider.bio || '',
             hourlyRate: response.provider.hourlyRate || 0,
+            profilePhoto: response.provider.profilePhoto || null,
+            gender: response.provider?.gender ?? null,
           })
         }
         if (isMounted) {
@@ -73,6 +110,40 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
     )
   }
 
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoError(null)
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Please choose an image file (JPEG, PNG, WebP, or GIF).')
+      return
+    }
+    if (file.size > MAX_PHOTO_SIZE_BYTES) {
+      setPhotoError('Image must be 2MB or smaller.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const dataUrl = reader.result
+      try {
+        setPhotoUploading(true)
+        const response = await userService.updateProviderProfile({ profilePhoto: dataUrl })
+        if (response?.provider?.profilePhoto !== undefined) {
+          setProfileData((prev) => ({ ...prev, profilePhoto: response.provider.profilePhoto }))
+        } else {
+          setProfileData((prev) => ({ ...prev, profilePhoto: dataUrl }))
+        }
+      } catch (err) {
+        console.error('Profile photo update failed:', err)
+        setPhotoError('Failed to save photo. Please try again.')
+      } finally {
+        setPhotoUploading(false)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
   if (error) {
     return (
       <div className="provider-profile">
@@ -87,6 +158,43 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
   return (
     <div className="provider-profile">
       <h1 className="provider-profile-title">Provider Profile</h1>
+
+      {/* Profile Photo Section */}
+      <div className="provider-profile-section">
+        <h2 className="provider-section-title">Profile Photo</h2>
+        <div className="provider-profile-card provider-profile-photo-card">
+          <div className="provider-photo-wrap">
+            <div className="provider-photo-preview">
+              <img
+                src={getProviderAvatarUrl(profileData.profilePhoto, profileData.gender)}
+                alt="Profile"
+                className={`provider-photo-img ${!profileData.profilePhoto ? 'provider-photo-default' : ''}`}
+              />
+            </div>
+            <div className="provider-photo-actions">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPT_IMAGE_TYPES}
+                onChange={handlePhotoChange}
+                className="provider-photo-input"
+                aria-label="Upload profile photo"
+                disabled={photoUploading}
+              />
+              <button
+                type="button"
+                className="provider-photo-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={photoUploading}
+              >
+                {photoUploading ? 'Uploading…' : profileData.profilePhoto ? 'Change photo' : 'Upload photo'}
+              </button>
+              <p className="provider-photo-hint">JPEG, PNG, WebP or GIF. Max 2MB.</p>
+              {photoError && <p className="provider-photo-error">{photoError}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Professional Information Section */}
       <div className="provider-profile-section">
@@ -108,6 +216,30 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
             <div className="provider-profile-field">
               <label>Phone Number</label>
               <div className="provider-field-value">{profileData.phone || 'Not provided'}</div>
+            </div>
+            <div className="provider-profile-field provider-profile-field-gender full-width">
+              <label>Gender</label>
+              {genderIsPermanent ? (
+                <div className="provider-field-value provider-gender-permanent">
+                  {genderDisplayLabel(profileData.gender)}
+                </div>
+              ) : (
+                <div className="provider-gender-edit">
+                  <select
+                    value={profileData.gender || ''}
+                    onChange={handleGenderChange}
+                    disabled={genderSaving}
+                    className="provider-field-select"
+                    aria-label="Gender"
+                  >
+                    <option value="">Select gender (cannot be changed after saving)</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                  {genderSaving && <span className="provider-field-saving">Saving…</span>}
+                </div>
+              )}
             </div>
             <div className="provider-profile-field full-width">
               <label>Specialization</label>

@@ -164,6 +164,38 @@ class Provider {
           `);
           console.log('✅ Added welcome_email_sent column to providers table');
         }
+
+        const profilePhotoExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'providers'
+              AND column_name = 'profile_photo'
+          );
+        `);
+        if (!profilePhotoExists.rows[0].exists) {
+          await pool.query(`
+            ALTER TABLE providers
+            ADD COLUMN profile_photo TEXT;
+          `);
+          console.log('✅ Added profile_photo column to providers table');
+        }
+
+        const genderExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'providers'
+              AND column_name = 'gender'
+          );
+        `);
+        if (!genderExists.rows[0].exists) {
+          await pool.query(`
+            ALTER TABLE providers
+            ADD COLUMN gender VARCHAR(20);
+          `);
+          console.log('✅ Added gender column to providers table');
+        }
         
         console.log('✅ Providers table migration completed');
       }
@@ -177,7 +209,7 @@ class Provider {
    * Create a new provider (independent from users table)
    */
   static async create(providerData) {
-    const { passwordHash, name, email, phone, specialty, title, bio, hourlyRate } = providerData;
+    const { passwordHash, name, email, phone, specialty, title, bio, hourlyRate, gender } = providerData;
     
     // Check if last_login column exists before including it in RETURNING
     const lastLoginExists = await pool.query(`
@@ -188,28 +220,40 @@ class Provider {
         AND column_name = 'last_login'
       );
     `);
+
+    const genderExists = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'providers' AND column_name = 'gender'
+      );
+    `);
     
     const returnColumns = lastLoginExists.rows[0].exists
       ? 'id, name, email, phone, specialty, title, bio, hourly_rate, rating, sessions_completed, reviews_count, verified, status, availability, created_at, updated_at, last_login'
       : 'id, name, email, phone, specialty, title, bio, hourly_rate, rating, sessions_completed, reviews_count, verified, status, availability, created_at, updated_at';
     
+    const genderCol = genderExists.rows[0].exists ? ', gender' : '';
+    const genderPlaceholder = genderExists.rows[0].exists ? ', $9' : '';
     const query = `
-      INSERT INTO providers (name, email, password, phone, specialty, title, bio, hourly_rate, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO providers (name, email, password, phone, specialty, title, bio, hourly_rate${genderExists.rows[0].exists ? ', gender' : ''}, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8${genderPlaceholder}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING ${returnColumns}
     `;
     
+    const insertValues = [
+      name,
+      email,
+      passwordHash,
+      phone || null,
+      specialty || null,
+      title || null,
+      bio || null,
+      hourlyRate || 0
+    ];
+    if (genderExists.rows[0].exists) insertValues.push(gender && ['male', 'female', 'other'].includes(gender) ? gender : null);
+    
     try {
-      const result = await pool.query(query, [
-        name,
-        email,
-        passwordHash,
-        phone || null,
-        specialty || null,
-        title || null,
-        bio || null,
-        hourlyRate || 0
-      ]);
+      const result = await pool.query(query, insertValues);
       
       // Add last_login as null if column doesn't exist (for backward compatibility)
       const provider = result.rows[0];
@@ -355,6 +399,15 @@ class Provider {
     if (updates.status !== undefined) {
       fields.push(`status = $${paramCount++}`);
       values.push(updates.status);
+    }
+    if (updates.profilePhoto !== undefined) {
+      fields.push(`profile_photo = $${paramCount++}`);
+      values.push(updates.profilePhoto);
+    }
+    if (updates.gender !== undefined) {
+      const val = updates.gender && ['male', 'female', 'other'].includes(updates.gender) ? updates.gender : null;
+      fields.push(`gender = $${paramCount++}`);
+      values.push(val);
     }
 
     if (fields.length === 0) {

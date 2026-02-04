@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import './MyAppointments.css'
+import { getProviderAvatarUrl } from '../utils/avatarUtils'
 import AppointmentReminder from './AppointmentReminder'
 import CancelBookingModal from './CancelBookingModal'
 import RescheduleBookingModal from './RescheduleBookingModal'
@@ -78,8 +79,8 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
         id: booking.id,
         providerId: booking.providerId,
         providerName: booking.providerName || 'Provider',
-        providerInitials: booking.providerName ? 
-          booking.providerName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'PR',
+        providerPhoto: booking.providerPhoto || null,
+        providerGender: booking.providerGender || null,
         dateTime: booking.appointmentDate,
         sessionType: booking.sessionType || 'Video Consultation',
         notes: booking.notes,
@@ -552,7 +553,11 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
                 <div key={appointment.id} className="appointment-card">
                   <div className="appointment-header">
                     <div className="appointment-avatar">
-                      {appointment.providerInitials || getProviderInitials(appointment.providerName)}
+                      <img
+                        src={getProviderAvatarUrl(appointment.providerPhoto, appointment.providerGender)}
+                        alt={appointment.providerName}
+                        className="appointment-avatar-img"
+                      />
                     </div>
                     <div className="appointment-info">
                       <h3 className="appointment-provider-name">{appointment.providerName}</h3>
