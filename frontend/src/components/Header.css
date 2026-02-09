@@ -12,6 +12,13 @@
   overflow: visible;
 }
 
+.header-left,
+.header-center,
+.header-right {
+  position: relative;
+  z-index: 1;
+}
+
 /* Lower header z-index when modals are open - modals have z-index 100000 */
 body.modal-open .header {
   z-index: 1 !important;

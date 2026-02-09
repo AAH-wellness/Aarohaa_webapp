@@ -137,7 +137,17 @@
 .kpi-icon {
   font-size: 32px;
   opacity: 0.9;
+  animation: icon-float 3s ease-in-out infinite;
 }
+
+.kpi-card:nth-child(1) .kpi-icon { animation-delay: 0s; }
+.kpi-card:nth-child(2) .kpi-icon { animation-delay: 0.25s; }
+.kpi-card:nth-child(3) .kpi-icon { animation-delay: 0.5s; }
+.kpi-card:nth-child(4) .kpi-icon { animation-delay: 0.75s; }
+.kpi-card:nth-child(5) .kpi-icon { animation-delay: 1s; }
+.kpi-card:nth-child(6) .kpi-icon { animation-delay: 1.25s; }
+.kpi-card:nth-child(7) .kpi-icon { animation-delay: 1.5s; }
+.kpi-card:nth-child(8) .kpi-icon { animation-delay: 1.75s; }
 
 .kpi-badge {
   background: rgba(14, 72, 38, 0.1);
@@ -296,6 +306,7 @@
 .activity-icon {
   font-size: 24px;
   flex-shrink: 0;
+  animation: icon-float 3.2s ease-in-out infinite;
 }
 
 .activity-content {
@@ -346,10 +357,25 @@
 
 .action-icon {
   font-size: 24px;
+  animation: icon-float 2.6s ease-in-out infinite;
 }
+
+.quick-action-btn:nth-child(1) .action-icon { animation-delay: 0s; }
+.quick-action-btn:nth-child(2) .action-icon { animation-delay: 0.4s; }
+.quick-action-btn:nth-child(3) .action-icon { animation-delay: 0.8s; }
+.quick-action-btn:nth-child(4) .action-icon { animation-delay: 1.2s; }
 
 .action-label {
   font-size: 13px;
+}
+
+@keyframes icon-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 @keyframes pulse {

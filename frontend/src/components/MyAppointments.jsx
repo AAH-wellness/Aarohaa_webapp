@@ -4,11 +4,15 @@ import { getProviderAvatarUrl } from '../utils/avatarUtils'
 import AppointmentReminder from './AppointmentReminder'
 import CancelBookingModal from './CancelBookingModal'
 import RescheduleBookingModal from './RescheduleBookingModal'
+import AppointmentsBox3D from './AppointmentsBox3D'
 import { appointmentService, userService, apiClient, API_CONFIG } from '../services'
 import { useUserNotification } from '../contexts/UserNotificationContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
   const { addNotification } = useUserNotification()
+  const { theme } = useTheme()
+  const isLightTheme = theme === 'light'
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCancelModal, setShowCancelModal] = useState(false)
@@ -531,7 +535,8 @@ const MyAppointments = ({ onJoinSession, onSessionCancelled }) => {
       <AppointmentReminder appointments={appointments} />
       <h1 className="appointments-title">My Appointments</h1>
       
-      <div className="appointments-container">
+      <div className={`appointments-container${isLightTheme ? ' appointments-container--premium' : ''}`}>
+        {isLightTheme && <AppointmentsBox3D />}
         <div className="upcoming-sessions-section">
           <h2 className="section-title">Upcoming Sessions</h2>
           {loading ? (

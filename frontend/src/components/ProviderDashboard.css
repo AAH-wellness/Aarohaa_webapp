@@ -101,7 +101,13 @@
 .stat-icon {
   font-size: 32px;
   opacity: 0.9;
+  animation: icon-float 3s ease-in-out infinite;
 }
+
+.stat-card:nth-child(1) .stat-icon { animation-delay: 0s; }
+.stat-card:nth-child(2) .stat-icon { animation-delay: 0.3s; }
+.stat-card:nth-child(3) .stat-icon { animation-delay: 0.6s; }
+.stat-card:nth-child(4) .stat-icon { animation-delay: 0.9s; }
 
 .stat-badge {
   background: rgba(14, 72, 38, 0.1);
@@ -138,6 +144,16 @@
     opacity: 0.3;
   }
 }
+
+@keyframes icon-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 
 .stat-content {
   display: flex;
@@ -365,10 +381,16 @@
   justify-content: center;
   flex-shrink: 0;
   transition: transform 0.3s ease;
+  animation: icon-float 2.8s ease-in-out infinite;
 }
 
+.quick-action-card:nth-child(1) .quick-action-icon-wrap { animation-delay: 0s; }
+.quick-action-card:nth-child(2) .quick-action-icon-wrap { animation-delay: 0.35s; }
+.quick-action-card:nth-child(3) .quick-action-icon-wrap { animation-delay: 0.7s; }
+.quick-action-card:nth-child(4) .quick-action-icon-wrap { animation-delay: 1.05s; }
+
 .quick-action-card:hover .quick-action-icon-wrap {
-  transform: scale(1.08);
+  transform: scale(1.08) translateY(-2px);
 }
 
 .quick-action-icon {
@@ -445,6 +467,7 @@
 .activity-icon {
   font-size: 20px;
   flex-shrink: 0;
+  animation: icon-float 3.2s ease-in-out infinite;
 }
 
 .activity-content {

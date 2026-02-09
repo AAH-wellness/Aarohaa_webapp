@@ -1,7 +1,10 @@
 import React from 'react'
+import { useTheme } from '../contexts/ThemeContext'
+import BubbleBackground3D from './BubbleBackground3D'
 import './Sidebar.css'
 
 const Sidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSidebar, hasActiveSession }) => {
+  const { theme } = useTheme()
   const menuItems = [
     { icon: '👥', label: 'Find Providers' },
     { icon: '📅', label: 'My Appointments' },
@@ -20,6 +23,7 @@ const Sidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSidebar, hasA
 
   return (
     <aside className={`sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
+      {theme === 'light' && <BubbleBackground3D />}
       <h2 className="sidebar-title">Dashboard</h2>
       <nav className="sidebar-nav">
         {menuItems.map((item, index) => (

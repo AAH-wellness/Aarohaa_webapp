@@ -473,7 +473,7 @@ const BookAppointment = ({ selectedProvider, onBookingConfirmed, onNavigateToApp
             />
           </div>
 
-          <button type="submit" className="confirm-booking-btn" disabled={loading}>
+          <button type="submit" className="confirm-booking-btn" disabled={loading} >
             {loading ? 'Booking...' : 'Confirm Booking'}
           </button>
         </form>

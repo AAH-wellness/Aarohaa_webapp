@@ -740,8 +740,8 @@ function App() {
             }}></div>
           </div>
           <div style={{ position: 'relative', zIndex: 1 }}>
-            {renderContent()}
-          </div>
+              {renderContent()}
+            </div>
         </main>
       </div>
     </div>

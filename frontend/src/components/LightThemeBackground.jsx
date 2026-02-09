@@ -2,8 +2,23 @@ import React, { useEffect, useRef } from 'react'
 import './LightThemeBackground.css'
 
 /**
- * Premium light-theme background: morphing gradient blobs, soft orbs, flowing rays.
- * No floating particles. Distinct from dark theme. High-quality, smooth animations.
+ * Dragon-flight path: sinuous curve (x,y) from path parameter s.
+ * Two harmonics so the trail weaves like a dragon flying through the sky.
+ */
+function dragonPath(s, config) {
+  const { startX, startY, scaleX, scaleY, ampX, ampY, freqX, freqY, phaseX, phaseY, ampX2, ampY2, phaseX2, phaseY2 } = config
+  const wave1X = ampX * Math.sin(s * freqX + phaseX)
+  const wave2X = (ampX2 || 0) * Math.sin(s * freqX * 1.7 + (phaseX2 ?? 0))
+  const wave1Y = ampY * Math.sin(s * freqY + phaseY)
+  const wave2Y = (ampY2 || 0) * Math.sin(s * freqY * 1.5 + (phaseY2 ?? 0))
+  const x = startX + s * scaleX + wave1X + wave2X
+  const y = startY + s * scaleY + wave1Y + wave2Y
+  return { x, y }
+}
+
+/**
+ * Premium light-theme background: morphing blobs, orbs, rays, and molecular particles
+ * flowing along dragon-flight (sinuous) paths.
  */
 const LightThemeBackground = () => {
   const canvasRef = useRef(null)
@@ -15,11 +30,13 @@ const LightThemeBackground = () => {
     const ctx = canvas.getContext('2d')
     let animationId = null
     let time = 0
+    let w = window.innerWidth
+    let h = window.innerHeight
 
     const setSize = () => {
       const dpr = Math.min(window.devicePixelRatio, 2)
-      const w = window.innerWidth
-      const h = window.innerHeight
+      w = window.innerWidth
+      h = window.innerHeight
       canvas.width = w * dpr
       canvas.height = h * dpr
       canvas.style.width = `${w}px`
@@ -28,6 +45,66 @@ const LightThemeBackground = () => {
     }
     setSize()
     window.addEventListener('resize', setSize)
+
+    // Molecular particle groups: each group flows along a dragon-flight path (sinuous, winding)
+    const STREAM_COUNT = 7
+    const PARTICLES_PER_STREAM = 22
+    const particleStreams = []
+    for (let g = 0; g < STREAM_COUNT; g++) {
+      const startX = Math.random() * w
+      const startY = Math.random() * h
+      const angle = (Math.PI * 0.2) + Math.random() * Math.PI * 0.6
+      const scaleX = Math.cos(angle) * (w * 0.0018)
+      const scaleY = -Math.sin(angle) * (h * 0.0015)
+      particleStreams.push({
+        pathConfig: {
+          startX,
+          startY,
+          scaleX,
+          scaleY,
+          ampX: w * (0.12 + Math.random() * 0.14),
+          ampY: h * (0.1 + Math.random() * 0.12),
+          freqX: 0.045 + Math.random() * 0.035,
+          freqY: 0.04 + Math.random() * 0.04,
+          phaseX: Math.random() * Math.PI * 2,
+          phaseY: Math.random() * Math.PI * 2,
+          ampX2: w * (0.04 + Math.random() * 0.06),
+          ampY2: h * (0.035 + Math.random() * 0.05),
+          phaseX2: Math.random() * Math.PI * 2,
+          phaseY2: Math.random() * Math.PI * 2,
+        },
+        speed: 0.35 + Math.random() * 0.2,
+        phase: Math.random() * Math.PI * 2,
+        particles: Array.from({ length: PARTICLES_PER_STREAM }, (_, i) => ({
+          offset: -i * 10 - Math.random() * 6,
+          size: 1.2 + Math.random() * 1.4,
+          opacity: 0.22 + Math.random() * 0.25,
+        })),
+        color: [
+          [14, 72, 38],
+          [26, 107, 58],
+          [48, 161, 78],
+          [240, 249, 244],
+          [232, 245, 233],
+        ][g % 5],
+      })
+    }
+
+    const drawParticles = () => {
+      particleStreams.forEach((stream) => {
+        const s0 = time * stream.speed + stream.phase
+        stream.particles.forEach((p) => {
+          const s = s0 + p.offset
+          const { x, y } = dragonPath(s, stream.pathConfig)
+          if (x >= -20 && x <= w + 20 && y >= -20 && y <= h + 20) {
+            ctx.beginPath()
+            ctx.arc(x, y, p.size, 0, Math.PI * 2)
+            ctx.fillStyle = `rgba(${stream.color[0]},${stream.color[1]},${stream.color[2]},${p.opacity})`
+            ctx.fill()
+          }
+        })
+      })
+    }
 
     // Premium palette: soft greens, cream, gold, white
     const blobColors = [
@@ -72,10 +149,9 @@ const LightThemeBackground = () => {
 
     const loop = () => {
       time += 0.012
-      const w = window.innerWidth
-      const h = window.innerHeight
       ctx.clearRect(0, 0, w, h)
       drawBlobs()
+      drawParticles()
       animationId = requestAnimationFrame(loop)
     }
     loop()
