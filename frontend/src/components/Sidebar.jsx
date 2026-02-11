@@ -41,6 +41,13 @@ const Sidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSidebar, hasA
           <span className="sidebar-coins-text">1,250 AAH Coins</span>
         </div>
       </nav>
+      <div className="sidebar-legal">
+        <a href="/terms" className="sidebar-legal-link">Terms of Service</a>
+        <a href="/privacy" className="sidebar-legal-link">Privacy Policy</a>
+        <a href="/cookies" className="sidebar-legal-link">Cookie Policy</a>
+        <a href="/disclaimer" className="sidebar-legal-link">Disclaimer</a>
+        <span className="sidebar-legal-copyright">© Aarohaa Wellness</span>
+      </div>
     </aside>
   )
 }

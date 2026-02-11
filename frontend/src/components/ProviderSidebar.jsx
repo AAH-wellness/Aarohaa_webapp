@@ -33,6 +33,13 @@ const ProviderSidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSideb
           </div>
         ))}
       </nav>
+      <div className="provider-sidebar-legal">
+        <a href="/terms" className="provider-sidebar-legal-link">Terms of Service</a>
+        <a href="/privacy" className="provider-sidebar-legal-link">Privacy Policy</a>
+        <a href="/cookies" className="provider-sidebar-legal-link">Cookie Policy</a>
+        <a href="/disclaimer" className="provider-sidebar-legal-link">Disclaimer</a>
+        <span className="provider-sidebar-legal-copyright">© Aarohaa Wellness</span>
+      </div>
     </aside>
   )
 }

@@ -7,6 +7,8 @@
   overflow-y: auto;
   border-right: 2px solid rgba(255, 215, 0, 0.3);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .provider-sidebar::before {
@@ -42,6 +44,40 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Legal links at bottom of sidebar */
+.provider-sidebar-legal {
+  margin-top: auto;
+  padding-top: 20px;
+  padding-bottom: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.provider-sidebar-legal-link {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.provider-sidebar-legal-link:hover {
+  color: rgba(255, 255, 255, 0.95);
+  text-decoration: underline;
+}
+
+.provider-sidebar-legal-copyright {
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
 }
 
 .provider-nav-item {

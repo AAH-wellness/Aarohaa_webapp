@@ -36,6 +36,13 @@ const AdminSidebar = ({ activeView, setActiveView, isMobileOpen, onCloseSidebar 
           </div>
         ))}
       </nav>
+      <div className="admin-sidebar-legal">
+        <a href="/terms" className="admin-sidebar-legal-link">Terms of Service</a>
+        <a href="/privacy" className="admin-sidebar-legal-link">Privacy Policy</a>
+        <a href="/cookies" className="admin-sidebar-legal-link">Cookie Policy</a>
+        <a href="/disclaimer" className="admin-sidebar-legal-link">Disclaimer</a>
+        <span className="admin-sidebar-legal-copyright">© Aarohaa Wellness</span>
+      </div>
     </aside>
   )
 }
