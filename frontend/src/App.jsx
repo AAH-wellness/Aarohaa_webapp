@@ -191,6 +191,20 @@ function App() {
     }
   }, [])
 
+  /* Login page is always light theme — never apply dark theme, even after logout */
+  useEffect(() => {
+    if (!isLoggedIn) {
+      document.documentElement.setAttribute('data-theme', 'light')
+    }
+  }, [isLoggedIn])
+
+  /* Provider dashboard always uses original (light) theme — no dark theme, no theme toggle */
+  useEffect(() => {
+    if (isLoggedIn && userRole === 'provider') {
+      document.documentElement.setAttribute('data-theme', 'light')
+    }
+  }, [isLoggedIn, userRole])
+
   const handleBookSession = (providerValue) => {
     setSelectedProvider(providerValue)
     setActiveView('Book Appointment')

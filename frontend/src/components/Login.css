@@ -48,7 +48,7 @@
 .login-form-container {
   width: 100%;
   max-width: 650px;
-  min-height: 560px;
+  min-height: 600px;
   height: auto;
   padding: 32px 28px;
   box-sizing: border-box;
@@ -136,6 +136,7 @@
   }
 }
 
+/* Same wrapper width for user and provider so form layout matches when switching mode */
 .login-form-wrapper {
   width: 100%;
   max-width: 520px;
@@ -341,16 +342,22 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
   max-width: 100%;
   margin: 0;
+  width: 100%;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
+}
+
+.login-form .form-group,
+.provider-login-form .form-group {
+  margin-bottom: 0;
 }
 
 .input-field-wrapper {
@@ -1463,16 +1470,20 @@
 }
 
 /* ============================================
-   PROVIDER LOGIN STYLES
+   PROVIDER LOGIN STYLES (same layout as user form)
    ============================================ */
 
 .provider-login-form {
   width: 100%;
-  margin-bottom: 24px;
+  max-width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .provider-login-form .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .provider-login-form .form-group:last-of-type {

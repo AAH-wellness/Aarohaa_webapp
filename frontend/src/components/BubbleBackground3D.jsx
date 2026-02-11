@@ -69,8 +69,8 @@ const BubbleBackground3D = () => {
     const bubbles = []
     const minR = 8
     const maxR = 28
-    const speedMin = 0.4
-    const speedMax = 1.2
+    const speedMin = 0.25
+    const speedMax = 0.85
 
     const hexToVec3 = (hex) => {
       const c = new THREE.Color(hex)
@@ -103,7 +103,7 @@ const BubbleBackground3D = () => {
       })
 
       const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.x = (Math.random() - 0.5) * width * 0.9
+      mesh.position.x = (Math.random() - 0.5) * width
       mesh.position.y = (Math.random() - 0.5) * height - height * 0.6
       mesh.position.z = (Math.random() - 0.5) * 100
       mesh.userData = {
@@ -115,6 +115,8 @@ const BubbleBackground3D = () => {
     }
 
     const clock = new THREE.Clock()
+    let currentWidth = width
+    let currentHeight = height
 
     const animate = () => {
       animationIdRef.current = requestAnimationFrame(animate)
@@ -123,9 +125,9 @@ const BubbleBackground3D = () => {
       bubbles.forEach((b) => {
         b.material.uniforms.uTime.value = t
         b.position.y += b.userData.speed
-        if (b.position.y > height / 2 + b.userData.radius + 20) {
-          b.position.y = -height / 2 - b.userData.radius - 20
-          b.position.x = (Math.random() - 0.5) * width * 0.9
+        if (b.position.y > currentHeight / 2 + b.userData.radius + 20) {
+          b.position.y = -currentHeight / 2 - b.userData.radius - 20
+          b.position.x = (Math.random() - 0.5) * currentWidth
         }
       })
 
@@ -137,6 +139,8 @@ const BubbleBackground3D = () => {
       if (!containerRef.current) return
       const w = containerRef.current.clientWidth
       const h = containerRef.current.clientHeight
+      currentWidth = w
+      currentHeight = h
       camera.left = -w / 2
       camera.right = w / 2
       camera.top = h / 2
@@ -146,7 +150,13 @@ const BubbleBackground3D = () => {
     }
     window.addEventListener('resize', handleResize)
 
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize()
+    })
+    resizeObserver.observe(containerRef.current)
+
     return () => {
+      resizeObserver.disconnect()
       window.removeEventListener('resize', handleResize)
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current)
       if (containerRef.current?.contains(renderer.domElement)) {
