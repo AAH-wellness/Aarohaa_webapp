@@ -235,6 +235,148 @@ class UserService {
   }
 
   /**
+   * Get user payment methods
+   * @returns {Promise<Object>} Payment methods list
+   */
+  async getPaymentMethods() {
+    if (this.useMock) {
+      return this.mockGetPaymentMethods()
+    }
+
+    try {
+      return await apiClient.get(`${this.baseUrl}/payment-methods`)
+    } catch (error) {
+      console.error('Get payment methods error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Add payment method (card)
+   * @param {Object} cardData - Card details
+   * @returns {Promise<Object>} Payment method object
+   */
+  async addPaymentMethod(cardData) {
+    if (this.useMock) {
+      return this.mockAddPaymentMethod(cardData)
+    }
+
+    try {
+      return await apiClient.post(`${this.baseUrl}/payment-methods`, cardData)
+    } catch (error) {
+      console.error('Add payment method error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Set default payment method
+   * @param {string} methodId - Payment method ID
+   * @returns {Promise<Object>} Success message
+   */
+  async setDefaultPaymentMethod(methodId) {
+    if (this.useMock) {
+      return this.mockSetDefaultPaymentMethod(methodId)
+    }
+
+    try {
+      return await apiClient.put(`${this.baseUrl}/payment-methods/${methodId}/default`)
+    } catch (error) {
+      console.error('Set default payment method error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Remove payment method
+   * @param {string} methodId - Payment method ID
+   * @returns {Promise<Object>} Success message
+   */
+  async removePaymentMethod(methodId) {
+    if (this.useMock) {
+      return this.mockRemovePaymentMethod(methodId)
+    }
+
+    try {
+      return await apiClient.delete(`${this.baseUrl}/payment-methods/${methodId}`)
+    } catch (error) {
+      console.error('Remove payment method error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get provider payment methods
+   * @returns {Promise<Object>} Payment methods list
+   */
+  async getProviderPaymentMethods() {
+    if (this.useMock) {
+      return this.mockGetProviderPaymentMethods()
+    }
+
+    try {
+      return await apiClient.get(`${this.baseUrl}/provider/payment-methods`)
+    } catch (error) {
+      console.error('Get provider payment methods error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Add provider payment method (card)
+   * @param {Object} cardData - Card details
+   * @returns {Promise<Object>} Payment method object
+   */
+  async addProviderPaymentMethod(cardData) {
+    if (this.useMock) {
+      return this.mockAddProviderPaymentMethod(cardData)
+    }
+
+    try {
+      return await apiClient.post(`${this.baseUrl}/provider/payment-methods`, cardData)
+    } catch (error) {
+      console.error('Add provider payment method error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Set default provider payment method
+   * @param {string} methodId - Payment method ID
+   * @returns {Promise<Object>} Success message
+   */
+  async setDefaultProviderPaymentMethod(methodId) {
+    if (this.useMock) {
+      return this.mockSetDefaultProviderPaymentMethod(methodId)
+    }
+
+    try {
+      return await apiClient.put(`${this.baseUrl}/provider/payment-methods/${methodId}/default`)
+    } catch (error) {
+      console.error('Set default provider payment method error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Remove provider payment method
+   * @param {string} methodId - Payment method ID
+   * @returns {Promise<Object>} Success message
+   */
+  async removeProviderPaymentMethod(methodId) {
+    if (this.useMock) {
+      return this.mockRemoveProviderPaymentMethod(methodId)
+    }
+
+    try {
+      return await apiClient.delete(`${this.baseUrl}/provider/payment-methods/${methodId}`)
+    } catch (error) {
+      console.error('Remove provider payment method error:', error)
+      throw error
+    }
+  }
+
+  /**
    * Request password reset
    * @param {string} email - User email
    * @param {string} role - User role ('user' or 'provider')
@@ -526,23 +668,115 @@ class UserService {
 
   async mockGetProfile() {
     await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Try to get user data from localStorage
     const stored = localStorage.getItem('currentUser')
+    const userData = localStorage.getItem('userData')
+    const authToken = localStorage.getItem('authToken')
+    
     if (stored) {
-      return JSON.parse(stored)
+      try {
+        const user = JSON.parse(stored)
+        return {
+          user: {
+            id: user.id || 1,
+            email: user.email || 'user@example.com',
+            name: user.name || user.email?.split('@')[0] || 'User',
+            role: user.role || localStorage.getItem('userRole') || 'user',
+            phone: user.phone || null,
+            address: user.address || null,
+            dateOfBirth: user.dateOfBirth || user.date_of_birth || null,
+            profilePhoto: user.profilePhoto || user.profile_photo || null,
+            gender: user.gender || null,
+            authMethod: user.authMethod || localStorage.getItem('loginMethod') || 'email',
+            profileIncomplete: user.profileIncomplete || false,
+            createdAt: user.createdAt || user.created_at || new Date().toISOString(),
+            updatedAt: user.updatedAt || user.updated_at || new Date().toISOString(),
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing currentUser from localStorage:', error)
+      }
     }
+    
+    // Fallback: try userData from localStorage
+    if (userData) {
+      try {
+        const data = JSON.parse(userData)
+        return {
+          user: {
+            id: 1,
+            email: data.email || 'user@example.com',
+            name: data.fullName || data.name || 'User',
+            role: localStorage.getItem('userRole') || 'user',
+            phone: data.phone || null,
+            address: data.address || null,
+            dateOfBirth: data.dateOfBirth || null,
+            profilePhoto: null,
+            gender: null,
+            authMethod: localStorage.getItem('loginMethod') || 'email',
+            profileIncomplete: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing userData from localStorage:', error)
+      }
+    }
+    
+    // If we have a token but no user data, return minimal profile
+    if (authToken) {
+      return {
+        user: {
+          id: 1,
+          email: localStorage.getItem('rememberEmail') || 'user@example.com',
+          name: localStorage.getItem('rememberEmail')?.split('@')[0] || 'User',
+          role: localStorage.getItem('userRole') || 'user',
+          phone: null,
+          address: null,
+          dateOfBirth: null,
+          profilePhoto: null,
+          gender: null,
+          authMethod: localStorage.getItem('loginMethod') || 'email',
+          profileIncomplete: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      }
+    }
+    
+    // Default fallback
     return {
-      id: 1,
-      email: 'user@example.com',
-      name: 'User',
-      role: 'user',
+      user: {
+        id: 1,
+        email: 'user@example.com',
+        name: 'User',
+        role: 'user',
+        phone: null,
+        address: null,
+        dateOfBirth: null,
+        profilePhoto: null,
+        gender: null,
+        authMethod: 'email',
+        profileIncomplete: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
     }
   }
 
   async mockUpdateProfile(profileData) {
     await new Promise(resolve => setTimeout(resolve, 500))
     const current = await this.mockGetProfile()
-    const updated = { ...current, ...profileData, updatedAt: new Date().toISOString() }
-    localStorage.setItem('currentUser', JSON.stringify(updated))
+    const updated = {
+      user: {
+        ...current.user,
+        ...profileData,
+        updatedAt: new Date().toISOString()
+      }
+    }
+    localStorage.setItem('currentUser', JSON.stringify(updated.user))
     return updated
   }
 
@@ -793,6 +1027,124 @@ class UserService {
     }
     
     return filtered
+  }
+
+  // ========== PAYMENT METHODS MOCK IMPLEMENTATIONS ==========
+
+  async mockGetPaymentMethods() {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const saved = localStorage.getItem('userPaymentMethods')
+    if (saved) {
+      try {
+        const methods = JSON.parse(saved)
+        return { paymentMethods: methods }
+      } catch (error) {
+        console.error('Error parsing saved payment methods:', error)
+      }
+    }
+    return { paymentMethods: [] }
+  }
+
+  async mockAddPaymentMethod(cardData) {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    const saved = localStorage.getItem('userPaymentMethods')
+    const methods = saved ? JSON.parse(saved) : []
+    
+    const newMethod = {
+      id: 'pm_' + Date.now(),
+      ...cardData,
+      isDefault: methods.length === 0, // First card is default
+      createdAt: new Date().toISOString(),
+    }
+    
+    methods.push(newMethod)
+    localStorage.setItem('userPaymentMethods', JSON.stringify(methods))
+    
+    return { paymentMethod: newMethod }
+  }
+
+  async mockSetDefaultPaymentMethod(methodId) {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const saved = localStorage.getItem('userPaymentMethods')
+    if (saved) {
+      const methods = JSON.parse(saved)
+      const updated = methods.map(method => ({
+        ...method,
+        isDefault: method.id === methodId
+      }))
+      localStorage.setItem('userPaymentMethods', JSON.stringify(updated))
+    }
+    return { message: 'Default payment method updated' }
+  }
+
+  async mockRemovePaymentMethod(methodId) {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const saved = localStorage.getItem('userPaymentMethods')
+    if (saved) {
+      const methods = JSON.parse(saved)
+      const filtered = methods.filter(method => method.id !== methodId)
+      localStorage.setItem('userPaymentMethods', JSON.stringify(filtered))
+    }
+    return { message: 'Payment method removed' }
+  }
+
+  // ========== PROVIDER PAYMENT METHODS MOCK IMPLEMENTATIONS ==========
+
+  async mockGetProviderPaymentMethods() {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const saved = localStorage.getItem('providerCardPaymentMethods')
+    if (saved) {
+      try {
+        const methods = JSON.parse(saved)
+        return { paymentMethods: methods }
+      } catch (error) {
+        console.error('Error parsing saved provider payment methods:', error)
+      }
+    }
+    return { paymentMethods: [] }
+  }
+
+  async mockAddProviderPaymentMethod(cardData) {
+    await new Promise(resolve => setTimeout(resolve, 500))
+    const saved = localStorage.getItem('providerCardPaymentMethods')
+    const methods = saved ? JSON.parse(saved) : []
+    
+    const newMethod = {
+      id: 'pm_' + Date.now(),
+      ...cardData,
+      isDefault: methods.length === 0, // First card is default
+      createdAt: new Date().toISOString(),
+    }
+    
+    methods.push(newMethod)
+    localStorage.setItem('providerCardPaymentMethods', JSON.stringify(methods))
+    
+    return { paymentMethod: newMethod }
+  }
+
+  async mockSetDefaultProviderPaymentMethod(methodId) {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const saved = localStorage.getItem('providerCardPaymentMethods')
+    if (saved) {
+      const methods = JSON.parse(saved)
+      const updated = methods.map(method => ({
+        ...method,
+        isDefault: method.id === methodId
+      }))
+      localStorage.setItem('providerCardPaymentMethods', JSON.stringify(updated))
+    }
+    return { message: 'Default payment method updated' }
+  }
+
+  async mockRemoveProviderPaymentMethod(methodId) {
+    await new Promise(resolve => setTimeout(resolve, 300))
+    const saved = localStorage.getItem('providerCardPaymentMethods')
+    if (saved) {
+      const methods = JSON.parse(saved)
+      const filtered = methods.filter(method => method.id !== methodId)
+      localStorage.setItem('providerCardPaymentMethods', JSON.stringify(filtered))
+    }
+    return { message: 'Payment method removed' }
   }
 }
 

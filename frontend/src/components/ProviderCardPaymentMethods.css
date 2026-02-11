@@ -1,0 +1,454 @@
+.provider-card-payment-methods {
+  padding: 0;
+  animation: fadeIn 0.4s ease-in;
+}
+
+.payment-methods-header {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0e4826;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.3px;
+}
+
+.section-description {
+  font-size: 14px;
+  color: rgba(14, 72, 38, 0.7);
+  margin: 0;
+}
+
+.payment-methods-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.saved-cards-section {
+  margin-bottom: 24px;
+}
+
+.subsection-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0e4826;
+  margin: 0 0 16px 0;
+}
+
+.no-cards-message {
+  padding: 32px;
+  text-align: center;
+  background: rgba(14, 72, 38, 0.03);
+  border-radius: 12px;
+  border: 1px dashed rgba(14, 72, 38, 0.2);
+  color: rgba(14, 72, 38, 0.6);
+}
+
+.cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-item {
+  background: #ffffff;
+  border: 2px solid rgba(14, 72, 38, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.3s ease;
+}
+
+.card-item:hover {
+  border-color: rgba(14, 72, 38, 0.3);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.1);
+}
+
+.card-item.default {
+  border-color: #0e4826;
+  background: rgba(14, 72, 38, 0.02);
+}
+
+.card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-brand {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0e4826;
+}
+
+.card-number {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.card-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: rgba(14, 72, 38, 0.7);
+}
+
+.card-expiry {
+  color: rgba(14, 72, 38, 0.7);
+}
+
+.default-badge {
+  background: #0e4826;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.card-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.set-default-btn,
+.remove-card-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.set-default-btn {
+  background: rgba(14, 72, 38, 0.1);
+  color: #0e4826;
+}
+
+.set-default-btn:hover {
+  background: rgba(14, 72, 38, 0.2);
+}
+
+.remove-card-btn {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.remove-card-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.5);
+}
+
+.add-card-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-card-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(14, 72, 38, 0.3);
+}
+
+.add-card-form {
+  background: #ffffff;
+  border: 2px solid rgba(14, 72, 38, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0e4826;
+}
+
+.form-group input {
+  padding: 12px;
+  border: 1px solid rgba(14, 72, 38, 0.2);
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #0e4826;
+  box-shadow: 0 0 0 3px rgba(14, 72, 38, 0.1);
+}
+
+.form-group input.error {
+  border-color: #dc2626;
+}
+
+.error-message {
+  font-size: 12px;
+  color: #dc2626;
+  margin-top: -4px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.cancel-btn,
+.save-card-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.cancel-btn {
+  background: rgba(14, 72, 38, 0.1);
+  color: #0e4826;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: rgba(14, 72, 38, 0.2);
+}
+
+.save-card-btn {
+  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  color: #fff;
+}
+
+.save-card-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.3);
+}
+
+.cancel-btn:disabled,
+.save-card-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-message {
+  text-align: center;
+  padding: 40px;
+  color: rgba(14, 72, 38, 0.7);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark Theme Styles */
+[data-theme="dark"] .provider-card-payment-methods .section-title {
+  color: #e8eaf0 !important;
+  background: linear-gradient(135deg, #4fc3f7 0%, #ff6b9d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .section-description {
+  color: #a0a8b8 !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .subsection-title {
+  color: #4fc3f7 !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .no-cards-message {
+  background: rgba(79, 195, 247, 0.05) !important;
+  border-color: rgba(79, 195, 247, 0.3) !important;
+  color: #a0a8b8 !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .card-item {
+  background: rgba(21, 29, 46, 0.9) !important;
+  border-color: rgba(79, 195, 247, 0.3) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .card-item:hover {
+  border-color: rgba(79, 195, 247, 0.5) !important;
+  box-shadow: 0 4px 12px rgba(79, 195, 247, 0.2) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .card-item.default {
+  border-color: #4fc3f7 !important;
+  background: rgba(79, 195, 247, 0.1) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .card-brand {
+  color: #4fc3f7 !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .card-number {
+  color: #e8eaf0 !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .card-expiry {
+  color: #a0a8b8 !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .default-badge {
+  background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%) !important;
+  color: #0c1322 !important;
+  box-shadow: 0 2px 8px rgba(79, 195, 247, 0.4) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .set-default-btn {
+  background: rgba(79, 195, 247, 0.15) !important;
+  color: #4fc3f7 !important;
+  border: 1px solid rgba(79, 195, 247, 0.3) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .set-default-btn:hover {
+  background: rgba(79, 195, 247, 0.25) !important;
+  border-color: rgba(79, 195, 247, 0.5) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .remove-card-btn {
+  color: #ff6b9d !important;
+  border-color: rgba(255, 107, 157, 0.4) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .remove-card-btn:hover {
+  background: rgba(255, 107, 157, 0.15) !important;
+  border-color: rgba(255, 107, 157, 0.6) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .add-card-btn {
+  background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%) !important;
+  box-shadow: 0 4px 15px rgba(79, 195, 247, 0.4) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .add-card-btn:hover {
+  background: linear-gradient(135deg, #29b6f6 0%, #1e88e5 100%) !important;
+  box-shadow: 0 6px 20px rgba(79, 195, 247, 0.5) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .add-card-form {
+  background: rgba(21, 29, 46, 0.9) !important;
+  border-color: rgba(79, 195, 247, 0.3) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .form-group label {
+  color: #4fc3f7 !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .form-group input {
+  background: rgba(15, 24, 41, 0.8) !important;
+  border-color: rgba(79, 195, 247, 0.3) !important;
+  color: #e8eaf0 !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .form-group input:focus {
+  border-color: #4fc3f7 !important;
+  box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.2) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .form-group input::placeholder {
+  color: rgba(160, 168, 184, 0.5) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .error-message {
+  color: #ff6b9d !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .cancel-btn {
+  background: rgba(79, 195, 247, 0.15) !important;
+  color: #4fc3f7 !important;
+  border: 1px solid rgba(79, 195, 247, 0.3) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .cancel-btn:hover:not(:disabled) {
+  background: rgba(79, 195, 247, 0.25) !important;
+  border-color: rgba(79, 195, 247, 0.5) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .save-card-btn {
+  background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%) !important;
+  box-shadow: 0 4px 12px rgba(79, 195, 247, 0.4) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .save-card-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #29b6f6 0%, #1e88e5 100%) !important;
+  box-shadow: 0 6px 16px rgba(79, 195, 247, 0.5) !important;
+}
+
+[data-theme="dark"] .provider-card-payment-methods .loading-message {
+  color: #a0a8b8 !important;
+}
+
+@media (max-width: 768px) {
+  .card-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .cancel-btn,
+  .save-card-btn {
+    width: 100%;
+  }
+}

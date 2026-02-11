@@ -163,6 +163,7 @@ async function startServer() {
     const Support = require('./models/Support');
     const VideoMeeting = require('./models/VideoMeeting');
     const Review = require('./models/Review');
+    const PaymentMethod = require('./models/PaymentMethod');
     await User.createTable();
     await Provider.createTable();
     await Booking.createTable(); // user_bookings and provider_bookings already exist
@@ -170,6 +171,7 @@ async function startServer() {
     await Support.createTable();
     await VideoMeeting.createTable();
     await Review.createTable();
+    await PaymentMethod.createTable();
     console.log('✅ Database tables initialized');
     
     // Start listening

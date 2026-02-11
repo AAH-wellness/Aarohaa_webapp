@@ -29,7 +29,15 @@ const {
   submitSessionReview,
   requestPasswordReset,
   resetPassword,
-  submitSupportTicket
+  submitSupportTicket,
+  getPaymentMethods,
+  addPaymentMethod,
+  setDefaultPaymentMethod,
+  removePaymentMethod,
+  getProviderPaymentMethods,
+  addProviderPaymentMethod,
+  setDefaultProviderPaymentMethod,
+  removeProviderPaymentMethod
 } = require('../controllers/authController');
 const { validateRegister, validateLogin } = require('../validators/authValidator');
 const { authenticateToken } = require('../middleware/auth');
@@ -120,6 +128,18 @@ router.post('/password/reset', resetPassword);
 
 // Support ticket submission (public - authentication optional)
 router.post('/support/submit', submitSupportTicket);
+
+// Payment methods routes (requires authentication)
+router.get('/payment-methods', authenticateToken, getPaymentMethods);
+router.post('/payment-methods', authenticateToken, addPaymentMethod);
+router.put('/payment-methods/:methodId/default', authenticateToken, setDefaultPaymentMethod);
+router.delete('/payment-methods/:methodId', authenticateToken, removePaymentMethod);
+
+// Provider payment methods routes (requires authentication)
+router.get('/provider/payment-methods', authenticateToken, getProviderPaymentMethods);
+router.post('/provider/payment-methods', authenticateToken, addProviderPaymentMethod);
+router.put('/provider/payment-methods/:methodId/default', authenticateToken, setDefaultProviderPaymentMethod);
+router.delete('/provider/payment-methods/:methodId', authenticateToken, removeProviderPaymentMethod);
 
 // Delete user permanently (WARNING: This permanently deletes the user)
 router.delete('/delete', deleteUser);

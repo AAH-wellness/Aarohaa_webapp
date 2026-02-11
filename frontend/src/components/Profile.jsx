@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import WalletConnect from './WalletConnect'
 import { userService } from '../services'
 import PasswordResetSuccessModal from './PasswordResetSuccessModal'
+import { getUserAvatarUrl } from '../utils/avatarUtils'
+import UserPaymentMethods from './UserPaymentMethods'
 import './Profile.css'
+
+const MAX_PHOTO_SIZE_BYTES = 2 * 1024 * 1024 // 2MB
+const ACCEPT_IMAGE_TYPES = 'image/jpeg,image/png,image/webp,image/gif'
 
 const Profile = () => {
   const [kycData, setKycData] = useState({
@@ -11,6 +16,8 @@ const Profile = () => {
     phone: '',
     dateOfBirth: '',
     address: '',
+    profilePhoto: null,
+    gender: null,
   })
   const [loading, setLoading] = useState(true)
   const [isEditingAddress, setIsEditingAddress] = useState(false)
@@ -18,6 +25,10 @@ const Profile = () => {
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [profileIncomplete, setProfileIncomplete] = useState(false)
   const [authMethod, setAuthMethod] = useState('email')
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoError, setPhotoError] = useState(null)
+  const [genderSaving, setGenderSaving] = useState(false)
+  const fileInputRef = useRef(null)
   const [showGoogleProfileForm, setShowGoogleProfileForm] = useState(false)
   const [googleProfileForm, setGoogleProfileForm] = useState({
     name: '',
@@ -33,20 +44,63 @@ const Profile = () => {
     isConnected: false,
   })
 
+  // Helper function to get fallback user data from localStorage
+  const getFallbackUserData = () => {
+    try {
+      const currentUser = localStorage.getItem('currentUser')
+      const userData = localStorage.getItem('userData')
+      
+      if (currentUser) {
+        const user = JSON.parse(currentUser)
+        return {
+          fullName: user.name || user.fullName || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          dateOfBirth: user.dateOfBirth || user.date_of_birth || '',
+          address: user.address || '',
+          profilePhoto: user.profilePhoto || user.profile_photo || null,
+          gender: user.gender || null,
+        }
+      }
+      
+      if (userData) {
+        const data = JSON.parse(userData)
+        return {
+          fullName: data.fullName || data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          dateOfBirth: data.dateOfBirth || '',
+          address: data.address || '',
+          profilePhoto: null,
+          gender: null,
+        }
+      }
+    } catch (error) {
+      console.error('Error getting fallback user data:', error)
+    }
+    return null
+  }
+
   // Fetch user profile data from backend
   useEffect(() => {
+    let isMounted = true
+    
     const fetchUserProfile = async () => {
       try {
         setLoading(true)
         const profile = await userService.getProfile()
         
-        if (profile.user) {
+        if (!isMounted) return
+        
+        if (profile && profile.user) {
           setKycData({
             fullName: profile.user.name || '',
             email: profile.user.email || '',
             phone: profile.user.phone || '',
             dateOfBirth: profile.user.dateOfBirth || '',
             address: profile.user.address || '',
+            profilePhoto: profile.user.profilePhoto || null,
+            gender: profile.user.gender || null,
           })
           setEditedAddress(profile.user.address || '')
           setProfileIncomplete(profile.user.profileIncomplete || false)
@@ -61,21 +115,65 @@ const Profile = () => {
               phone: profile.user.phone || ''
             })
           }
+        } else {
+          console.warn('Profile data structure unexpected:', profile)
+          // Try fallback: get from localStorage directly
+          if (isMounted) {
+            const fallbackData = getFallbackUserData()
+            if (fallbackData) {
+              setKycData(fallbackData)
+            } else {
+              setKycData({
+                fullName: '',
+                email: '',
+                phone: '',
+                dateOfBirth: '',
+                address: '',
+                profilePhoto: null,
+                gender: null,
+              })
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching user profile:', error)
+        if (!isMounted) return
+        
+        // Try fallback: get from localStorage directly
+        const fallbackData = getFallbackUserData()
+        if (fallbackData) {
+          setKycData(fallbackData)
+        } else {
+          // Set default data so component can still render even on error
+          setKycData({
+            fullName: '',
+            email: '',
+            phone: '',
+            dateOfBirth: '',
+            address: '',
+            profilePhoto: null,
+            gender: null,
+          })
+        }
+        
         // If error, try to get from token (fallback)
         const token = localStorage.getItem('authToken')
         if (token) {
           // Token exists but profile fetch failed - show error
-          alert('Failed to load profile data. Please try refreshing the page.')
+          console.error('Failed to load profile data. Token exists but fetch failed.')
         }
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchUserProfile()
+    
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   // Check if wallet is connected on component mount
@@ -301,7 +399,9 @@ const Profile = () => {
           ...prev,
           fullName: response.user.name,
           phone: response.user.phone,
-          dateOfBirth: response.user.dateOfBirth
+          dateOfBirth: response.user.dateOfBirth,
+          profilePhoto: response.user.profilePhoto || prev.profilePhoto,
+          gender: response.user.gender || prev.gender,
         }))
         setProfileIncomplete(false)
         setShowGoogleProfileForm(false)
@@ -317,6 +417,8 @@ const Profile = () => {
             phone: profile.user.phone || '',
             dateOfBirth: profile.user.dateOfBirth || '',
             address: profile.user.address || '',
+            profilePhoto: profile.user.profilePhoto || null,
+            gender: profile.user.gender || null,
           })
         }
       }
@@ -328,6 +430,72 @@ const Profile = () => {
     }
   }
 
+  const genderDisplayLabel = (value) => {
+    if (!value) return 'Not provided'
+    const labels = { male: 'Male', female: 'Female', other: 'Other' }
+    return labels[value] || value
+  }
+
+  const handleGenderChange = async (e) => {
+    const value = e.target.value || null
+    const toSave = value && ['male', 'female', 'other'].includes(value) ? value : null
+    if (!toSave) return
+    
+    // Store previous gender for rollback
+    const previousGender = kycData.gender
+    setKycData((prev) => ({ ...prev, gender: toSave }))
+    
+    try {
+      setGenderSaving(true)
+      const response = await userService.updateProfile({ gender: toSave })
+      // Update with response if available
+      if (response?.user?.gender !== undefined) {
+        setKycData((prev) => ({ ...prev, gender: response.user.gender }))
+      }
+    } catch (err) {
+      console.error('Failed to update gender:', err)
+      alert('Failed to update gender. Please try again.')
+      // Rollback to previous gender
+      setKycData((prev) => ({ ...prev, gender: previousGender }))
+    } finally {
+      setGenderSaving(false)
+    }
+  }
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoError(null)
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Please choose an image file (JPEG, PNG, WebP, or GIF).')
+      return
+    }
+    if (file.size > MAX_PHOTO_SIZE_BYTES) {
+      setPhotoError('Image must be 2MB or smaller.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const dataUrl = reader.result
+      try {
+        setPhotoUploading(true)
+        const response = await userService.updateProfile({ profilePhoto: dataUrl })
+        if (response?.user?.profilePhoto !== undefined) {
+          setKycData((prev) => ({ ...prev, profilePhoto: response.user.profilePhoto }))
+        } else {
+          setKycData((prev) => ({ ...prev, profilePhoto: dataUrl }))
+        }
+      } catch (err) {
+        console.error('Profile photo update failed:', err)
+        setPhotoError('Failed to save photo. Please try again.')
+      } finally {
+        setPhotoUploading(false)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
   if (loading) {
     return (
       <div className="profile">
@@ -335,6 +503,32 @@ const Profile = () => {
         <div className="loading-message">Loading profile data...</div>
       </div>
     )
+  }
+
+  // Safety check: ensure getUserAvatarUrl is available
+  let avatarUrl = 'https://api.dicebear.com/8.x/personas/svg?seed=person' // Default fallback
+  try {
+    if (typeof getUserAvatarUrl === 'function') {
+      const photoUrl = getUserAvatarUrl(kycData?.profilePhoto, kycData?.gender)
+      if (photoUrl && typeof photoUrl === 'string') {
+        avatarUrl = photoUrl
+      }
+    }
+  } catch (error) {
+    console.error('Error getting avatar URL:', error)
+    // Use default fallback URL if function fails
+    avatarUrl = 'https://api.dicebear.com/8.x/personas/svg?seed=person'
+  }
+
+  // Ensure kycData exists
+  const safeKycData = kycData || {
+    fullName: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
+    address: '',
+    profilePhoto: null,
+    gender: null,
   }
 
   return (
@@ -403,6 +597,55 @@ const Profile = () => {
         </div>
       )}
 
+      {/* Profile Photo Section */}
+      <div className="profile-section">
+        <h2 className="section-title">Profile Photo</h2>
+        <div className="profile-card profile-photo-card">
+          <div className="profile-photo-wrap">
+            <div className="profile-photo-preview">
+              <img
+                src={avatarUrl}
+                alt="Profile"
+                className={`profile-photo-img ${!safeKycData.profilePhoto ? 'profile-photo-default' : ''}`}
+                onError={(e) => {
+                  // Fallback to default avatar if image fails to load
+                  try {
+                    const fallbackUrl = getUserAvatarUrl ? getUserAvatarUrl(null, 'other') : 'https://api.dicebear.com/8.x/personas/svg?seed=person'
+                    if (e.target.src !== fallbackUrl) {
+                      e.target.src = fallbackUrl
+                    }
+                  } catch (err) {
+                    console.error('Error in image onError handler:', err)
+                    e.target.src = 'https://api.dicebear.com/8.x/personas/svg?seed=person'
+                  }
+                }}
+              />
+            </div>
+            <div className="profile-photo-actions">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPT_IMAGE_TYPES}
+                onChange={handlePhotoChange}
+                className="profile-photo-input"
+                aria-label="Upload profile photo"
+                disabled={photoUploading}
+              />
+              <button
+                type="button"
+                className="profile-photo-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={photoUploading}
+              >
+                {photoUploading ? 'Uploading…' : safeKycData.profilePhoto ? 'Change photo' : 'Upload photo'}
+              </button>
+              <p className="profile-photo-hint">JPEG, PNG, WebP or GIF. Max 2MB.</p>
+              {photoError && <p className="profile-photo-error">{photoError}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Personal Information Section */}
       <div className="profile-section">
         <h2 className="section-title">Personal Information</h2>
@@ -415,19 +658,40 @@ const Profile = () => {
           <div className="profile-grid">
             <div className="profile-field">
               <label>Full Name</label>
-              <div className="field-value">{kycData.fullName || 'Not provided'}</div>
+              <div className="field-value">{safeKycData.fullName || 'Not provided'}</div>
             </div>
             <div className="profile-field">
               <label>Email Address</label>
-              <div className="field-value">{kycData.email || 'Not provided'}</div>
+              <div className="field-value">{safeKycData.email || 'Not provided'}</div>
             </div>
             <div className="profile-field">
               <label>Phone Number</label>
-              <div className="field-value">{kycData.phone || 'Not provided'}</div>
+              <div className="field-value">{safeKycData.phone || 'Not provided'}</div>
             </div>
             <div className="profile-field">
               <label>Date of Birth</label>
-              <div className="field-value">{kycData.dateOfBirth || 'Not provided'}</div>
+              <div className="field-value">{safeKycData.dateOfBirth || 'Not provided'}</div>
+            </div>
+            <div className="profile-field profile-field-gender">
+              <label>Gender</label>
+              {safeKycData.gender ? (
+                <div className="field-value">{genderDisplayLabel(safeKycData.gender)}</div>
+              ) : (
+                <div className="profile-gender-edit">
+                  <select
+                    className="profile-field-select"
+                    value={safeKycData.gender || ''}
+                    onChange={handleGenderChange}
+                    disabled={genderSaving}
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                  {genderSaving && <span style={{ fontSize: '12px', color: '#666' }}>Saving...</span>}
+                </div>
+              )}
             </div>
             <div className="profile-field full-width">
               <div className="address-field-header">
@@ -469,7 +733,7 @@ const Profile = () => {
                   </div>
                 </div>
               ) : (
-                <div className="field-value">{kycData.address || 'Not provided'}</div>
+                <div className="field-value">{safeKycData.address || 'Not provided'}</div>
               )}
             </div>
           </div>
@@ -512,6 +776,13 @@ const Profile = () => {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Payment Methods Section */}
+      <div className="profile-section">
+        <div className="profile-card">
+          <UserPaymentMethods />
         </div>
       </div>
 

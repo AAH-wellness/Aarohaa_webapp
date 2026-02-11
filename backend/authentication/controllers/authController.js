@@ -672,6 +672,8 @@ async function getProfile(req, res, next) {
         address: user.address || null,
         dateOfBirth: user.date_of_birth || null,
         picture: user.google_picture || null,
+        profilePhoto: user.profile_photo || null,
+        gender: user.gender || null,
         authMethod: user.auth_method || 'email',
         profileIncomplete: profileIncomplete,
         createdAt: user.created_at,
@@ -701,13 +703,29 @@ async function updateProfile(req, res, next) {
       });
     }
 
-    const { name, phone, address } = req.body;
+    const { name, phone, address, profilePhoto, gender } = req.body;
     
     // Build update object
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (phone !== undefined) updates.phone = phone;
     if (address !== undefined) updates.address = address;
+    if (profilePhoto !== undefined) updates.profilePhoto = profilePhoto;
+    if (gender !== undefined) {
+      // Gender can only be set once, similar to provider
+      const user = await User.findById(userId);
+      if (user && user.gender) {
+        return res.status(400).json({
+          error: {
+            message: 'Gender cannot be changed once set',
+            code: 'GENDER_PERMANENT',
+            status: 400
+          }
+        });
+      }
+      const newGender = gender && ['male', 'female', 'other'].includes(gender) ? gender : null;
+      if (newGender) updates.gender = newGender;
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
@@ -730,6 +748,9 @@ async function updateProfile(req, res, next) {
         role: updatedUser.role,
         phone: updatedUser.phone || null,
         address: updatedUser.address || null,
+        dateOfBirth: updatedUser.date_of_birth || null,
+        profilePhoto: updatedUser.profile_photo || null,
+        gender: updatedUser.gender || null,
         createdAt: updatedUser.created_at,
         updatedAt: updatedUser.updated_at
       },
@@ -3762,6 +3783,404 @@ async function submitSessionReview(req, res, next) {
 }
 
 /**
+ * Get user payment methods
+ */
+async function getPaymentMethods(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        error: {
+          message: 'User not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    const PaymentMethod = require('../models/PaymentMethod');
+    const methods = await PaymentMethod.findByUserId(userId);
+    
+    res.json({
+      paymentMethods: methods.map(method => ({
+        id: method.id,
+        type: method.type,
+        brand: method.brand,
+        last4: method.last4,
+        cardholderName: method.cardholder_name,
+        expiryDate: method.expiry_date,
+        zipCode: method.zip_code,
+        isDefault: method.is_default,
+        createdAt: method.created_at,
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Add payment method
+ */
+async function addPaymentMethod(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        error: {
+          message: 'User not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    const { brand, last4, cardholderName, expiryDate, zipCode, stripePaymentMethodId } = req.body;
+    
+    if (!last4 || !cardholderName || !expiryDate) {
+      return res.status(400).json({
+        error: {
+          message: 'Missing required fields',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+
+    const PaymentMethod = require('../models/PaymentMethod');
+    const method = await PaymentMethod.create({
+      userId,
+      type: 'card',
+      brand,
+      last4,
+      cardholderName,
+      expiryDate,
+      zipCode,
+      stripePaymentMethodId
+    });
+    
+    res.json({
+      paymentMethod: {
+        id: method.id,
+        type: method.type,
+        brand: method.brand,
+        last4: method.last4,
+        cardholderName: method.cardholder_name,
+        expiryDate: method.expiry_date,
+        zipCode: method.zip_code,
+        isDefault: method.is_default,
+        createdAt: method.created_at,
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Set default payment method
+ */
+async function setDefaultPaymentMethod(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    const methodId = parseInt(req.params.methodId);
+    
+    if (!userId) {
+      return res.status(401).json({
+        error: {
+          message: 'User not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    if (!methodId || isNaN(methodId)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid payment method ID',
+          code: 'INVALID_ID',
+          status: 400
+        }
+      });
+    }
+
+    const PaymentMethod = require('../models/PaymentMethod');
+    const method = await PaymentMethod.setDefault(userId, methodId);
+    
+    if (!method) {
+      return res.status(404).json({
+        error: {
+          message: 'Payment method not found',
+          code: 'NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+    
+    res.json({
+      message: 'Default payment method updated',
+      paymentMethod: {
+        id: method.id,
+        isDefault: method.is_default
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Remove payment method
+ */
+async function removePaymentMethod(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    const methodId = parseInt(req.params.methodId);
+    
+    if (!userId) {
+      return res.status(401).json({
+        error: {
+          message: 'User not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    if (!methodId || isNaN(methodId)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid payment method ID',
+          code: 'INVALID_ID',
+          status: 400
+        }
+      });
+    }
+
+    const PaymentMethod = require('../models/PaymentMethod');
+    const deleted = await PaymentMethod.delete(userId, methodId);
+    
+    if (!deleted) {
+      return res.status(404).json({
+        error: {
+          message: 'Payment method not found',
+          code: 'NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+    
+    res.json({
+      message: 'Payment method removed'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get provider payment methods
+ */
+async function getProviderPaymentMethods(req, res, next) {
+  try {
+    const providerId = req.user?.userId;
+    
+    if (!providerId) {
+      return res.status(401).json({
+        error: {
+          message: 'Provider not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    const PaymentMethod = require('../models/PaymentMethod');
+    const methods = await PaymentMethod.findByUserId(providerId);
+    
+    res.json({
+      paymentMethods: methods.map(method => ({
+        id: method.id,
+        type: method.type,
+        brand: method.brand,
+        last4: method.last4,
+        cardholderName: method.cardholder_name,
+        expiryDate: method.expiry_date,
+        zipCode: method.zip_code,
+        isDefault: method.is_default,
+        createdAt: method.created_at,
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Add provider payment method
+ */
+async function addProviderPaymentMethod(req, res, next) {
+  try {
+    const providerId = req.user?.userId;
+    
+    if (!providerId) {
+      return res.status(401).json({
+        error: {
+          message: 'Provider not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    const { brand, last4, cardholderName, expiryDate, zipCode, stripePaymentMethodId } = req.body;
+    
+    if (!last4 || !cardholderName || !expiryDate) {
+      return res.status(400).json({
+        error: {
+          message: 'Missing required fields',
+          code: 'MISSING_FIELDS',
+          status: 400
+        }
+      });
+    }
+
+    const PaymentMethod = require('../models/PaymentMethod');
+    const method = await PaymentMethod.create({
+      userId: providerId,
+      type: 'card',
+      brand,
+      last4,
+      cardholderName,
+      expiryDate,
+      zipCode,
+      stripePaymentMethodId
+    });
+    
+    res.json({
+      paymentMethod: {
+        id: method.id,
+        type: method.type,
+        brand: method.brand,
+        last4: method.last4,
+        cardholderName: method.cardholder_name,
+        expiryDate: method.expiry_date,
+        zipCode: method.zip_code,
+        isDefault: method.is_default,
+        createdAt: method.created_at,
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Set default provider payment method
+ */
+async function setDefaultProviderPaymentMethod(req, res, next) {
+  try {
+    const providerId = req.user?.userId;
+    const methodId = parseInt(req.params.methodId);
+    
+    if (!providerId) {
+      return res.status(401).json({
+        error: {
+          message: 'Provider not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    if (!methodId || isNaN(methodId)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid payment method ID',
+          code: 'INVALID_ID',
+          status: 400
+        }
+      });
+    }
+
+    const PaymentMethod = require('../models/PaymentMethod');
+    const method = await PaymentMethod.setDefault(providerId, methodId);
+    
+    if (!method) {
+      return res.status(404).json({
+        error: {
+          message: 'Payment method not found',
+          code: 'NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+    
+    res.json({
+      message: 'Default payment method updated',
+      paymentMethod: {
+        id: method.id,
+        isDefault: method.is_default
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Remove provider payment method
+ */
+async function removeProviderPaymentMethod(req, res, next) {
+  try {
+    const providerId = req.user?.userId;
+    const methodId = parseInt(req.params.methodId);
+    
+    if (!providerId) {
+      return res.status(401).json({
+        error: {
+          message: 'Provider not authenticated',
+          code: 'UNAUTHORIZED',
+          status: 401
+        }
+      });
+    }
+
+    if (!methodId || isNaN(methodId)) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid payment method ID',
+          code: 'INVALID_ID',
+          status: 400
+        }
+      });
+    }
+
+    const PaymentMethod = require('../models/PaymentMethod');
+    const deleted = await PaymentMethod.delete(providerId, methodId);
+    
+    if (!deleted) {
+      return res.status(404).json({
+        error: {
+          message: 'Payment method not found',
+          code: 'NOT_FOUND',
+          status: 404
+        }
+      });
+    }
+    
+    res.json({
+      message: 'Payment method removed'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Provider completes a session (marks booking + video meeting completed)
  */
 async function completeVideoSession(req, res, next) {
@@ -3807,6 +4226,42 @@ async function completeVideoSession(req, res, next) {
       console.warn('completeVideoSession: failed to mark video meeting completed:', e?.message || e);
     }
 
+    // After marking session as completed, process payment
+    try {
+      // Get booking details to calculate amount
+      const bookingDetails = await Booking.findById(bookingId);
+      if (bookingDetails && bookingDetails.status === 'completed') {
+        // Get provider hourly rate
+        const Provider = require('../models/Provider');
+        const provider = await Provider.findById(bookingDetails.provider_id);
+        
+        if (provider && provider.hourly_rate) {
+          // Calculate session duration (default to 1 hour if not available)
+          const sessionDuration = 1; // TODO: Get actual duration from VideoMeeting
+          const amount = parseFloat(provider.hourly_rate) * sessionDuration;
+          
+          // Get user's default payment method
+          const PaymentMethod = require('../models/PaymentMethod');
+          const defaultPaymentMethod = await PaymentMethod.getDefault(bookingDetails.user_id);
+          
+          if (defaultPaymentMethod) {
+            // Process payment (TODO: Integrate with Stripe)
+            console.log(`Processing payment of $${amount} for booking ${bookingId} using payment method ${defaultPaymentMethod.id}`);
+            // await processPayment(bookingDetails.user_id, defaultPaymentMethod.id, amount, bookingId);
+            
+            // TODO: Send payment to provider
+            console.log(`Sending $${amount} to provider ${provider.id}`);
+            // await sendProviderPayout(provider.id, amount, bookingId);
+          } else {
+            console.warn(`No default payment method found for user ${bookingDetails.user_id}. Payment not processed.`);
+          }
+        }
+      }
+    } catch (paymentError) {
+      console.error('Error processing payment after session completion:', paymentError);
+      // Don't fail the session completion if payment fails
+    }
+
     res.json({
       message: 'Session completed successfully',
       booking: { id: updated.id, status: updated.status },
@@ -3845,6 +4300,14 @@ module.exports = {
   submitSessionReview,
   requestPasswordReset,
   resetPassword,
-  submitSupportTicket
+  submitSupportTicket,
+  getPaymentMethods,
+  addPaymentMethod,
+  setDefaultPaymentMethod,
+  removePaymentMethod,
+  getProviderPaymentMethods,
+  addProviderPaymentMethod,
+  setDefaultProviderPaymentMethod,
+  removeProviderPaymentMethod
 };
 

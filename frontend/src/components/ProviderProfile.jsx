@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { userService } from '../services'
 import './ProviderProfile.css'
+import ProviderCardPaymentMethods from './ProviderCardPaymentMethods'
 
 import { getProviderAvatarUrl } from '../utils/avatarUtils'
 
@@ -273,6 +274,13 @@ const ProviderProfile = ({ onNavigateToAvailability, onNavigateToNotifications, 
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Payment Methods Section */}
+      <div className="provider-profile-section">
+        <div className="provider-profile-card">
+          <ProviderCardPaymentMethods />
         </div>
       </div>
 

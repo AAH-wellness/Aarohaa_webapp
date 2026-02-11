@@ -18,6 +18,39 @@ class User {
       const result = await pool.query(query);
       if (result.rows[0].exists) {
         console.log('✅ Users table exists');
+        
+        // Add new columns if they don't exist (migration)
+        try {
+          // Check and add profile_photo column
+          const checkProfilePhoto = `
+            SELECT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name = 'users' AND column_name = 'profile_photo'
+            );
+          `;
+          const profilePhotoExists = await pool.query(checkProfilePhoto);
+          
+          if (!profilePhotoExists.rows[0].exists) {
+            await pool.query('ALTER TABLE users ADD COLUMN profile_photo TEXT;');
+            console.log('✅ Added profile_photo column to users table');
+          }
+          
+          // Check and add gender column
+          const checkGender = `
+            SELECT EXISTS (
+              SELECT 1 FROM information_schema.columns 
+              WHERE table_name = 'users' AND column_name = 'gender'
+            );
+          `;
+          const genderExists = await pool.query(checkGender);
+          
+          if (!genderExists.rows[0].exists) {
+            await pool.query('ALTER TABLE users ADD COLUMN gender VARCHAR(20);');
+            console.log('✅ Added gender column to users table');
+          }
+        } catch (migrationError) {
+          console.warn('⚠️  Warning: Could not add new columns (they may already exist):', migrationError.message);
+        }
       } else {
         // Create table if it doesn't exist (shouldn't happen, but just in case)
         const createQuery = `
@@ -37,6 +70,8 @@ class User {
             phone VARCHAR(20),
             date_of_birth DATE,
             address TEXT,
+            profile_photo TEXT,
+            gender VARCHAR(20),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP
@@ -71,11 +106,25 @@ class User {
    * Find user by ID
    */
   static async findById(id) {
-    const query = 'SELECT id, email, name, role, phone, address, date_of_birth, google_id, google_picture, auth_method, created_at, updated_at, password FROM users WHERE id = $1';
+    // Try with new columns first, fallback to basic columns if they don't exist
+    let query = 'SELECT id, email, name, role, phone, address, date_of_birth, google_id, google_picture, auth_method, profile_photo, gender, created_at, updated_at, password FROM users WHERE id = $1';
     try {
       const result = await pool.query(query, [id]);
       return result.rows[0] || null;
     } catch (error) {
+      // If columns don't exist, try without them
+      if (error.message && error.message.includes('profile_photo') || error.message.includes('gender')) {
+        console.warn('⚠️  profile_photo or gender columns not found, using fallback query');
+        query = 'SELECT id, email, name, role, phone, address, date_of_birth, google_id, google_picture, auth_method, created_at, updated_at, password FROM users WHERE id = $1';
+        const result = await pool.query(query, [id]);
+        const user = result.rows[0] || null;
+        if (user) {
+          // Add null values for missing columns
+          user.profile_photo = null;
+          user.gender = null;
+        }
+        return user;
+      }
       console.error('Error finding user by id:', error);
       throw error;
     }
@@ -142,6 +191,14 @@ class User {
       fields.push(`date_of_birth = $${paramCount++}`);
       values.push(updates.dateOfBirth);
     }
+    if (updates.profilePhoto !== undefined) {
+      fields.push(`profile_photo = $${paramCount++}`);
+      values.push(updates.profilePhoto);
+    }
+    if (updates.gender !== undefined) {
+      fields.push(`gender = $${paramCount++}`);
+      values.push(updates.gender);
+    }
 
     if (fields.length === 0) {
       return await this.findById(id);
@@ -154,7 +211,7 @@ class User {
       UPDATE users 
       SET ${fields.join(', ')}
       WHERE id = $${paramCount}
-      RETURNING id, email, name, role, phone, address, date_of_birth, google_id, google_picture, auth_method, created_at, updated_at
+      RETURNING id, email, name, role, phone, address, date_of_birth, google_id, google_picture, auth_method, profile_photo, gender, created_at, updated_at
     `;
 
     try {
