@@ -1,7 +1,7 @@
 .sidebar {
   width: 280px;
   flex-shrink: 0;
-  background: #0a3620 !important;
+  background: #00422c !important;
   padding: 32px 20px;
   box-shadow: 4px 0 20px rgba(14, 72, 38, 0.3);
   min-height: calc(100vh - 84px);
@@ -24,7 +24,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #0a3620;
+  background: #00422c;
   z-index: -2;
   min-height: 100%;
   width: 100%;
@@ -37,8 +37,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(180deg, #0e4826 0%, #0a3620 100%);
-  background-size: 100% 100%;
+  background: #00422c;
   z-index: -1;
   width: 100%;
   min-height: 100%;
@@ -186,16 +185,23 @@
     top: 0;
     left: -100%;
     width: 280px;
+    min-height: 100vh;
     height: 100vh;
+    max-height: 100vh;
     z-index: 1001;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
-    padding-top: 60px;
-    background: linear-gradient(180deg, #0e4826 0%, #0a3620 100%) !important;
+    padding-top: 24px;
+    padding-bottom: 24px;
+    background: #00422c !important;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
   }
   
   .sidebar::before {
-    height: 100vh;
+    min-height: 100vh;
+    height: 100%;
   }
 
   .sidebar.mobile-open {
@@ -244,11 +250,13 @@
     font-size: 14px;
   }
 
-  /* Dark theme mobile sidebar - same style as light theme but with dark colors */
+  /* Dark theme mobile sidebar - full height from top to bottom */
   [data-theme="dark"] .sidebar {
-    top: 60px !important;
-    height: calc(100vh - 60px) !important;
-    padding-top: 20px !important;
+    top: 0 !important;
+    min-height: 100vh !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    padding-top: 24px !important;
     z-index: 1001 !important;
     pointer-events: auto !important;
     border-right: none !important;
@@ -285,7 +293,7 @@
   
   /* Prevent overlay from blocking sidebar area - exclude sidebar width from overlay */
   [data-theme="dark"] .sidebar-overlay {
-    clip-path: polygon(280px 60px, 100% 60px, 100% 100%, 280px 100%);
+    clip-path: polygon(280px 0, 100% 0, 100% 100%, 280px 100%);
   }
 
   [data-theme="dark"] .sidebar::before {

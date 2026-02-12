@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import LoginSuccess from './LoginSuccess'
 import LoginErrorModal from './LoginErrorModal'
-import NetworkBackground3D from './NetworkBackground3D'
 import GlassReflectionEffect from './GlassReflectionEffect'
 import { userService } from '../services'
 import API_CONFIG from '../services/config.js'
@@ -588,7 +587,6 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
           </div>
         </div>
       )}
-      <NetworkBackground3D />
       <div className="login-wrapper">
         <div className="login-form-section">
           <div className="login-form-container">

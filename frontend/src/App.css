@@ -20,7 +20,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 20px;
-  background-color: var(--theme-bg);
+  background-color: #005236;
   position: relative;
 }
 

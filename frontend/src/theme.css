@@ -81,36 +81,16 @@ html[data-theme="light"] {
   min-height: 100%;
 }
 
-/* Light theme – Header: same glass/gradient/shadow effects as dark, with light (green) colors */
+/* Light theme – Header: solid #00422c */
 [data-theme="light"] .header {
   position: relative;
   margin: 0;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(14, 72, 38, 0.06) 5%,
-    rgba(14, 72, 38, 0.12) 12%,
-    rgba(14, 72, 38, 0.18) 25%,
-    rgba(14, 72, 38, 0.22) 50%,
-    rgba(14, 72, 38, 0.18) 75%,
-    rgba(14, 72, 38, 0.12) 88%,
-    rgba(14, 72, 38, 0.06) 95%,
-    transparent 100%
-  ),
-  linear-gradient(135deg,
-    rgba(14, 72, 38, 0.92) 0%,
-    rgba(10, 54, 32, 0.94) 50%,
-    rgba(8, 42, 24, 0.92) 100%
-  );
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: #00422c;
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
     inset 0 -1px 0 0 rgba(0, 0, 0, 0.08),
     0 8px 32px rgba(14, 72, 38, 0.25);
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 28px;
+  border-radius: 0;
   overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-top: none !important;
@@ -121,10 +101,7 @@ html[data-theme="light"] {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 28px;
+  border-radius: 0;
   overflow: hidden;
   background:
     radial-gradient(ellipse 50% 50% at 5% 5%, rgba(255, 255, 255, 0.08) 0%, transparent 55%),
@@ -134,12 +111,12 @@ html[data-theme="light"] {
 }
 
 [data-theme="light"] .app-body {
-  padding: 0 0 8px 0;
-  gap: 8px;
+  padding: 0;
+  gap: 0;
   background: transparent !important;
 }
 
-/* Light theme – Sidebar: same glass/gradient/shadow effects as dark, with light (green) colors */
+/* Light theme – Sidebar: solid #00422c */
 [data-theme="light"] .sidebar {
   border-right: none !important;
   border-top-left-radius: 0;
@@ -151,20 +128,7 @@ html[data-theme="light"] {
     inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
     inset 0 -1px 0 0 rgba(0, 0, 0, 0.08),
     0 8px 32px rgba(14, 72, 38, 0.2) !important;
-  background: linear-gradient(135deg,
-    rgba(14, 72, 38, 0.9) 0%,
-    rgba(10, 54, 32, 0.92) 50%,
-    rgba(8, 42, 24, 0.9) 100%
-  ),
-  linear-gradient(90deg,
-    rgba(10, 54, 32, 0.95) 0%,
-    rgba(10, 54, 32, 0.9) 68%,
-    rgba(10, 54, 32, 0.82) 88%,
-    rgba(10, 54, 32, 0.7) 96%,
-    transparent 100%
-  ) !important;
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background: #00422c !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 [data-theme="light"] .sidebar::before {
@@ -197,10 +161,48 @@ html[data-theme="light"] {
 }
 
 [data-theme="light"] .main-content {
-  background: transparent !important;
+  background: #005236 !important;
   border-radius: 0;
-  border: none;
-  box-shadow: none;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Light theme – all headings and titles: gold-copper shining */
+[data-theme="light"] .main-content h1,
+[data-theme="light"] .main-content h2,
+[data-theme="light"] .main-content h3,
+[data-theme="light"] .main-content h4,
+[data-theme="light"] .main-content [class*="-title"]:not([class*="subtitle"]),
+[data-theme="light"] .main-content .find-providers-subtitle,
+[data-theme="light"] .sidebar .sidebar-title {
+  background: linear-gradient(90deg, #d4a574, #e6b366, #f0d090, #d4b85a, #d4a574, #e6b366, #f0d090, #d4b85a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.15)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+  font-weight: 700;
+}
+
+/* Light theme – provider names: normal color (no gold-copper gradient) */
+[data-theme="light"] .main-content .provider-card-name,
+[data-theme="light"] .main-content .appointment-provider-name {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  -webkit-text-fill-color: unset !important;
+  color: #0a3620 !important;
+  filter: none;
+}
+
+/* Light theme – "Upcoming Sessions" in appointments box: normal color (no gold-copper) */
+[data-theme="light"] .main-content .appointments-container .section-title {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  -webkit-text-fill-color: unset !important;
+  color: #0a3620 !important;
+  filter: none;
 }
 
 /* Light theme – disable main-content overlays so no white/frosted layer covers background */
@@ -316,7 +318,7 @@ html[data-theme="dark"] {
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
     inset 0 -1px 0 0 rgba(0, 0, 0, 0.15),
     0 8px 32px rgba(0, 0, 0, 0.25);
-  border-radius: 0 0 0 28px;
+  border-radius: 0;
   overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-top: none !important;
@@ -327,7 +329,7 @@ html[data-theme="dark"] {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  border-radius: 0 0 0 28px;
+  border-radius: 0;
   overflow: hidden;
   background: 
     radial-gradient(ellipse 50% 50% at 5% 5%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
@@ -544,7 +546,13 @@ html[data-theme="dark"] {
   color: #e8eaf0 !important;
 }
 
-[data-theme="dark"] .appointments-container,
+[data-theme="dark"] .appointments-container {
+  background: rgba(21, 29, 46, 0.85) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(79, 195, 247, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
 [data-theme="dark"] .dashboard-section {
   background: #151d2e !important;
   border-color: rgba(79, 195, 247, 0.2) !important;
