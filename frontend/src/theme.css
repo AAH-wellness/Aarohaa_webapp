@@ -144,8 +144,8 @@ html[data-theme="light"] {
   border-right: none !important;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   overflow: hidden;
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
@@ -184,16 +184,16 @@ html[data-theme="light"] {
   z-index: 0;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   overflow: hidden;
 }
 [data-theme="light"] .sidebar::after {
   background: transparent !important;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 [data-theme="light"] .main-content {
@@ -341,8 +341,8 @@ html[data-theme="dark"] {
   border-right: none !important;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   overflow: hidden;
   box-shadow: 
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
@@ -371,8 +371,8 @@ html[data-theme="dark"] {
     border-right: none !important;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
-    border-bottom-left-radius: 24px;
-    border-bottom-right-radius: 24px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
     overflow: hidden;
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
@@ -412,8 +412,8 @@ html[data-theme="dark"] {
     z-index: 0;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
-    border-bottom-left-radius: 24px;
-    border-bottom-right-radius: 24px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
     overflow: hidden;
   }
 
@@ -421,8 +421,8 @@ html[data-theme="dark"] {
     background: transparent !important;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
-    border-bottom-left-radius: 24px;
-    border-bottom-right-radius: 24px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 }
 [data-theme="dark"] .sidebar::before {
@@ -442,8 +442,8 @@ html[data-theme="dark"] {
   z-index: 0;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   overflow: hidden;
 }
 [data-theme="dark"] .sidebar::after {
