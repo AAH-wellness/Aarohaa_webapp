@@ -88,7 +88,12 @@ class UserService {
     try {
       // Use /api/users/login endpoint (user login only)
       // Routes are mounted at /api/users, so login is at /api/users/login
-      const response = await apiClient.post(`${this.baseUrl}/login`, credentials)
+      const loginUrl = `${this.baseUrl}/login`
+      console.log('Attempting login at URL:', loginUrl)
+      console.log('Base URL:', this.baseUrl)
+      console.log('API_CONFIG.USER_SERVICE:', API_CONFIG.USER_SERVICE)
+      
+      const response = await apiClient.post(loginUrl, credentials)
       if (response.token) {
         localStorage.setItem('authToken', response.token)
         localStorage.setItem('isLoggedIn', 'true')
@@ -98,6 +103,17 @@ class UserService {
       return response
     } catch (error) {
       console.error('Login error:', error)
+      console.error('Error status:', error.status)
+      console.error('Error message:', error.message)
+      console.error('Full error:', error)
+      
+      // Provide more helpful error message for 404
+      if (error.status === 404) {
+        const errorMessage = `Backend API not found at ${this.baseUrl}/login. Please ensure the backend server is running on port 3001.`
+        console.error(errorMessage)
+        throw new Error(errorMessage)
+      }
+      
       throw error
     }
   }

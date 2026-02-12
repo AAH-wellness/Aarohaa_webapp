@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import LoginSuccess from './LoginSuccess'
 import LoginErrorModal from './LoginErrorModal'
-import Modern3DScene from './Modern3DScene'
 import { userService } from '../services'
 import API_CONFIG from '../services/config.js'
 import './Login.css'
@@ -574,14 +573,9 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
 
   return (
     <div className="login-container">
-      <div className="login-particle-background" aria-hidden="true">
-        <Modern3DScene variant="background" />
-      </div>
       <div className="login-wrapper">
         <div className="login-form-section">
           <div className="login-form-container">
-            <div className="orbit-ornaments"></div>
-            <div className="data-flow-animation"></div>
             <div className="login-form-content">
               <div className="login-form-wrapper">
                 <div className="login-header">
