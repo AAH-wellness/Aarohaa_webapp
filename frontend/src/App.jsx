@@ -40,7 +40,6 @@ import MaintenanceMode from './components/MaintenanceMode'
 import ForgotPasswordModal from './components/ForgotPasswordModal'
 import ResetPassword from './components/ResetPassword'
 import NotificationTicker from './components/NotificationTicker'
-import ThemeAwareBackground from './components/ThemeAwareBackground'
 import { UserNotificationProvider } from './contexts/UserNotificationContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { authService } from './services'
@@ -554,45 +553,6 @@ function App() {
             onCloseSidebar={() => setIsAdminSidebarOpen(false)}
           />
           <main className="main-content">
-            <div className="network-nodes">
-              <div className="network-node" style={{ top: '10%', left: '15%', animationDelay: '0s' }}></div>
-              <div className="network-node" style={{ top: '25%', left: '80%', animationDelay: '0.5s' }}></div>
-              <div className="network-node" style={{ top: '50%', left: '20%', animationDelay: '1s' }}></div>
-              <div className="network-node" style={{ top: '70%', left: '75%', animationDelay: '1.5s' }}></div>
-              <div className="network-node" style={{ top: '35%', left: '50%', animationDelay: '2s' }}></div>
-              <div className="network-node" style={{ top: '60%', left: '10%', animationDelay: '2.5s' }}></div>
-              <div className="network-node" style={{ top: '15%', left: '60%', animationDelay: '0.3s' }}></div>
-              <div className="network-node" style={{ top: '80%', left: '40%', animationDelay: '0.8s' }}></div>
-              
-              <div className="network-connection" style={{ 
-                top: '12%', 
-                left: '15%', 
-                width: '65%', 
-                transform: 'rotate(15deg)',
-                animationDelay: '0s'
-              }}></div>
-              <div className="network-connection" style={{ 
-                top: '30%', 
-                left: '20%', 
-                width: '55%', 
-                transform: 'rotate(-20deg)',
-                animationDelay: '1s'
-              }}></div>
-              <div className="network-connection" style={{ 
-                top: '55%', 
-                left: '10%', 
-                width: '70%', 
-                transform: 'rotate(10deg)',
-                animationDelay: '2s'
-              }}></div>
-              <div className="network-connection" style={{ 
-                top: '75%', 
-                left: '25%', 
-                width: '50%', 
-                transform: 'rotate(-15deg)',
-                animationDelay: '1.5s'
-              }}></div>
-            </div>
             <div style={{ position: 'relative', zIndex: 1 }}>
               {renderAdminContent()}
             </div>
@@ -636,45 +596,6 @@ function App() {
             onCloseSidebar={() => setIsProviderSidebarOpen(false)}
           />
           <main className="main-content">
-            <div className="network-nodes">
-              <div className="network-node" style={{ top: '10%', left: '15%', animationDelay: '0s' }}></div>
-              <div className="network-node" style={{ top: '25%', left: '80%', animationDelay: '0.5s' }}></div>
-              <div className="network-node" style={{ top: '50%', left: '20%', animationDelay: '1s' }}></div>
-              <div className="network-node" style={{ top: '70%', left: '75%', animationDelay: '1.5s' }}></div>
-              <div className="network-node" style={{ top: '35%', left: '50%', animationDelay: '2s' }}></div>
-              <div className="network-node" style={{ top: '60%', left: '10%', animationDelay: '2.5s' }}></div>
-              <div className="network-node" style={{ top: '15%', left: '60%', animationDelay: '0.3s' }}></div>
-              <div className="network-node" style={{ top: '80%', left: '40%', animationDelay: '0.8s' }}></div>
-              
-              <div className="network-connection" style={{ 
-                top: '12%', 
-                left: '15%', 
-                width: '65%', 
-                transform: 'rotate(15deg)',
-                animationDelay: '0s'
-              }}></div>
-              <div className="network-connection" style={{ 
-                top: '30%', 
-                left: '20%', 
-                width: '55%', 
-                transform: 'rotate(-20deg)',
-                animationDelay: '1s'
-              }}></div>
-              <div className="network-connection" style={{ 
-                top: '55%', 
-                left: '10%', 
-                width: '70%', 
-                transform: 'rotate(10deg)',
-                animationDelay: '2s'
-              }}></div>
-              <div className="network-connection" style={{ 
-                top: '75%', 
-                left: '25%', 
-                width: '50%', 
-                transform: 'rotate(-15deg)',
-                animationDelay: '1.5s'
-              }}></div>
-            </div>
             <div style={{ position: 'relative', zIndex: 1 }}>
               {renderProviderContent()}
             </div>
@@ -689,7 +610,6 @@ function App() {
     <ThemeProvider>
     <UserNotificationProvider>
       <div className="app theme-transition">
-        <ThemeAwareBackground />
         <Header 
           onNavigateToProfile={handleNavigateToProfile}
           onSignOut={handleSignOut}
@@ -714,45 +634,6 @@ function App() {
           onCloseSidebar={() => setIsSidebarOpen(false)}
         />
         <main className="main-content">
-          <div className="network-nodes">
-            <div className="network-node" style={{ top: '10%', left: '15%', animationDelay: '0s' }}></div>
-            <div className="network-node" style={{ top: '25%', left: '80%', animationDelay: '0.5s' }}></div>
-            <div className="network-node" style={{ top: '50%', left: '20%', animationDelay: '1s' }}></div>
-            <div className="network-node" style={{ top: '70%', left: '75%', animationDelay: '1.5s' }}></div>
-            <div className="network-node" style={{ top: '35%', left: '50%', animationDelay: '2s' }}></div>
-            <div className="network-node" style={{ top: '60%', left: '10%', animationDelay: '2.5s' }}></div>
-            <div className="network-node" style={{ top: '15%', left: '60%', animationDelay: '0.3s' }}></div>
-            <div className="network-node" style={{ top: '80%', left: '40%', animationDelay: '0.8s' }}></div>
-            
-            <div className="network-connection" style={{ 
-              top: '12%', 
-              left: '15%', 
-              width: '65%', 
-              transform: 'rotate(15deg)',
-              animationDelay: '0s'
-            }}></div>
-            <div className="network-connection" style={{ 
-              top: '30%', 
-              left: '20%', 
-              width: '55%', 
-              transform: 'rotate(-20deg)',
-              animationDelay: '1s'
-            }}></div>
-            <div className="network-connection" style={{ 
-              top: '55%', 
-              left: '10%', 
-              width: '70%', 
-              transform: 'rotate(10deg)',
-              animationDelay: '2s'
-            }}></div>
-            <div className="network-connection" style={{ 
-              top: '75%', 
-              left: '25%', 
-              width: '50%', 
-              transform: 'rotate(-15deg)',
-              animationDelay: '1.5s'
-            }}></div>
-          </div>
           <div style={{ position: 'relative', zIndex: 1 }}>
               {renderContent()}
             </div>

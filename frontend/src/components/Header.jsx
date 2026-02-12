@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { userService } from '../services'
 import { useTheme } from '../contexts/ThemeContext'
-import BubbleBackground3D from './BubbleBackground3D'
 import './Header.css'
 
 const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, isSidebarOpen, activeSession, showThemeToggle }) => {
@@ -138,7 +137,6 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
 
   return (
     <header className="header">
-      {theme === 'light' && <BubbleBackground3D />}
       <div className="header-left">
         <button 
           className="mobile-menu-btn"

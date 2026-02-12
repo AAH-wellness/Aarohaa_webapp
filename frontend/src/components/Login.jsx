@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import LoginSuccess from './LoginSuccess'
 import LoginErrorModal from './LoginErrorModal'
+import NetworkBackground3D from './NetworkBackground3D'
+import GlassReflectionEffect from './GlassReflectionEffect'
 import { userService } from '../services'
 import API_CONFIG from '../services/config.js'
 import './Login.css'
@@ -573,12 +575,28 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
 
   return (
     <div className="login-container">
+      {isAdminMode && (
+        <div className="admin-coming-soon-overlay" onClick={() => onToggleMode && onToggleMode('user')}>
+          <div className="admin-coming-soon-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-coming-soon-icon">🔐</div>
+            <h2 className="admin-coming-soon-title">Admin Operations</h2>
+            <p className="admin-coming-soon-text">Coming soon</p>
+            <p className="admin-coming-soon-subtext">We're building a secure admin control center. Check back later.</p>
+            <button type="button" className="admin-coming-soon-btn" onClick={() => onToggleMode && onToggleMode('user')}>
+              Back to login
+            </button>
+          </div>
+        </div>
+      )}
+      <NetworkBackground3D />
       <div className="login-wrapper">
         <div className="login-form-section">
           <div className="login-form-container">
+            <GlassReflectionEffect />
             <div className="login-form-content">
               <div className="login-form-wrapper">
                 <div className="login-header">
+                  <img src="/logo.png" alt="Aarohaa" className="login-logo" />
                   <h1 className="login-title">
                     {isAdminMode ? 'Admin Portal' : isProviderMode ? 'Provider Portal' : 'Welcome back!'}
                   </h1>
@@ -995,6 +1013,12 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
               </>
             )}
               </div>
+              <footer className="login-copyright">
+                <span className="login-copyright-icon" aria-hidden="true">©</span>
+                <span className="login-copyright-year">{new Date().getFullYear()}</span>
+                <span className="login-copyright-name">Aarohaa Wellness</span>
+                <span className="login-copyright-legal">All rights reserved.</span>
+              </footer>
             </div>
           </div>
         </div>

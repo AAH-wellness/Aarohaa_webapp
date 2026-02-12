@@ -1,7 +1,7 @@
 .login-container {
   min-height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #0e4826 0%, #16a34a 50%, #0e4826 100%);
+  background: linear-gradient(135deg, #0e4826 0%, #00422c 50%, #0e4826 100%);
   display: flex;
   align-items: stretch;
   justify-content: stretch;
@@ -33,30 +33,29 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items: center;
+  align-items: stretch;
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 100vh;
   max-width: 100%;
   position: relative;
   z-index: 0;
-  padding: 40px 24px;
-  padding-top: 60px;
+  padding: 0;
   box-sizing: border-box;
 }
 
 .login-form-container {
   width: 100%;
-  max-width: 650px;
-  min-height: 600px;
-  height: auto;
-  padding: 32px 28px;
+  max-width: 100%;
+  min-height: 100vh;
+  height: 100%;
+  padding: 48px;
   box-sizing: border-box;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: none;
   box-shadow:
-    0 25px 60px rgba(0, 0, 0, 0.25),
-    0 18px 50px rgba(0, 0, 0, 0.18),
-    0 6px 16px rgba(0, 0, 0, 0.12);
+    inset 0 28px 48px -18px rgba(0, 0, 0, 0.5),
+    inset 0 -28px 48px -18px rgba(0, 0, 0, 0.5),
+    inset -28px 0 48px -18px rgba(0, 0, 0, 0.5);
   position: relative;
   top: 0;
   left: 0;
@@ -64,10 +63,10 @@
   pointer-events: auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  align-items: stretch;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
-  border-radius: 50px;
+  border-radius: 0 40px 40px 0;
   background: 
     radial-gradient(circle at 10% 20%, rgba(14, 72, 38, 0.03) 0%, transparent 50%),
     radial-gradient(circle at 90% 80%, rgba(14, 72, 38, 0.03) 0%, transparent 50%),
@@ -80,9 +79,14 @@
   position: relative;
   z-index: 2;
   width: 100%;
+  max-width: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: center;
+  align-items: center;
   height: 100%;
+  padding-top: 52px;
+  box-sizing: border-box;
 }
 
 .login-form-container::before {
@@ -139,12 +143,14 @@
 /* Same wrapper width for user and provider so form layout matches when switching mode */
 .login-form-wrapper {
   width: 100%;
-  max-width: 520px;
+  max-width: 400px;
   margin: 0 auto;
   min-height: 0;
   height: auto;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
   position: relative;
   z-index: 1;
   overflow: visible;
@@ -211,11 +217,11 @@
 
 @keyframes wellnessBreathe {
   0%, 100% {
-    transform: translateX(50%) scale(1);
+    transform: translate(-50%, -50%) scale(1);
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
   }
   50% {
-    transform: translateX(50%) scale(1.05);
+    transform: translate(-50%, -50%) scale(1.05);
     box-shadow: 0 22px 60px rgba(0, 0, 0, 0.3);
   }
 }
@@ -301,16 +307,60 @@
 }
 
 .login-header {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   text-align: left;
   opacity: 1;
 }
 
+.login-logo {
+  display: block;
+  max-width: 120px;
+  max-height: 48px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 14px;
+}
+
+.login-copyright {
+  margin-top: auto;
+  padding-top: 20px;
+  padding-bottom: 28px;
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.login-copyright-icon {
+  font-weight: 600;
+  color: #555;
+}
+
+.login-copyright-year {
+  font-weight: 500;
+}
+
+.login-copyright-name {
+  font-weight: 600;
+  color: #0e4826;
+}
+
+.login-copyright-legal {
+  color: #888;
+  font-size: 11px;
+}
+
 .login-title {
-  font-size: 38px;
+  font-size: 28px;
   font-weight: 700;
   color: #1a1a1a;
-  margin: 0 0 10px 0;
+  margin: 0 0 6px 0;
   letter-spacing: -1px;
   text-align: left;
   line-height: 1.2;
@@ -318,7 +368,7 @@
 }
 
 .login-subtitle {
-  font-size: 15px;
+  font-size: 14px;
   color: #666666;
   margin: 0;
   text-align: left;
@@ -330,7 +380,7 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   max-width: 100%;
   margin: 0;
   width: 100%;
@@ -472,11 +522,11 @@
 
 .form-input {
   width: 100%;
-  height: 52px;
-  padding: 16px 18px;
+  height: 46px;
+  padding: 12px 14px;
   border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  font-size: 15px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 400;
   color: #1f2937;
   background: linear-gradient(to bottom, #ffffff 0%, #fafafa 100%);
@@ -707,16 +757,16 @@
 
 .login-button {
   width: 100%;
-  padding: 13px 22px;
+  padding: 11px 18px;
   background: #0e4826;
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-top: 8px;
+  margin-top: 6px;
   opacity: 1;
 }
 
@@ -734,9 +784,9 @@
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 20px 0;
+  margin: 14px 0;
   color: #999999;
-  font-size: 14px;
+  font-size: 13px;
   text-transform: lowercase;
 }
 
@@ -755,8 +805,8 @@
 .social-login {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 12px;
   width: 100%;
 }
 
@@ -848,13 +898,13 @@
 .login-mode-toggle-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: 4px;
   background: rgba(14, 72, 38, 0.05);
   padding: 4px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid rgba(14, 72, 38, 0.1);
-  margin-top: 20px;
-  margin-bottom: 8px;
+  margin-top: 14px;
+  margin-bottom: 6px;
   width: 100%;
   position: relative;
   overflow: hidden;
@@ -956,28 +1006,53 @@
   position: relative;
   overflow: hidden;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  isolation: isolate;
+}
+
+.login-illustration-section .wellness-content-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .login-illustration-section .wellness-content {
   max-width: 360px;
-  margin-top: 400px;
-  position: relative;
+  margin: 0;
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 100%;
   z-index: 2;
   isolation: isolate;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: calc(34% + 210px + 44px);
+  box-sizing: border-box;
 }
 
 .login-illustration-section .wellness-circle {
   position: absolute;
-  top: -420px;
-  left: calc(50% - 510px);
-  width: 500px;
-  height: 500px;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%) scale(1);
+  width: 420px;
+  height: 420px;
   background: radial-gradient(circle, #FFFFFF 0%, #FEF2D0 100%);
   border-radius: 50%;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
   border: none;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -985,7 +1060,6 @@
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
-  transform: translateX(-50%) scale(1);
   transform-origin: center;
   animation: wellnessBreathe 7s ease-in-out infinite;
 }
@@ -993,10 +1067,10 @@
 .login-illustration-section .wellness-circle > div,
 .login-illustration-section .wellness-circle canvas,
 .login-illustration-section .wellness-circle svg {
-  width: 450px !important;
-  height: 450px !important;
-  max-width: 450px !important;
-  max-height: 450px !important;
+  width: 380px !important;
+  height: 380px !important;
+  max-width: 380px !important;
+  max-height: 380px !important;
   object-fit: contain;
   border-radius: 50%;
 }
@@ -1006,13 +1080,13 @@
 .login-illustration-section .wellness-title {
   font-size: 50px;
   position: relative;
-  margin-top: 85px;
+  margin-top: 0;
+  margin-bottom: 6px;
   z-index: 3;
   color: #1f2937;
   padding: 6px 12px;
   display: inline-block;
   white-space: nowrap;
-  transform: translateX(-50px);
 }
 
 .login-illustration-section .wellness-subtitle {
@@ -1021,17 +1095,17 @@
 }
 .login-illustration-section .wellness-subtitle {
   font-size: 15px;
-  margin-bottom: 32px;
+  margin-top: 0;
+  margin-bottom: 12px;
   color: rgba(255, 255, 255, 0.95);
   z-index: 2;
-  transform: translateX(-24px);
 }
 
 .login-illustration-section .wellness-features {
   flex-direction: row;
   flex-wrap: nowrap;
   gap: 12px;
-  margin-top: 28px;
+  margin-top: 8px;
   justify-content: center;
   align-items: center;
 }
@@ -1051,14 +1125,13 @@
 /* Medium screens (e.g. 14" laptop) - keep two columns but scale content */
 @media (max-width: 1400px) {
   .login-form-section {
-    padding: 32px 20px;
-    padding-top: 48px;
+    padding: 0;
   }
 
   .login-form-container {
     max-width: 100%;
     padding: 28px 24px;
-    border-radius: 40px;
+    border-radius: 0 40px 40px 0;
   }
 
   .login-title {
@@ -1072,21 +1145,23 @@
   .login-illustration-section .wellness-circle {
     width: 420px;
     height: 420px;
-    left: calc(50% - 210px);
+  }
+
+  .login-illustration-section .wellness-content {
+    padding-top: calc(34% + 180px + 44px);
   }
 
   .login-illustration-section .wellness-circle > div,
   .login-illustration-section .wellness-circle canvas,
   .login-illustration-section .wellness-circle svg {
-    width: 380px !important;
-    height: 380px !important;
-    max-width: 380px !important;
-    max-height: 380px !important;
+    width: 320px !important;
+    height: 320px !important;
+    max-width: 320px !important;
+    max-height: 320px !important;
   }
 
   .login-illustration-section .wellness-title {
     font-size: 42px;
-    margin-top: 60px;
   }
 
   .login-illustration-section .feature-item {
@@ -1099,13 +1174,12 @@
 
 @media (max-width: 1200px) {
   .login-form-section {
-    padding: 24px 16px;
-    padding-top: 40px;
+    padding: 0;
   }
 
   .login-form-container {
     padding: 24px 20px;
-    border-radius: 32px;
+    border-radius: 0 32px 32px 0;
   }
 
   .login-title {
@@ -1123,24 +1197,25 @@
   }
 
   .login-illustration-section .wellness-circle {
-    width: 360px;
-    height: 360px;
-    top: -380px;
-    left: calc(50% - 180px);
+    width: 300px;
+    height: 300px;
+  }
+
+  .login-illustration-section .wellness-content {
+    padding-top: calc(34% + 150px + 44px);
   }
 
   .login-illustration-section .wellness-circle > div,
   .login-illustration-section .wellness-circle canvas,
   .login-illustration-section .wellness-circle svg {
-    width: 320px !important;
-    height: 320px !important;
-    max-width: 320px !important;
-    max-height: 320px !important;
+    width: 270px !important;
+    height: 270px !important;
+    max-width: 270px !important;
+    max-height: 270px !important;
   }
 
   .login-illustration-section .wellness-title {
     font-size: 36px;
-    margin-top: 50px;
   }
 
   .login-illustration-section .wellness-features {
@@ -1166,11 +1241,14 @@
 
   .login-form-section {
     padding: 40px 30px;
+    align-items: center;
   }
 
   .login-form-container {
     width: 100%;
     max-width: 520px;
+    min-height: 520px;
+    border-radius: 40px;
   }
 
   .login-title {
@@ -1277,6 +1355,107 @@
     padding: 14px;
     font-size: 14px;
   }
+}
+
+/* Admin Coming Soon – premium popup */
+.admin-coming-soon-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: adminOverlayIn 0.3s ease-out;
+}
+
+@keyframes adminOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.admin-coming-soon-modal {
+  background: linear-gradient(165deg, #ffffff 0%, #f8faf8 50%, #f2f6f3 100%);
+  border-radius: 24px;
+  padding: 40px 36px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  box-shadow:
+    0 32px 64px rgba(0, 0, 0, 0.2),
+    0 16px 32px rgba(14, 72, 38, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(14, 72, 38, 0.12);
+  animation: adminModalIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes adminModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.admin-coming-soon-icon {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 2px 8px rgba(14, 72, 38, 0.15));
+}
+
+.admin-coming-soon-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+.admin-coming-soon-text {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0e4826;
+  margin: 0 0 10px 0;
+  letter-spacing: 0.02em;
+}
+
+.admin-coming-soon-subtext {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.admin-coming-soon-btn {
+  display: inline-block;
+  padding: 12px 24px;
+  background: #0e4826;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-coming-soon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(14, 72, 38, 0.3);
+}
+
+.admin-coming-soon-btn:active {
+  transform: translateY(0);
 }
 
 /* Wallet Modal Styles */
