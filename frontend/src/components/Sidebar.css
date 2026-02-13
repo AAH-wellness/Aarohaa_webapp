@@ -114,16 +114,16 @@
 }
 
 .nav-item:hover {
-  background: linear-gradient(135deg, rgba(208, 182, 168, 0.2) 0%, rgba(208, 182, 168, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
   color: #ffffff;
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, #d0b6a8 0%, #c4a896 100%);
-  color: #0e4826;
-  box-shadow: 0 4px 15px rgba(208, 182, 168, 0.4);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.12) 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   font-weight: 600;
   transform: translateX(4px);
 }

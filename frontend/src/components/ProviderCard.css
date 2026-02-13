@@ -26,7 +26,7 @@
   box-shadow: 0 2px 12px rgba(79, 195, 247, 0.4);
 }
 
-.find-providers-page--dark .provider-card-name { color: #e8eaf0; }
+.find-providers-page--dark .provider-card-name { color: #ffffff; }
 .find-providers-page--dark .provider-card-verified { color: #4fc3f7; }
 .find-providers-page--dark .provider-card .text-sm.text-gray-500,
 .find-providers-page--dark .provider-card .text-gray-600 { color: #a0a8b8 !important; }
@@ -68,14 +68,16 @@
 }
 
 .find-providers-page--dark .provider-card-cta {
-  background: linear-gradient(135deg, #4fc3f7 0%, #00d4ff 100%);
-  color: #0a1628;
-  box-shadow: 0 4px 16px rgba(79, 195, 247, 0.4);
+  background: linear-gradient(135deg, #00422c 0%, #0a3620 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(14, 72, 38, 0.3);
 }
 
 .find-providers-page--dark .provider-card-cta:hover {
   transform: scale(1.03);
-  box-shadow: 0 6px 24px rgba(79, 195, 247, 0.5);
+  background: linear-gradient(135deg, #0e4826 0%, #00422c 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 24px rgba(14, 72, 38, 0.4);
 }
 
 /* Light theme */
@@ -92,9 +94,9 @@
 }
 
 .find-providers-page--light .provider-card-avatar {
-  background: linear-gradient(135deg, #d0b6a8 0%, #c4a896 100%);
-  color: #0e4826;
-  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.15);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.12) 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .find-providers-page--light .provider-card-name { color: #ffffff; }
@@ -116,16 +118,16 @@
 }
 
 .find-providers-page--light .provider-card-cta {
-  background: rgba(255, 255, 255, 0.95);
-  color: #275c4a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #00422c 0%, #0a3620 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.3);
 }
 
 .find-providers-page--light .provider-card-cta:hover {
   transform: scale(1.02);
-  background: #ffffff;
-  color: #275c4a;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(135deg, #0e4826 0%, #00422c 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(14, 72, 38, 0.4);
 }
 
 .provider-card-avatar {
@@ -146,7 +148,7 @@
   object-fit: cover;
 }
 
-.provider-card-name { font-size: 1.25rem; font-weight: 600; }
+.provider-card-name { font-size: 1.25rem; font-weight: 600; color: #ffffff; }
 .provider-card-pill {
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;

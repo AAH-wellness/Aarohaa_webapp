@@ -46,6 +46,26 @@
   border-color: #FFC107;
 }
 
+/* Light theme: same card background as Find Providers #275c4a */
+[data-theme="light"] .book-appointment-container {
+  background: #275c4a !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.2) !important;
+}
+
+[data-theme="light"] .book-appointment-container::before {
+  display: none;
+}
+
+[data-theme="light"] .book-appointment-title {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .book-appointment-container .form-label,
+[data-theme="light"] .book-appointment-container .form-group label {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
 .book-appointment-title {
   font-size: 36px;
   font-weight: 800;
@@ -208,7 +228,7 @@
 }
 
 .confirm-booking-btn {
-  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  background: linear-gradient(135deg, #00422c 0%, #0a3620 100%);
   color: white;
   border: none;
   padding: 16px 40px;
@@ -218,7 +238,7 @@
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: 8px;
-  box-shadow: 0 4px 15px rgba(14, 72, 38, 0.3);
+  box-shadow: 0 4px 15px rgba(14, 72, 38, 0.35);
   align-self: center;
   min-width: 220px;
   letter-spacing: 0.5px;
@@ -226,8 +246,8 @@
 
 .confirm-booking-btn:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(14, 72, 38, 0.4);
-  background: linear-gradient(135deg, #0a3620 0%, #0e4826 100%);
+  box-shadow: 0 8px 25px rgba(14, 72, 38, 0.45);
+  background: linear-gradient(135deg, #0e4826 0%, #00422c 100%);
 }
 
 .confirm-booking-btn:active {

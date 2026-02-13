@@ -25,12 +25,12 @@
   overflow: hidden;
 }
 
-/* Light theme: same look as provider card (semi-transparent white) */
+/* Light theme: same as Find Providers cards #275c4a */
 [data-theme="light"] .appointments-container,
 [data-theme="light"] .appointments-container--premium {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border: 1px solid #e5e7eb !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  background: #275c4a !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.2) !important;
   padding: 40px;
   overflow: hidden;
   display: flex;
@@ -56,6 +56,53 @@
 
 [data-theme="light"] .appointments-container--premium::before {
   display: none;
+}
+
+[data-theme="light"] .appointments-container .appointment-time,
+[data-theme="light"] .appointments-container .appointment-full-time,
+[data-theme="light"] .appointments-container .section-title {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .appointments-container .dashboard-join-btn,
+[data-theme="light"] .appointments-container .view-all-btn {
+  color: #ffffff;
+}
+
+/* Light theme: box inside Upcoming Sessions – same green family #275c4a */
+[data-theme="light"] .appointments-container .appointment-card {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .appointments-container .appointment-card::before {
+  display: none;
+}
+
+[data-theme="light"] .appointments-container .appointment-card:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+[data-theme="light"] .appointments-container .appointment-card .appointment-provider-name,
+[data-theme="light"] .appointments-container .appointment-card .appointment-time,
+[data-theme="light"] .appointments-container .appointment-card .appointment-full-time,
+[data-theme="light"] .appointments-container .appointment-card .appointment-type {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .appointments-container .appointment-avatar {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+}
+
+[data-theme="light"] .appointments-container .no-appointments {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-theme="light"] .appointments-container .no-appointments-message {
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .appointments-container::before {
@@ -185,7 +232,7 @@
 }
 
 .confirm-booking-btn {
-  background: linear-gradient(135deg, #0e4826 0%, #0a3620 100%);
+  background: linear-gradient(135deg, #00422c 0%, #0a3620 100%);
   color: white;
   border: none;
   padding: 16px 40px;
@@ -195,7 +242,7 @@
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: 8px;
-  box-shadow: 0 4px 15px rgba(14, 72, 38, 0.3);
+  box-shadow: 0 4px 15px rgba(14, 72, 38, 0.35);
   align-self: center;
   min-width: 220px;
   letter-spacing: 0.5px;
@@ -203,7 +250,8 @@
 
 .confirm-booking-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.4);
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.45);
+  background: linear-gradient(135deg, #0e4826 0%, #00422c 100%);
 }
 
 .confirm-booking-btn:active {
@@ -223,9 +271,9 @@
 .no-appointments {
   text-align: center;
   padding: 64px 32px;
-  background-color: #ede9d0;
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  border: 2px dashed #e5e7eb;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
 }
 
 .no-appointments-icon {
@@ -289,7 +337,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #d0b6a8 0%, #d0b6a8 100%);
+  background: linear-gradient(135deg, rgba(14, 72, 38, 0.9) 0%, rgba(0, 66, 44, 0.9) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -330,7 +378,7 @@
 .appointment-provider-name {
   font-size: 20px;
   font-weight: 700;
-  color: #333;
+  color: #ffffff;
   margin-bottom: 4px;
 }
 

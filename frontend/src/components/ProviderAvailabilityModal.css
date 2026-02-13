@@ -1,5 +1,227 @@
 /* Provider Availability Modal Styles */
 
+/* Modal panel – background #255c3b theme */
+.provider-availability-modal-panel {
+  background: #255c3b !important;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.provider-avail-modal-header {
+  background: #255c3b !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.provider-avail-modal-header h2 {
+  color: #ffffff !important;
+}
+
+.provider-avail-modal-header p {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.provider-avail-modal-header button {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.provider-avail-modal-header button:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.provider-avail-modal-body {
+  background: #255c3b !important;
+}
+
+.provider-avail-modal-body .time-slots-date-label {
+  color: #ffffff !important;
+}
+
+.provider-avail-modal-body .no-slots-message {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.provider-avail-modal-footer {
+  background: rgba(14, 72, 38, 0.4) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.provider-avail-modal-footer .border-b,
+.provider-avail-modal-footer .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.provider-avail-modal-footer p,
+.provider-avail-modal-footer label {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.provider-avail-modal-footer .text-gray-500,
+.provider-avail-modal-footer .text-gray-600,
+.provider-avail-modal-footer .text-gray-700,
+.provider-avail-modal-footer .text-gray-900 {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.provider-avail-modal-footer select,
+.provider-avail-modal-footer textarea {
+  background: rgba(0, 66, 44, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+.provider-avail-modal-footer select:focus,
+.provider-avail-modal-footer textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15) !important;
+}
+
+.provider-avail-modal-footer select option {
+  background: #00422c !important;
+  color: #ffffff !important;
+}
+
+.provider-avail-modal-footer textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.provider-avail-confirm-btn:not(:disabled) {
+  background: linear-gradient(135deg, #00422c 0%, #0a3620 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.3) !important;
+}
+
+.provider-avail-confirm-btn:not(:disabled):hover {
+  background: linear-gradient(135deg, #0e4826 0%, #00422c 100%) !important;
+  box-shadow: 0 4px 12px rgba(14, 72, 38, 0.4) !important;
+}
+
+.provider-avail-confirm-btn:disabled {
+  background: rgba(0, 66, 44, 0.5) !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Calendar and time slots – darker green surfaces, white text only */
+.provider-availability-modal-panel .calendar-day {
+  background: rgba(0, 66, 44, 0.7);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.provider-availability-modal-panel .calendar-day:hover {
+  background: rgba(0, 66, 44, 0.85);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.provider-availability-modal-panel .calendar-day.has-slots {
+  background: rgba(14, 72, 38, 0.85);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.provider-availability-modal-panel .calendar-day.has-slots:hover {
+  background: rgba(14, 72, 38, 0.95);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.provider-availability-modal-panel .calendar-day.selected {
+  background: #0e4826;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+
+.provider-availability-modal-panel .calendar-day.no-slots {
+  background: rgba(0, 66, 44, 0.5);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.provider-availability-modal-panel .calendar-day.no-slots.enabled-no-slots {
+  background: rgba(0, 66, 44, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.provider-availability-modal-panel .calendar-day.no-slots.enabled-no-slots:hover {
+  background: rgba(0, 66, 44, 0.75) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.provider-availability-modal-panel .calendar-day.no-slots.enabled-no-slots .day-name,
+.provider-availability-modal-panel .calendar-day.no-slots.enabled-no-slots .day-date,
+.provider-availability-modal-panel .calendar-day.no-slots.enabled-no-slots .day-count {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.provider-availability-modal-panel .day-name,
+.provider-availability-modal-panel .day-date,
+.provider-availability-modal-panel .day-count {
+  color: #ffffff !important;
+}
+
+.provider-availability-modal-panel .calendar-day.no-slots .day-name,
+.provider-availability-modal-panel .calendar-day.no-slots .day-date,
+.provider-availability-modal-panel .calendar-day.no-slots .day-count {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.provider-availability-modal-panel .calendar-day.has-slots .day-count {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.provider-availability-modal-panel .calendar-day.is-today {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.provider-availability-modal-panel .calendar-day.is-today.enabled-no-slots {
+  background: rgba(0, 66, 44, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.provider-availability-modal-panel .calendar-day.is-today.enabled-no-slots .day-name,
+.provider-availability-modal-panel .calendar-day.is-today.enabled-no-slots .day-date {
+  color: #ffffff !important;
+}
+
+.provider-availability-modal-panel .time-slot-btn {
+  background: rgba(0, 66, 44, 0.8);
+  color: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+
+.provider-availability-modal-panel .time-slot-btn:hover {
+  background: #0e4826;
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+  box-shadow: 0 2px 12px rgba(14, 72, 38, 0.4);
+}
+
+.provider-availability-modal-panel .time-slot-btn.booked {
+  background: rgba(0, 66, 44, 0.45);
+  color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Loading spinner and error/retry in modal */
+.provider-avail-modal-body .border-crypto-blue {
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  border-top-color: transparent !important;
+}
+
+.provider-avail-modal-body .text-red-600 {
+  color: #fecaca !important;
+}
+
+.provider-avail-modal-body .text-crypto-blue,
+.provider-avail-modal-body .hover\:text-crypto-cyan:hover {
+  color: #ffffff !important;
+}
+
+.provider-avail-modal-footer .bg-red-50 {
+  background: rgba(127, 29, 29, 0.5) !important;
+  border-color: rgba(248, 113, 113, 0.4) !important;
+}
+
+.provider-avail-modal-footer .text-red-600 {
+  color: #fecaca !important;
+}
+
 .calendar-grid {
   display: flex;
   flex-direction: column;

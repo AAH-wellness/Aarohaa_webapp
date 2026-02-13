@@ -125,6 +125,43 @@
   transform: translateY(0);
 }
 
+/* Light theme: header text visible on dark green main-content */
+[data-theme="light"] .activities-title {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .activities-subtitle {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Light theme: green card background (same as Find Providers #275c4a) */
+[data-theme="light"] .activity-card {
+  background: #275c4a !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.2) !important;
+}
+
+[data-theme="light"] .activity-card::before {
+  display: none;
+}
+
+[data-theme="light"] .activity-title {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .activity-description {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="light"] .activity-reward {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .activity-card:hover {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 8px 28px rgba(14, 72, 38, 0.3) !important;
+}
+
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .wellness-activities {

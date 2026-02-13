@@ -35,32 +35,6 @@
   overflow: hidden;
 }
 
-.contact-form-container::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    45deg,
-    transparent,
-    rgba(255, 215, 0, 0.1),
-    transparent
-  );
-  transform: rotate(45deg);
-  animation: shine 3s infinite;
-  pointer-events: none;
-}
-
-@keyframes shine {
-  0% {
-    transform: translateX(-100%) translateY(-100%) rotate(45deg);
-  }
-  100% {
-    transform: translateX(100%) translateY(100%) rotate(45deg);
-  }
-}
 
 .contact-form-container:hover {
   box-shadow: 0 8px 30px rgba(14, 72, 38, 0.1), 0 0 0 1px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.3);

@@ -153,25 +153,102 @@ html[data-theme="light"] {
   font-weight: 700;
 }
 
-/* Light theme – provider names: normal color (no gold-copper gradient) */
+/* Light theme – provider names: always white */
 [data-theme="light"] .main-content .provider-card-name,
 [data-theme="light"] .main-content .appointment-provider-name {
   background: none !important;
   -webkit-background-clip: unset !important;
   background-clip: unset !important;
   -webkit-text-fill-color: unset !important;
-  color: #0a3620 !important;
+  color: #ffffff !important;
   filter: none;
 }
 
-/* Light theme – "Upcoming Sessions" in appointments box: normal color (no gold-copper) */
+/* Light theme – appointments container is #275c4a, so section title and text white */
 [data-theme="light"] .main-content .appointments-container .section-title {
   background: none !important;
   -webkit-background-clip: unset !important;
   background-clip: unset !important;
   -webkit-text-fill-color: unset !important;
-  color: #0a3620 !important;
+  color: #ffffff !important;
   filter: none;
+}
+
+/* Light theme – card background #275c4a on all pages (dashboard sections, stat cards) */
+[data-theme="light"] .main-content .dashboard-section,
+[data-theme="light"] .main-content .stat-card {
+  background: #275c4a !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.2) !important;
+}
+
+[data-theme="light"] .main-content .dashboard-section .stat-value,
+[data-theme="light"] .main-content .dashboard-section .stat-title,
+[data-theme="light"] .main-content .stat-card .stat-value,
+[data-theme="light"] .main-content .stat-card .stat-title,
+[data-theme="light"] .main-content .stat-card .stat-trend-label {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .main-content .dashboard-appointment-item {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-theme="light"] .main-content .dashboard-appointment-item .appointment-provider-name,
+[data-theme="light"] .main-content .dashboard-appointment-item .appointment-time {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .main-content .coming-soon-container,
+[data-theme="light"] .main-content .contact-form-container,
+[data-theme="light"] .main-content .profile-card {
+  background: #275c4a !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 20px rgba(14, 72, 38, 0.2) !important;
+}
+
+[data-theme="light"] .main-content .coming-soon-title,
+[data-theme="light"] .main-content .coming-soon-message {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .main-content .contact-form-container .form-group label,
+[data-theme="light"] .main-content .contact-form-container h2 {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .main-content .contact-form-container .form-input,
+[data-theme="light"] .main-content .contact-form-container .form-textarea {
+  background: #00422c !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .main-content .contact-form-container .form-input::placeholder,
+[data-theme="light"] .main-content .contact-form-container .form-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+[data-theme="light"] .main-content .contact-form-container .form-input:focus,
+[data-theme="light"] .main-content .contact-form-container .form-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .main-content .contact-form-container .input-icon {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="light"] .main-content .contact-form-container .form-input:focus + .input-icon,
+[data-theme="light"] .main-content .contact-form-container .form-input:focus ~ .input-icon {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .main-content .profile-card .section-title,
+[data-theme="light"] .main-content .profile-card .profile-field label,
+[data-theme="light"] .main-content .profile-card .field-value {
+  color: rgba(255, 255, 255, 0.95) !important;
 }
 
 /* Light theme – disable main-content overlays so no white/frosted layer covers background */
