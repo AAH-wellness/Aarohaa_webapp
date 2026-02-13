@@ -1026,7 +1026,7 @@ const Login = ({ onLogin, onNavigateToRegister, onForgotPassword, loginMode, onT
             <div className="wellness-content">
               <div className="wellness-circle" aria-hidden="true">
                 <DotLottieReact
-                  src="https://lottie.host/975e7c1c-6823-4b67-9810-c2608fec06d9/D6nLGKy42R.lottie"
+                  src="https://lottie.host/6a524a72-76e4-46c0-83b8-ce251f715490/JElvscVStv.lottie"
                   loop
                   autoplay
                 />

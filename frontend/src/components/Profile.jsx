@@ -745,36 +745,16 @@ const Profile = () => {
         <h2 className="section-title">Wallet</h2>
         <div className="profile-card">
           <div className="wallet-info">
-            <div className="wallet-field">
-              <label>Connected Network</label>
-              <div className="field-value">{walletData.network}</div>
+            <div className="coming-soon-placeholder" style={{ 
+              textAlign: 'center', 
+              padding: '40px 20px',
+              color: '#666',
+              fontSize: '16px'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
+              <div style={{ fontWeight: '600', marginBottom: '8px', color: '#333' }}>Coming Soon</div>
+              <div style={{ fontSize: '14px' }}>Wallet functionality will be available soon</div>
             </div>
-            {walletData.isConnected && walletData.address ? (
-              <>
-                <div className="wallet-field">
-                  <label>Wallet Address</label>
-                  <div className="field-value wallet-address">
-                    {walletData.address}
-                    <button
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(walletData.address)}
-                      title="Copy address"
-                    >
-                      📋
-                    </button>
-                  </div>
-                </div>
-                <div className="wallet-field">
-                  <label>Balance</label>
-                  <div className="field-value balance-value">{walletData.balance || '0.0000 SOL'}</div>
-                </div>
-              </>
-            ) : (
-              <div className="wallet-not-connected">
-                <p>Wallet not connected. Connect your Solana wallet to verify your account.</p>
-                <WalletConnect onWalletConnected={handleWalletConnected} />
-              </div>
-            )}
           </div>
         </div>
       </div>

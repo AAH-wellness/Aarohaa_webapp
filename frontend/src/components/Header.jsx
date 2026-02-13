@@ -162,14 +162,6 @@ const Header = ({ onNavigateToProfile, onSignOut, activeView, onToggleSidebar, i
           <span className="logo-text">Aarohaa Wellness</span>
         </div>
       </div>
-      {activeView !== 'Profile' && activeView !== 'Active Session' && (
-        <div className="header-center">
-          <div className="coins-display">
-            <span className="coins-icon">💰</span>
-            <span className="coins-text">1,250 AAH Coins</span>
-          </div>
-        </div>
-      )}
       {activeView === 'Active Session' && activeSession && (
         <div className="header-center">
           <div className="session-info-display">

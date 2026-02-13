@@ -57,14 +57,14 @@
 
 /* Light theme */
 .find-providers-page--light .provider-card-skeleton {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #e5e7eb;
+  background: #275c4a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 .find-providers-page--light .provider-card-skeleton-avatar {
-  background: #e5e7eb;
+  background: rgba(255, 255, 255, 0.25);
 }
 .find-providers-page--light .provider-card-skeleton-line,
 .find-providers-page--light .provider-card-skeleton-chip,
 .find-providers-page--light .provider-card-skeleton-btn {
-  background: #e5e7eb;
+  background: rgba(255, 255, 255, 0.2);
 }

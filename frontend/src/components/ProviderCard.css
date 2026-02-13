@@ -80,15 +80,15 @@
 
 /* Light theme */
 .find-providers-page--light .provider-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  background: #275c4a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
 
 .find-providers-page--light .provider-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border-color: #d1d5db;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .find-providers-page--light .provider-card-avatar {
@@ -97,34 +97,35 @@
   box-shadow: 0 2px 8px rgba(14, 72, 38, 0.15);
 }
 
-.find-providers-page--light .provider-card-name { color: #0a3620; }
-.find-providers-page--light .provider-card-verified { color: #24664a; }
+.find-providers-page--light .provider-card-name { color: #ffffff; }
+.find-providers-page--light .provider-card-verified { color: rgba(255, 255, 255, 0.9); }
 .find-providers-page--light .provider-card .text-sm.text-gray-500,
-.find-providers-page--light .provider-card .text-gray-600 { color: #6b7280 !important; }
-.find-providers-page--light .provider-card .text-gray-900 { color: #111827 !important; }
+.find-providers-page--light .provider-card .text-gray-600 { color: rgba(255, 255, 255, 0.85) !important; }
+.find-providers-page--light .provider-card .text-gray-900 { color: #ffffff !important; }
 
 .find-providers-page--light .provider-card-pill {
-  background: #dcf4e6;
-  color: #24664a;
-  border: 1px solid #bce8d0;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .find-providers-page--light .provider-card-pill--muted {
-  background: #f3f4f6;
-  color: #6b7280;
-  border-color: #e5e7eb;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .find-providers-page--light .provider-card-cta {
-  background: #0e4826;
-  color: white;
-  box-shadow: 0 2px 8px rgba(14, 72, 38, 0.25);
+  background: rgba(255, 255, 255, 0.95);
+  color: #275c4a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .find-providers-page--light .provider-card-cta:hover {
   transform: scale(1.02);
-  background: #0a3620;
-  box-shadow: 0 4px 16px rgba(14, 72, 38, 0.3);
+  background: #ffffff;
+  color: #275c4a;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .provider-card-avatar {

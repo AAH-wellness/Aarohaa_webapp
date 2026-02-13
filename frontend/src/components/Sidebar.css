@@ -226,19 +226,7 @@
   }
 
   .sidebar-coins-display {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 16px;
-    margin-top: 8px;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
-    border-radius: 12px;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    color: #ffffff;
-    font-weight: 600;
-    font-size: 14px;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+    display: none !important;
   }
 
   .sidebar-coins-icon {
